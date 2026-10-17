@@ -11,6 +11,7 @@ types are generated from it on every build, so the app can only call what the co
    ```bash
    scripts/sync.sh api                                     # from ../vomatt-web/api-docs.json
    scripts/sync.sh api --url https://vomatt-api.vercel.app # or straight from a deployed API
+   scripts/sync.sh api --file ../vomatt-api/docs/frontend/openapi.json  # or vomatt-api's snapshot
    ```
 
    The script prints a summary before writing the file, for example:
@@ -40,6 +41,18 @@ types are generated from it on every build, so the app can only call what the co
    JSON; capture a real payload into `Tests/VomattCoreTests/Fixtures` when you can).
 
 4. Build the app, then commit `openapi.json` with the code that uses it.
+
+## Automatic sync
+
+When `docs/frontend/openapi.json` changes on vomatt-api's main, its `notify-ios-contract` workflow sends
+a `repository_dispatch` (`api-contract-updated`) here, and `.github/workflows/sync-api-contract.yml`
+has Claude follow this page and open a PR (none when the app is already in step). Run it by hand
+from the Actions tab with an optional vomatt-api `sha`.
+
+Secrets: `CLAUDE_CODE_OAUTH_TOKEN` here, `API_READ_TOKEN` here if vomatt-api is private,
+`SYNC_PR_TOKEN` here (a PAT that can open PRs; without it the PR is opened with `github.token` and
+ios.yml does not run on it), and
+`IOS_DISPATCH_TOKEN` in vomatt-api (a fine-grained PAT with "Contents: read and write" on vomatt-ios).
 
 ## Checking for drift
 

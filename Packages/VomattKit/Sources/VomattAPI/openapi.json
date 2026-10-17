@@ -48,6 +48,407 @@
       }
     },
     "schemas": {
+      "AdminCommentResponse": {
+        "description": "A Comment or Reply as seen in the back office; deleted ones keep their author and text",
+        "properties": {
+          "content": {
+            "description": "Comment text, also when deleted",
+            "example": "Java, obviously.",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When it was written",
+            "example": "2026-10-16T09:30:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted": {
+            "description": "Whether the Comment is deleted",
+            "example": false,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Comment ID (UUIDv7)",
+            "example": "0199f3b1-2c4d-7e5f-8a9b-0c1d2e3f4a5b",
+            "type": "string"
+          },
+          "parentId": {
+            "description": "Top-level Comment this Reply belongs to; null for a top-level Comment",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "When it was last edited or deleted",
+            "example": "2026-10-16T09:30:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Author's user ID",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "type": "string"
+          },
+          "username": {
+            "description": "Author's username",
+            "example": "alice",
+            "type": "string"
+          },
+          "voteId": {
+            "description": "Poll the Comment belongs to",
+            "example": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+            "type": "string"
+          },
+          "voteTitle": {
+            "description": "Title of that Poll",
+            "example": "Which language should we use for the next side project?",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AdminStatsResponse": {
+        "description": "Back-office dashboard counts. Poll counts exclude Deleted Polls except `pollsDeleted`",
+        "nullable": true,
+        "properties": {
+          "ballotsLast24Hours": {
+            "description": "Ballots cast or changed in the last 24 hours",
+            "example": 433,
+            "format": "int64",
+            "type": "integer"
+          },
+          "pollsDeleted": {
+            "description": "Deleted Polls",
+            "example": 12,
+            "format": "int64",
+            "type": "integer"
+          },
+          "pollsEnded": {
+            "description": "Ended Polls, Closed and Cancelled ones included",
+            "example": 910,
+            "format": "int64",
+            "type": "integer"
+          },
+          "pollsInProgress": {
+            "description": "Open Polls (started, not yet Ended)",
+            "example": 57,
+            "format": "int64",
+            "type": "integer"
+          },
+          "usersNewLast7Days": {
+            "description": "Accounts created in the last 7 days",
+            "example": 84,
+            "format": "int64",
+            "type": "integer"
+          },
+          "usersSuspended": {
+            "description": "Suspended accounts",
+            "example": 3,
+            "format": "int64",
+            "type": "integer"
+          },
+          "usersTotal": {
+            "description": "All accounts, suspended included",
+            "example": 1520,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "AdminUserDetail": {
+        "description": "An account with its activity counts, as shown in the back office",
+        "nullable": true,
+        "properties": {
+          "active": {
+            "description": "False when suspended",
+            "example": true,
+            "type": "boolean"
+          },
+          "authMethod": {
+            "description": "How the account signs in: email_otp, phone_otp, google, line or apple",
+            "example": "email_otp",
+            "nullable": true,
+            "type": "string"
+          },
+          "ballotCount": {
+            "description": "Ballots the user currently holds",
+            "example": 35,
+            "format": "int64",
+            "type": "integer"
+          },
+          "commentCount": {
+            "description": "Comments and Replies the user wrote, deleted ones included",
+            "example": 14,
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "description": "When the account was created",
+            "example": "2026-09-01T10:00:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Display name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email; null for accounts registered by phone",
+            "example": "alice@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "User ID (UUIDv7)",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "description": "Last sign-in; null if never",
+            "example": "2026-10-16T21:04:11+08:00",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "membershipLevel": {
+            "description": "Membership level: BASIC, SILVER, GOLD or PLATINUM",
+            "example": "BASIC",
+            "type": "string"
+          },
+          "phoneNumber": {
+            "description": "Phone number (E.164); null for accounts registered by email or OAuth",
+            "example": "+886912345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "points": {
+            "description": "Points balance",
+            "example": 120,
+            "format": "int32",
+            "type": "integer"
+          },
+          "pollCount": {
+            "description": "Polls the user created, any Audience, Deleted ones included",
+            "example": 8,
+            "format": "int64",
+            "type": "integer"
+          },
+          "roles": {
+            "description": "Roles: user, moderator, admin",
+            "example": [
+              "user"
+            ],
+            "items": {
+              "description": "Roles: user, moderator, admin",
+              "example": "[\"user\"]",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "username": {
+            "description": "Username",
+            "example": "alice",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AdminUserResponse": {
+        "description": "An account as listed in the back office",
+        "properties": {
+          "active": {
+            "description": "False when suspended",
+            "example": true,
+            "type": "boolean"
+          },
+          "authMethod": {
+            "description": "How the account signs in: email_otp, phone_otp, google, line or apple",
+            "example": "email_otp",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When the account was created",
+            "example": "2026-09-01T10:00:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Display name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "description": "Email; null for accounts registered by phone",
+            "example": "alice@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "User ID (UUIDv7)",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "description": "Last sign-in; null if never",
+            "example": "2026-10-16T21:04:11+08:00",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "phoneNumber": {
+            "description": "Phone number (E.164); null for accounts registered by email or OAuth",
+            "example": "+886912345678",
+            "nullable": true,
+            "type": "string"
+          },
+          "roles": {
+            "description": "Roles: user, moderator, admin",
+            "example": [
+              "user"
+            ],
+            "items": {
+              "description": "Roles: user, moderator, admin",
+              "example": "[\"user\"]",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "username": {
+            "description": "Username",
+            "example": "alice",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AdminVoteResponse": {
+        "description": "A Poll as seen in the back office: the regular Poll (results still Sealed until it has Ended) plus moderation fields",
+        "nullable": true,
+        "properties": {
+          "creatorActive": {
+            "description": "False when the owner is suspended",
+            "example": true,
+            "type": "boolean"
+          },
+          "creatorEmail": {
+            "description": "Email of the owner; null for accounts registered by phone",
+            "example": "alice@example.com",
+            "nullable": true,
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "When the Poll was Deleted; null while not Deleted",
+            "example": "2026-10-16T12:00:00+08:00",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "vote": {
+            "$ref": "#/components/schemas/VoteResponse"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponseAdminStatsResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdminStatsResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponseAdminUserDetail": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdminUserDetail"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponseAdminVoteResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AdminVoteResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "ApiResponseAuthEmailExistsResponse": {
         "description": "Envelope of every API response, success or error",
         "properties": {
@@ -666,6 +1067,134 @@
         },
         "type": "object"
       },
+      "ApiResponsePageResponseAdminCommentResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAdminCommentResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponsePageResponseAdminUserResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAdminUserResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponsePageResponseAdminVoteResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAdminVoteResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponsePageResponseAuditLogResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAuditLogResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "ApiResponseSimpleResultResponse": {
         "description": "Envelope of every API response, success or error",
         "properties": {
@@ -940,6 +1469,91 @@
         "required": [
           "idToken"
         ],
+        "type": "object"
+      },
+      "AuditLogResponse": {
+        "description": "One audit log entry: a write action and whether it succeeded",
+        "properties": {
+          "action": {
+            "description": "Action, e.g. CREATE, DELETE, SUSPEND, FORCE_CLOSE",
+            "example": "SUSPEND",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When the action happened",
+            "example": "2026-10-16T12:00:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "details": {
+            "description": "Extra context: the suspend reason (as given) or the new roles (sorted, comma-separated, e.g. `admin,user`); null when none",
+            "example": "Repeated spam in comments",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorMessage": {
+            "description": "Error message of a failed action; null on success",
+            "nullable": true,
+            "type": "string"
+          },
+          "httpMethod": {
+            "description": "HTTP method; null for failed actions",
+            "example": "PATCH",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Entry ID (UUIDv7)",
+            "example": "0199f4c0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            "type": "string"
+          },
+          "ipAddress": {
+            "description": "Client IP",
+            "example": "203.0.113.7",
+            "nullable": true,
+            "type": "string"
+          },
+          "requestUri": {
+            "description": "Request path; null for failed actions",
+            "example": "/api/admin/users/0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47/suspend",
+            "nullable": true,
+            "type": "string"
+          },
+          "resourceId": {
+            "description": "Affected resource ID; null when not recorded",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "nullable": true,
+            "type": "string"
+          },
+          "resourceType": {
+            "description": "Resource type, e.g. VOTE, COMMENT, USER",
+            "example": "USER",
+            "type": "string"
+          },
+          "success": {
+            "description": "Whether the action succeeded",
+            "example": true,
+            "type": "boolean"
+          },
+          "userAgent": {
+            "description": "Client User-Agent; null for failed actions",
+            "example": "Mozilla/5.0",
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "description": "Acting user's ID; null for unauthenticated requests",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "nullable": true,
+            "type": "string"
+          },
+          "username": {
+            "description": "Acting user's email at the time; null when unknown",
+            "example": "admin@example.com",
+            "nullable": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "AuthEmailExistsResponse": {
@@ -1921,6 +2535,134 @@
         },
         "type": "object"
       },
+      "PageResponseAdminCommentResponse": {
+        "description": "Offset-style page container (page number and total count); most list endpoints use CursorResponse instead",
+        "nullable": true,
+        "properties": {
+          "content": {
+            "description": "Items of this page",
+            "items": {
+              "$ref": "#/components/schemas/AdminCommentResponse"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "example": 20,
+            "format": "int32",
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-based)",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items across all pages",
+            "example": 123,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseAdminUserResponse": {
+        "description": "Offset-style page container (page number and total count); most list endpoints use CursorResponse instead",
+        "nullable": true,
+        "properties": {
+          "content": {
+            "description": "Items of this page",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserResponse"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "example": 20,
+            "format": "int32",
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-based)",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items across all pages",
+            "example": 123,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseAdminVoteResponse": {
+        "description": "Offset-style page container (page number and total count); most list endpoints use CursorResponse instead",
+        "nullable": true,
+        "properties": {
+          "content": {
+            "description": "Items of this page",
+            "items": {
+              "$ref": "#/components/schemas/AdminVoteResponse"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "example": 20,
+            "format": "int32",
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-based)",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items across all pages",
+            "example": 123,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseAuditLogResponse": {
+        "description": "Offset-style page container (page number and total count); most list endpoints use CursorResponse instead",
+        "nullable": true,
+        "properties": {
+          "content": {
+            "description": "Items of this page",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponse"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "example": 20,
+            "format": "int32",
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-based)",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items across all pages",
+            "example": 123,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "PhoneSendOtpRequest": {
         "description": "Request to send a phone OTP by SMS",
         "properties": {
@@ -2028,6 +2770,20 @@
             "description": "Whether the operation succeeded",
             "example": true,
             "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "SuspendUserRequest": {
+        "description": "Optional note on why the account is suspended. Audit-only: written to the audit log entry's `details`, not stored on the account and not shown to the user",
+        "properties": {
+          "reason": {
+            "description": "Reason, up to 500 characters",
+            "example": "Repeated spam in comments",
+            "maxLength": 500,
+            "minLength": 0,
+            "nullable": true,
+            "type": "string"
           }
         },
         "type": "object"
@@ -2209,6 +2965,33 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateRolesRequest": {
+        "description": "The account's complete new role set",
+        "properties": {
+          "roles": {
+            "description": "Roles replacing the current ones; duplicates are ignored",
+            "example": [
+              "user",
+              "moderator"
+            ],
+            "items": {
+              "enum": [
+                "user",
+                "moderator",
+                "admin"
+              ],
+              "pattern": "user|moderator|admin",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles"
+        ],
         "type": "object"
       },
       "UpdateTagRequest": {
@@ -2983,7 +3766,581 @@
   },
   "openapi": "3.0.1",
   "paths": {
+    "/api/admin/audit-logs": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: read-only offset page of audit log entries, newest first. Filters (all optional, exact match, combined with AND): `userId` (actor), `action`, `resourceType`, `resourceId`, and the time range `from` (inclusive) to `to` (exclusive) as ISO-8601 date-times. `page` is 1-based (default 1), `limit` 1-50 (default 20). Entries are written asynchronously, so an action may show up a moment after it returns\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `userId` or `resourceId` is not a valid UUID, or `from` / `to` is not an ISO-8601 date-time",
+        "operationId": "listAuditLogs",
+        "parameters": [
+          {
+            "description": "Actor's user ID (UUID)",
+            "in": "query",
+            "name": "userId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Action, e.g. DELETE, SUSPEND, FORCE_CLOSE",
+            "example": "SUSPEND",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Resource type, e.g. VOTE, COMMENT, USER",
+            "example": "USER",
+            "in": "query",
+            "name": "resourceType",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Affected resource ID (UUID; every audited resource has a UUID id)",
+            "in": "query",
+            "name": "resourceId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive start, ISO-8601 (URL-encode a `+` offset as `%2B`)",
+            "example": "2026-10-01T00:00:00Z",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive end, ISO-8601 (URL-encode a `+` offset as `%2B`)",
+            "example": "2026-10-17T00:00:00Z",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page number, 1-based (default 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AuditLogs": {
+                    "description": "AuditLogs",
+                    "value": {
+                      "data": {
+                        "content": [
+                          {
+                            "action": "SUSPEND",
+                            "createdAt": "2026-10-16T12:00:00+08:00",
+                            "details": "Repeated spam in comments",
+                            "errorMessage": null,
+                            "httpMethod": "PATCH",
+                            "id": "0199f4c0-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+                            "ipAddress": "203.0.113.7",
+                            "requestUri": "/api/admin/users/0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47/suspend",
+                            "resourceId": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                            "resourceType": "USER",
+                            "success": true,
+                            "userAgent": "Mozilla/5.0",
+                            "userId": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d00",
+                            "username": "admin@example.com"
+                          }
+                        ],
+                        "limit": 20,
+                        "page": 1,
+                        "total": 1
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageResponseAuditLogResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List Audit Logs",
+        "tags": [
+          "Admin - Overview"
+        ]
+      }
+    },
+    "/api/admin/comments": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of Comments and Replies on any Poll (Deleted Polls included), newest first. Filters (all optional, combined with AND): `voteId`, `userId` (author), `q` (case-insensitive contains on the text), `deleted` true for deleted only, false for live only. Deleted Comments keep their author and text here. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `voteId`, `userId` or `deleted` is malformed",
+        "operationId": "listComments",
+        "parameters": [
+          {
+            "description": "Only Comments on this Poll (UUID)",
+            "in": "query",
+            "name": "voteId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only Comments by this user (UUID)",
+            "in": "query",
+            "name": "userId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Text contained in the Comment",
+            "example": "spam",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "true: deleted only; false: live only; omit for both",
+            "example": false,
+            "in": "query",
+            "name": "deleted",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Page number, 1-based (default 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Comments": {
+                    "description": "Comments",
+                    "value": {
+                      "data": {
+                        "content": [
+                          {
+                            "content": "Java, obviously.",
+                            "createdAt": "2026-10-16T09:30:00+08:00",
+                            "deleted": false,
+                            "id": "0199f3b1-2c4d-7e5f-8a9b-0c1d2e3f4a5b",
+                            "parentId": null,
+                            "updatedAt": "2026-10-16T09:30:00+08:00",
+                            "userId": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                            "username": "alice",
+                            "voteId": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+                            "voteTitle": "Which language should we use for the next side project?"
+                          }
+                        ],
+                        "limit": 20,
+                        "page": 1,
+                        "total": 1
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageResponseAdminCommentResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List Comments",
+        "tags": [
+          "Admin - Comment"
+        ]
+      }
+    },
+    "/api/admin/comments/{commentId}": {
+      "delete": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the Comment exists\n**Behavior**: soft-deletes any Comment or Reply, as its author's own delete would; a deleted one is left as is (idempotent). Returns `{success: true}`\n**Side effects**: the text and author disappear from the public Comment lists; a top-level Comment with live Replies stays there as a placeholder. Written to the audit log\n**Errors**:\n- 400 `common.type_mismatch`: `commentId` is not a valid UUID\n- 404 `comment.not_found`: no Comment with this ID",
+        "operationId": "deleteComment_1",
+        "parameters": [
+          {
+            "description": "Comment ID (UUIDv7)",
+            "in": "path",
+            "name": "commentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Deleted": {
+                    "description": "Deleted",
+                    "value": {
+                      "data": {
+                        "id": null,
+                        "message": null,
+                        "status": null,
+                        "success": true
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CommentNotFound": {
+                    "description": "CommentNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "Comment not found",
+                      "errorCode": "comment.not_found",
+                      "message": "Comment not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Comment not found (`comment.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Delete Comment",
+        "tags": [
+          "Admin - Comment"
+        ]
+      }
+    },
     "/api/admin/lookups": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: lists the items of `type` (every type when omitted), ordered by type then `seq`. Unlike the public listing, `includeInactive` (default true) also returns deactivated items so they can be re-activated. Not cached, not paged\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `includeInactive` is not a boolean",
+        "operationId": "listLookups",
+        "parameters": [
+          {
+            "description": "Dictionary type; omit for every type",
+            "example": "vote_duration",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include deactivated items (default true)",
+            "example": true,
+            "in": "query",
+            "name": "includeInactive",
+            "required": false,
+            "schema": {
+              "default": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Lookups": {
+                    "description": "Lookups",
+                    "value": {
+                      "data": [
+                        {
+                          "description": "Poll duration presets",
+                          "frontendUsing": true,
+                          "id": "0199c3a2-7b5e-7c1d-9a4f-3e2b1d5c6f71",
+                          "isActive": false,
+                          "lookupKey": "24h",
+                          "lookupType": "vote_duration",
+                          "lookupValue": {
+                            "hours": 24,
+                            "label": "24 hours"
+                          },
+                          "parentKey": null,
+                          "parentType": null,
+                          "seq": 1
+                        }
+                      ],
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListLookupDto"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List Dictionary Items",
+        "tags": [
+          "Admin - Lookup"
+        ]
+      },
       "post": {
         "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: creates an active item; `type` and `key` are trimmed, `seq` defaults to 0 and `frontendUsing` to false. Returns **201**\n**Side effects**: evicts the cached listing of this type, and the frontend dictionary when `frontendUsing` is true\n**Errors**:\n- 409 `lookup.exists`: an item with this type and key already exists",
         "operationId": "create",
@@ -3638,6 +4995,92 @@
         ]
       }
     },
+    "/api/admin/stats": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: returns live counts: users (total, created in the last 7 days, suspended), Polls (Open, Ended, Deleted; the first two leave Deleted Polls out) and Ballots cast or changed in the last 24 hours. Poll status is derived from the times at the moment of the request\n**Side effects**: none\n**Errors**: none beyond the common ones",
+        "operationId": "getStats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Stats": {
+                    "description": "Stats",
+                    "value": {
+                      "data": {
+                        "ballotsLast24Hours": 433,
+                        "pollsDeleted": 12,
+                        "pollsEnded": 910,
+                        "pollsInProgress": 57,
+                        "usersNewLast7Days": 84,
+                        "usersSuspended": 3,
+                        "usersTotal": 1520
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminStatsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Get Dashboard Stats",
+        "tags": [
+          "Admin - Overview"
+        ]
+      }
+    },
     "/api/admin/tags": {
       "post": {
         "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: creates a tag. `name` is trimmed; `slug` defaults to a slug generated from the name (lowercase, spaces to hyphens, unsupported characters dropped). Returns 200 with the created tag, `usageCount` 0\n**Side effects**: a new tag becomes visible in the public tag lists\n**Errors**:\n- 400 `common.bad_request`: `slug` is omitted and no valid slug can be generated from `name`\n- 409 `tag.name.exists`: another tag already has this name\n- 409 `tag.slug.exists`: another tag already has this slug",
@@ -4060,6 +5503,1593 @@
         "summary": "Update Tag",
         "tags": [
           "Admin Tag"
+        ]
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every account, suspended included, newest first. `q` matches (case-insensitive contains) username, email, phone number or display name; `status` is `active` or `suspended`; `role` is `user`, `moderator` or `admin`. All filters are optional and combine with AND. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `active` nor `suspended`\n- 400 `common.validation_failed`: `role` is not `user`, `moderator` or `admin`",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "description": "Text matched against username, email, phone number and display name",
+            "example": "alice",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "`active` or `suspended`; omit for both",
+            "example": "suspended",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only accounts holding this role: `user`, `moderator` or `admin`",
+            "example": "admin",
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page number, 1-based (default 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Users": {
+                    "description": "Users",
+                    "value": {
+                      "data": {
+                        "content": [
+                          {
+                            "active": true,
+                            "authMethod": "email_otp",
+                            "createdAt": "2026-09-01T10:00:00+08:00",
+                            "displayName": "Alice",
+                            "email": "alice@example.com",
+                            "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                            "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                            "phoneNumber": null,
+                            "roles": [
+                              "user"
+                            ],
+                            "username": "alice"
+                          }
+                        ],
+                        "limit": 20,
+                        "page": 1,
+                        "total": 1
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageResponseAdminUserResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List Users",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/api/admin/users/{userId}": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: returns the account with sign-in details, points and counts of Polls created (any Audience, Deleted included), Ballots held and Comments written (deleted included)\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 404 `user.not_found`: no account with this ID",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "description": "User ID (UUIDv7)",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "User": {
+                    "description": "User",
+                    "value": {
+                      "data": {
+                        "active": true,
+                        "authMethod": "email_otp",
+                        "ballotCount": 35,
+                        "commentCount": 14,
+                        "createdAt": "2026-09-01T10:00:00+08:00",
+                        "displayName": "Alice",
+                        "email": "alice@example.com",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "membershipLevel": "BASIC",
+                        "phoneNumber": null,
+                        "points": 120,
+                        "pollCount": 8,
+                        "roles": [
+                          "user"
+                        ],
+                        "username": "alice"
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminUserDetail"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UserNotFound": {
+                    "description": "UserNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "User not found",
+                      "errorCode": "user.not_found",
+                      "message": "User not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "User not found (`user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Get User",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/api/admin/users/{userId}/roles": {
+      "put": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the account exists; when the change drops the admin role, the account is not the caller and not the last active admin\n**Behavior**: replaces the account's roles with `roles` (each `user`, `moderator` or `admin`; duplicates ignored) and returns the account\n**Side effects**: when the role set actually changes, every refresh token of the user is revoked once the change commits, so the new roles apply from their next sign-in; an access token already issued keeps its old roles until it expires, except that a removed admin role stops working on `/api/admin/**` on the next request. An unchanged role set changes nothing. Written to the audit log with the new roles in `details`\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 400 `common.validation_failed`: `roles` is empty or holds an unknown role\n- 403 `admin.self_action_forbidden`: the caller tried to drop their own admin role\n- 404 `user.not_found`: no account with this ID\n- 409 `admin.last_admin`: the change would demote the only active admin\n- 409 `common.conflict`: another admin change holds the admin rows; retry",
+        "operationId": "updateRoles",
+        "parameters": [
+          {
+            "description": "User ID (UUIDv7)",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Roles": {
+                  "description": "Roles",
+                  "value": {
+                    "roles": [
+                      "user",
+                      "moderator"
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRolesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RolesUpdated": {
+                    "description": "RolesUpdated",
+                    "value": {
+                      "data": {
+                        "active": true,
+                        "authMethod": "email_otp",
+                        "ballotCount": 35,
+                        "commentCount": 14,
+                        "createdAt": "2026-09-01T10:00:00+08:00",
+                        "displayName": "Alice",
+                        "email": "alice@example.com",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "membershipLevel": "BASIC",
+                        "phoneNumber": null,
+                        "points": 120,
+                        "pollCount": 8,
+                        "roles": [
+                          "user"
+                        ],
+                        "username": "alice"
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminUserDetail"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UserNotFound": {
+                    "description": "UserNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "User not found",
+                      "errorCode": "user.not_found",
+                      "message": "User not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "User not found (`user.not_found`)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "LastAdmin": {
+                    "description": "LastAdmin",
+                    "value": {
+                      "data": null,
+                      "error": "Cannot remove the last active admin",
+                      "errorCode": "admin.last_admin",
+                      "message": "Cannot remove the last active admin",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Would demote the only active admin (`admin.last_admin`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Set User Roles",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/api/admin/users/{userId}/suspend": {
+      "patch": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the account exists, is not the caller, and is not the last active admin\n**Behavior**: sets `active` to false and returns the account. Idempotent: suspending a suspended account succeeds. The body is optional; its `reason` is audit-only (kept in the audit log entry's `details`, not on the account), and the audit log is written asynchronously on a best-effort basis\n**Side effects**: once the suspension commits, every refresh token of the user is revoked, so they cannot refresh or sign in; their unexpired access token still reads but every write gets 403 `auth.account_banned`, and a suspended admin loses back-office access on the next request (403 `auth.account_banned`). Written to the audit log with the reason in `details`\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 400 `common.validation_failed`: `reason` is longer than 500 characters\n- 403 `admin.self_action_forbidden`: the caller tried to suspend themself\n- 404 `user.not_found`: no account with this ID\n- 409 `admin.last_admin`: the account is the only active admin\n- 409 `common.conflict`: another admin change holds the admin rows; retry",
+        "operationId": "suspendUser",
+        "parameters": [
+          {
+            "description": "User ID (UUIDv7)",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Suspend": {
+                  "description": "Suspend",
+                  "value": {
+                    "reason": "Repeated spam in comments"
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/SuspendUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Suspended": {
+                    "description": "Suspended",
+                    "value": {
+                      "data": {
+                        "active": false,
+                        "authMethod": "email_otp",
+                        "ballotCount": 35,
+                        "commentCount": 14,
+                        "createdAt": "2026-09-01T10:00:00+08:00",
+                        "displayName": "Alice",
+                        "email": "alice@example.com",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "membershipLevel": "BASIC",
+                        "phoneNumber": null,
+                        "points": 120,
+                        "pollCount": 8,
+                        "roles": [
+                          "user"
+                        ],
+                        "username": "alice"
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminUserDetail"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UserNotFound": {
+                    "description": "UserNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "User not found",
+                      "errorCode": "user.not_found",
+                      "message": "User not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "User not found (`user.not_found`)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "LastAdmin": {
+                    "description": "LastAdmin",
+                    "value": {
+                      "data": null,
+                      "error": "Cannot remove the last active admin",
+                      "errorCode": "admin.last_admin",
+                      "message": "Cannot remove the last active admin",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Only active admin (`admin.last_admin`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Suspend User",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/api/admin/users/{userId}/unsuspend": {
+      "patch": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the account exists\n**Behavior**: sets `active` to true and returns the account. Idempotent\n**Side effects**: the user can sign in again (revoked refresh tokens stay revoked). Written to the audit log\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 404 `user.not_found`: no account with this ID",
+        "operationId": "unsuspendUser",
+        "parameters": [
+          {
+            "description": "User ID (UUIDv7)",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Unsuspended": {
+                    "description": "Unsuspended",
+                    "value": {
+                      "data": {
+                        "active": true,
+                        "authMethod": "email_otp",
+                        "ballotCount": 35,
+                        "commentCount": 14,
+                        "createdAt": "2026-09-01T10:00:00+08:00",
+                        "displayName": "Alice",
+                        "email": "alice@example.com",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "membershipLevel": "BASIC",
+                        "phoneNumber": null,
+                        "points": 120,
+                        "pollCount": 8,
+                        "roles": [
+                          "user"
+                        ],
+                        "username": "alice"
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminUserDetail"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UserNotFound": {
+                    "description": "UserNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "User not found",
+                      "errorCode": "user.not_found",
+                      "message": "User not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "User not found (`user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Unsuspend User",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
+    "/api/admin/votes": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every Poll, any Audience and Deleted ones included, newest created first. Filters (all optional, combined with AND): `q` searches title and description (at least 2 characters); `status` is `scheduled`, `open` or `ended`, derived from the times; `creatorId`; `audience` (`PUBLIC`, `UNLISTED`, `INVITE_ONLY`); `deleted` true for Deleted only, false for not Deleted only. Results stay Sealed: `vote.options[].votes` is null until the Poll has Ended. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is not `scheduled`, `open` or `ended`\n- 400 `common.type_mismatch`: `creatorId`, `audience` or `deleted` is malformed\n- 400 `vote.search.query_too_short`: `q` is a single character",
+        "operationId": "listVotes_1",
+        "parameters": [
+          {
+            "description": "Search text on title and description, at least 2 characters",
+            "example": "language",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "`scheduled`, `open` or `ended`; omit for any",
+            "example": "open",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only Polls created by this user (UUID)",
+            "in": "query",
+            "name": "creatorId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only Polls with this Audience",
+            "example": "INVITE_ONLY",
+            "in": "query",
+            "name": "audience",
+            "required": false,
+            "schema": {
+              "enum": [
+                "PUBLIC",
+                "UNLISTED",
+                "INVITE_ONLY"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "true: Deleted only; false: not Deleted only; omit for both",
+            "example": true,
+            "in": "query",
+            "name": "deleted",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Page number, 1-based (default 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Polls": {
+                    "description": "Polls",
+                    "value": {
+                      "data": {
+                        "content": [
+                          {
+                            "creatorActive": true,
+                            "creatorEmail": "alice@example.com",
+                            "deletedAt": null,
+                            "vote": {
+                              "active": true,
+                              "allowMultipleChoices": false,
+                              "anonymous": false,
+                              "audience": "PUBLIC",
+                              "commentCount": 7,
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "creatorAvatarUrl": "bot:boba",
+                              "creatorId": "0199f2a1-1b4c-7e02-8a9d-6c3f0d2e5b71",
+                              "creatorUsername": "alice",
+                              "deadline": "2026-10-19T09:00:00+08:00",
+                              "deletable": null,
+                              "description": null,
+                              "endTime": "2026-10-19T09:00:00+08:00",
+                              "id": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+                              "inviteeCount": null,
+                              "myBallotAnonymous": null,
+                              "myOptionId": null,
+                              "options": [
+                                {
+                                  "createdAt": "2026-10-09T15:20:31+08:00",
+                                  "description": null,
+                                  "displayOrder": 0,
+                                  "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
+                                  "text": "Java",
+                                  "votes": null
+                                },
+                                {
+                                  "createdAt": "2026-10-09T15:20:31+08:00",
+                                  "description": null,
+                                  "displayOrder": 1,
+                                  "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f814",
+                                  "text": "Go",
+                                  "votes": null
+                                }
+                              ],
+                              "participantCount": 42,
+                              "startTime": "2026-10-12T09:00:00+08:00",
+                              "tags": [],
+                              "title": "Which language should we use for the next side project?",
+                              "totalVotes": 42,
+                              "unread": null,
+                              "updatedAt": "2026-10-09T15:20:31+08:00",
+                              "voterVisibility": "OWNER",
+                              "votingActive": true
+                            }
+                          }
+                        ],
+                        "limit": 20,
+                        "page": 1,
+                        "total": 1
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageResponseAdminVoteResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List Polls",
+        "tags": [
+          "Admin - Poll"
+        ]
+      }
+    },
+    "/api/admin/votes/{voteId}": {
+      "delete": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the Poll exists; any status, regardless of the owner's delete window\n**Behavior**: Deletes the Poll (soft: the row and its Ballots are kept, `deletedAt` is set). A Deleted Poll is left as is (idempotent). Returns `{success: true}`\n**Side effects**: the Poll is hidden from everyone, owner included, and its tags stop counting it. Nobody is notified. Reversible with Restore. Written to the audit log\n**Errors**:\n- 400 `common.type_mismatch`: `voteId` is not a valid UUID\n- 404 `vote.not_found`: no Poll with this ID\n- 409 `common.conflict`: the Poll is busy; retry",
+        "operationId": "deleteVote_1",
+        "parameters": [
+          {
+            "description": "Poll ID (UUIDv7)",
+            "in": "path",
+            "name": "voteId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Deleted": {
+                    "description": "Deleted",
+                    "value": {
+                      "data": {
+                        "id": null,
+                        "message": null,
+                        "status": null,
+                        "success": true
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VoteNotFound": {
+                    "description": "VoteNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "Vote not found",
+                      "errorCode": "vote.not_found",
+                      "message": "Vote not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Poll not found (`vote.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Delete Poll",
+        "tags": [
+          "Admin - Poll"
+        ]
+      },
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: returns any Poll, Deleted and Invite-only included, with when it was Deleted and the owner's email and suspension state. Results stay Sealed until the Poll has Ended\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `voteId` is not a valid UUID\n- 404 `vote.not_found`: no Poll with this ID",
+        "operationId": "getVote_1",
+        "parameters": [
+          {
+            "description": "Poll ID (UUIDv7)",
+            "in": "path",
+            "name": "voteId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Poll": {
+                    "description": "Poll",
+                    "value": {
+                      "data": {
+                        "creatorActive": true,
+                        "creatorEmail": "alice@example.com",
+                        "deletedAt": null,
+                        "vote": {
+                          "active": true,
+                          "allowMultipleChoices": false,
+                          "anonymous": false,
+                          "audience": "PUBLIC",
+                          "commentCount": 7,
+                          "createdAt": "2026-10-09T15:20:31+08:00",
+                          "creatorAvatarUrl": "bot:boba",
+                          "creatorId": "0199f2a1-1b4c-7e02-8a9d-6c3f0d2e5b71",
+                          "creatorUsername": "alice",
+                          "deadline": "2026-10-19T09:00:00+08:00",
+                          "deletable": null,
+                          "description": null,
+                          "endTime": "2026-10-19T09:00:00+08:00",
+                          "id": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+                          "inviteeCount": null,
+                          "myBallotAnonymous": null,
+                          "myOptionId": null,
+                          "options": [
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 0,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
+                              "text": "Java",
+                              "votes": null
+                            },
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 1,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f814",
+                              "text": "Go",
+                              "votes": null
+                            }
+                          ],
+                          "participantCount": 42,
+                          "startTime": "2026-10-12T09:00:00+08:00",
+                          "tags": [],
+                          "title": "Which language should we use for the next side project?",
+                          "totalVotes": 42,
+                          "unread": null,
+                          "updatedAt": "2026-10-09T15:20:31+08:00",
+                          "voterVisibility": "OWNER",
+                          "votingActive": true
+                        }
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminVoteResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VoteNotFound": {
+                    "description": "VoteNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "Vote not found",
+                      "errorCode": "vote.not_found",
+                      "message": "Vote not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Poll not found (`vote.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Get Poll",
+        "tags": [
+          "Admin - Poll"
+        ]
+      }
+    },
+    "/api/admin/votes/{voteId}/close": {
+      "put": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the Poll exists, is not Deleted, and is Open with Audience UNLISTED or INVITE_ONLY, the same rules as the owner's Close (to take down a Public or Scheduled Poll, Delete it)\n**Behavior**: Closes the Poll for its owner: it Ends now and keeps its Deadline. An Ended Poll is left as is (idempotent). Returns the Poll, whose results are now unsealed\n**Side effects**: Participants see the Poll Ended in their notifications. Written to the audit log\n**Errors**:\n- 400 `common.type_mismatch`: `voteId` is not a valid UUID\n- 400 `vote.close.public_not_allowed`: the Poll is Public\n- 400 `vote.close.scheduled`: the Poll is Scheduled\n- 404 `vote.not_found`: no Poll with this ID, or the Poll is Deleted (Restore it first)\n- 409 `common.conflict`: the Poll is busy (a Ballot or another change holds it); retry",
+        "operationId": "closeVote",
+        "parameters": [
+          {
+            "description": "Poll ID (UUIDv7)",
+            "in": "path",
+            "name": "voteId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Closed": {
+                    "description": "Closed",
+                    "value": {
+                      "data": {
+                        "creatorActive": true,
+                        "creatorEmail": "alice@example.com",
+                        "deletedAt": null,
+                        "vote": {
+                          "active": true,
+                          "allowMultipleChoices": false,
+                          "anonymous": false,
+                          "audience": "PUBLIC",
+                          "commentCount": 7,
+                          "createdAt": "2026-10-09T15:20:31+08:00",
+                          "creatorAvatarUrl": "bot:boba",
+                          "creatorId": "0199f2a1-1b4c-7e02-8a9d-6c3f0d2e5b71",
+                          "creatorUsername": "alice",
+                          "deadline": "2026-10-19T09:00:00+08:00",
+                          "deletable": null,
+                          "description": null,
+                          "endTime": "2026-10-19T09:00:00+08:00",
+                          "id": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+                          "inviteeCount": null,
+                          "myBallotAnonymous": null,
+                          "myOptionId": null,
+                          "options": [
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 0,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
+                              "text": "Java",
+                              "votes": null
+                            },
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 1,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f814",
+                              "text": "Go",
+                              "votes": null
+                            }
+                          ],
+                          "participantCount": 42,
+                          "startTime": "2026-10-12T09:00:00+08:00",
+                          "tags": [],
+                          "title": "Which language should we use for the next side project?",
+                          "totalVotes": 42,
+                          "unread": null,
+                          "updatedAt": "2026-10-09T15:20:31+08:00",
+                          "voterVisibility": "OWNER",
+                          "votingActive": true
+                        }
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminVoteResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VoteNotFound": {
+                    "description": "VoteNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "Vote not found",
+                      "errorCode": "vote.not_found",
+                      "message": "Vote not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Poll not found (`vote.not_found`)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Conflict": {
+                    "description": "Conflict",
+                    "value": {
+                      "data": null,
+                      "error": "Resource conflict, please try again",
+                      "errorCode": "common.conflict",
+                      "message": "Resource conflict, please try again",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Poll busy (`common.conflict`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Close Poll",
+        "tags": [
+          "Admin - Poll"
+        ]
+      }
+    },
+    "/api/admin/votes/{voteId}/restore": {
+      "patch": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the Poll exists\n**Behavior**: undoes a Delete by clearing `deletedAt`; a Poll that is not Deleted is left as is (idempotent). Its times are unchanged, so it comes back in whatever status they give. Returns the Poll\n**Side effects**: the Poll is visible again to everyone who could reach it before, and its tags count it again. Written to the audit log\n**Errors**:\n- 400 `common.type_mismatch`: `voteId` is not a valid UUID\n- 404 `vote.not_found`: no Poll with this ID\n- 409 `common.conflict`: the Poll is busy; retry",
+        "operationId": "restoreVote",
+        "parameters": [
+          {
+            "description": "Poll ID (UUIDv7)",
+            "in": "path",
+            "name": "voteId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Restored": {
+                    "description": "Restored",
+                    "value": {
+                      "data": {
+                        "creatorActive": true,
+                        "creatorEmail": "alice@example.com",
+                        "deletedAt": null,
+                        "vote": {
+                          "active": true,
+                          "allowMultipleChoices": false,
+                          "anonymous": false,
+                          "audience": "PUBLIC",
+                          "commentCount": 7,
+                          "createdAt": "2026-10-09T15:20:31+08:00",
+                          "creatorAvatarUrl": "bot:boba",
+                          "creatorId": "0199f2a1-1b4c-7e02-8a9d-6c3f0d2e5b71",
+                          "creatorUsername": "alice",
+                          "deadline": "2026-10-19T09:00:00+08:00",
+                          "deletable": null,
+                          "description": null,
+                          "endTime": "2026-10-19T09:00:00+08:00",
+                          "id": "0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
+                          "inviteeCount": null,
+                          "myBallotAnonymous": null,
+                          "myOptionId": null,
+                          "options": [
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 0,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
+                              "text": "Java",
+                              "votes": null
+                            },
+                            {
+                              "createdAt": "2026-10-09T15:20:31+08:00",
+                              "description": null,
+                              "displayOrder": 1,
+                              "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f814",
+                              "text": "Go",
+                              "votes": null
+                            }
+                          ],
+                          "participantCount": 42,
+                          "startTime": "2026-10-12T09:00:00+08:00",
+                          "tags": [],
+                          "title": "Which language should we use for the next side project?",
+                          "totalVotes": 42,
+                          "unread": null,
+                          "updatedAt": "2026-10-09T15:20:31+08:00",
+                          "voterVisibility": "OWNER",
+                          "votingActive": true
+                        }
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAdminVoteResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VoteNotFound": {
+                    "description": "VoteNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "Vote not found",
+                      "errorCode": "vote.not_found",
+                      "message": "Vote not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Poll not found (`vote.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Restore Poll",
+        "tags": [
+          "Admin - Poll"
         ]
       }
     },
@@ -7413,7 +10443,7 @@
     },
     "/api/users/{userId}": {
       "delete": {
-        "description": "**Auth**: required (own account; an admin may delete any account)\n**Precondition**: `userId` is the caller's own id, or the caller has the admin role\n**Behavior**: permanently deletes the account. The user's Ballots are removed and released from the stored option counts (this is a Retraction of every Ballot the user held).\n**Side effects**: all refresh tokens of the user are revoked, so the client must discard its tokens and sign out; the deletion is written to the audit log\n**Errors**:\n- 403 `user.delete.forbidden`: deleting another user's account without the admin role\n- 404 `user.not_found`: no account with this id\n- 400 `common.bad_request`: `userId` is not a valid id (admin callers only; other callers get 403 first)",
+        "description": "**Auth**: required (own account; an active admin may delete any account)\n**Precondition**: `userId` is the caller's own id, or the caller is an active admin in the database\n**Behavior**: permanently deletes the account. The user's Ballots are removed and released from the stored option counts (this is a Retraction of every Ballot the user held).\n**Side effects**: once the deletion commits, all refresh tokens of the user are revoked, so the client must discard its tokens and sign out; the deletion is written to the audit log\n**Errors**:\n- 403 `user.delete.forbidden`: deleting another user's account without being an active admin (checked against the database, not the token)\n- 409 `admin.last_admin`: the account is the only active admin\n- 409 `common.conflict`: another admin change is in progress; retry\n- 404 `user.not_found`: no account with this id\n- 400 `common.bad_request`: `userId` is not a valid id (admin callers only; other callers get 403 first)",
         "operationId": "deleteUser",
         "parameters": [
           {
@@ -11303,11 +14333,11 @@
   "servers": [
     {
       "description": "Development",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "http://localhost:8080"
     },
     {
       "description": "Production",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "https://api.example.com"
     }
   ],
   "tags": [
@@ -11316,24 +14346,12 @@
       "name": "Admin - Lookup"
     },
     {
-      "description": "Public tag APIs",
-      "name": "Tag"
-    },
-    {
-      "description": "Comments and Replies on a Poll (path segment `votes` = Poll)",
-      "name": "Vote Comment"
-    },
-    {
       "description": "Dictionary lookup APIs",
       "name": "Lookup"
     },
     {
       "description": "User management APIs",
       "name": "User"
-    },
-    {
-      "description": "Invitations and Ended Notifications, derived when read (no push). The list itself is `GET /api/votes/my` (Invitations on `status=open`, Ended Notifications on `status=ended`), whose items carry `unread`",
-      "name": "Notification"
     },
     {
       "description": "Admin-only tag management APIs",
@@ -11350,6 +14368,34 @@
     {
       "description": "Poll APIs: create, edit, Close, cast / retract a Ballot, results, Participants, Feed / Explore / Search listing",
       "name": "Vote"
+    },
+    {
+      "description": "Comment moderation APIs (Admin)",
+      "name": "Admin - Comment"
+    },
+    {
+      "description": "Account moderation APIs (Admin)",
+      "name": "Admin - User"
+    },
+    {
+      "description": "Public tag APIs",
+      "name": "Tag"
+    },
+    {
+      "description": "Comments and Replies on a Poll (path segment `votes` = Poll)",
+      "name": "Vote Comment"
+    },
+    {
+      "description": "Invitations and Ended Notifications, derived when read (no push). The list itself is `GET /api/votes/my` (Invitations on `status=open`, Ended Notifications on `status=ended`), whose items carry `unread`",
+      "name": "Notification"
+    },
+    {
+      "description": "Poll moderation APIs (Admin)",
+      "name": "Admin - Poll"
+    },
+    {
+      "description": "Dashboard and audit log APIs (Admin)",
+      "name": "Admin - Overview"
     }
   ]
 }

@@ -1,0 +1,77 @@
+# Runs when vomatt-api's contract (docs/frontend/openapi.json) changes on main:
+# Claude syncs the contract, adds the matching app features, cleans them up,
+# reviews them and opens a PR. Triggered by vomatt-api's notify-ios-contract workflow.
+name: Sync API contract
+
+on:
+  repository_dispatch:
+    types: [api-contract-updated]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: vomatt-api commit to sync against (default main)
+        required: false
+
+concurrency:
+  group: sync-api-contract
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  sync:
+    # Same toolchain as ios.yml (Xcode 26 or later)
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      API_SHA: ${{ github.event.client_payload.sha || inputs.sha || 'main' }}
+      API_BEFORE: ${{ github.event.client_payload.before || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # docs/api-sync.md and the prompt read the contract from ../vomatt-api
+      - uses: actions/checkout@v4
+        with:
+          repository: vomatt/vomatt-api
+          ref: ${{ env.API_SHA }}
+          path: .vomatt-api
+          fetch-depth: 0
+          token: ${{ secrets.API_READ_TOKEN || github.token }}
+      # Keep the checkout out of `git status` and commits
+      - run: |
+          ln -s "$GITHUB_WORKSPACE/.vomatt-api" "$GITHUB_WORKSPACE/../vomatt-api"
+          echo /.vomatt-api/ >> .git/info/exclude
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+      - run: brew install xcodegen
+      - name: Pick a simulator
+        run: echo "SIM=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone [0-9]+[^()]*' | sed 's/ *$//')" >> "$GITHUB_ENV"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --max-turns 200
+          prompt: |
+            vomatt-api changed its API contract. The new contract is ../vomatt-api/docs/frontend/openapi.json
+            at commit ${{ env.API_SHA }} (previous main: "${{ env.API_BEFORE }}").
+
+            1. Find what changed for this app: run
+               `scripts/sync.sh api --file ../vomatt-api/docs/frontend/openapi.json`, then read
+               `git -C ../vomatt-api diff ${{ env.API_BEFORE }} ${{ env.API_SHA }} -- docs/frontend/CHANGELOG.md`
+               (if the previous commit is empty or unknown, read the newest CHANGELOG.md entries and compare them
+               with Packages/VomattKit/Sources/VomattCore). Behavior changes described only in the CHANGELOG count.
+            2. If `git status` shows no change and the CHANGELOG has nothing the app is missing, stop without
+               creating a branch or PR.
+            3. Otherwise create a branch `sync/api-$(git -C ../vomatt-api rev-parse --short HEAD)` and update the app,
+               views and tests included, as docs/api-sync.md and CLAUDE.md describe.
+            4. Run the /simplify skill on your changes, then the /code-review skill, and fix what they find.
+            5. `make test-core` and `make build SIMULATOR="${{ env.SIM }}"` must pass.
+            6. Commit (short imperative English subject, like the git log), push, and open a PR against main
+               with `gh pr create` describing the contract changes covered.
+        env:
+          # A PR opened with github.token does not trigger ios.yml
+          GH_TOKEN: ${{ secrets.SYNC_PR_TOKEN || github.token }}

@@ -217,7 +217,7 @@ public final class VomattService: Sendable {
         _ = try await retryingWhenBusy { try await client.retract(path: .init(voteId: pollId)).ok }
     }
 
-    /// A busy Poll (409) recorded nothing; the API asks for one retry.
+    /// A busy write (409) recorded nothing; the API asks for one retry.
     private func retryingWhenBusy<T>(_ request: () async throws -> T) async throws -> T {
         do {
             return try await call(request)
@@ -441,7 +441,7 @@ public final class VomattService: Sendable {
     /// Permanently deletes the signed-in user's account; the backend revokes every session.
     public func deleteMyAccount() async throws {
         let id = try await myProfile().id
-        _ = try await call { try await client.deleteUser(path: .init(userId: id)).ok }
+        _ = try await retryingWhenBusy { try await client.deleteUser(path: .init(userId: id)).ok }
         await session.signOut()
     }
 
