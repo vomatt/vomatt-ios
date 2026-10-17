@@ -187,6 +187,19 @@ struct ServiceTests {
         #expect(transport.requests.count == 2)
     }
 
+    // vomatt-api #50: 409 common.conflict on account deletion means nothing was deleted; retry once
+    @Test func aBusyAccountDeletionIsRetriedOnce() async throws {
+        let counter = Counter()
+        let transport = StubTransport { request, _ in
+            if request.method == .get { return (200, envelope(#"{"id":"u1","username":"alice"}"#), [:]) }
+            await counter.increment()
+            return await counter.value == 1 ? (409, failure("common.conflict"), [:]) : (200, envelope("null"), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.deleteMyAccount()
+        #expect(transport.requests.map(\.method) == [.get, .delete, .delete])
+    }
+
     @Test func profileCarriesTheBallotDefault() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }

@@ -2,6 +2,7 @@
 # Pulls what the iOS app shares with vomatt-web into this repo.
 #
 #   scripts/sync.sh api [--url https://api.example.com]   OpenAPI contract (prints a diff first)
+#   scripts/sync.sh api --file path/to/openapi.json       the contract from a file (e.g. vomatt-api's docs/frontend/openapi.json)
 #   scripts/sync.sh locales                               en/zh strings
 #   scripts/sync.sh tokens                                color tokens -> asset catalog + Swift
 #   scripts/sync.sh avatars                               the bot avatar SVGs
@@ -30,8 +31,12 @@ sync_api() {
 		source="${2:?--url needs the API origin}/v3/api-docs"
 		curl -fsSL "$source" -o "$tmp"
 	else
-		require_web
-		source="$WEB_DIR/api-docs.json"
+		if [[ "${1:-}" == "--file" ]]; then
+			source="${2:?--file needs a path}"
+		else
+			require_web
+			source="$WEB_DIR/api-docs.json"
+		fi
 		cp "$source" "$tmp"
 	fi
 	# Stable formatting keeps the git diff readable
@@ -101,5 +106,5 @@ case "${1:-}" in
 	avatars) sync_avatars ;;
 	all) sync_api; sync_locales; sync_tokens; sync_avatars ;;
 	check) check ;;
-	*) sed -n '2,12p' "$0"; exit 1 ;;
+	*) sed -n '2,13p' "$0"; exit 1 ;;
 esac
