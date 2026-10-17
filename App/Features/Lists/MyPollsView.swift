@@ -25,11 +25,11 @@ struct MyPollsView: View {
                     Button { app.push(.notifications) } label: {
                         Image(systemName: "bell")
                             .overlay(alignment: .topTrailing) {
-                                if app.unreadCount > 0 { UnreadDot(label: "\(app.unreadCount)").offset(x: 4, y: -2) }
+                                if let badge = app.unreadBadge { UnreadDot(label: badge).offset(x: 4, y: -2) }
                             }
                     }
                     .accessibilityLabel(app.t("common.notifications"))
-                    .accessibilityValue(app.unreadCount > 0 ? "\(app.unreadCount) \(app.t("notifications.unread"))" : "")
+                    .accessibilityValue(app.unreadBadge.map { "\($0) \(app.t("notifications.unread"))" } ?? "")
                 }
             }
         }

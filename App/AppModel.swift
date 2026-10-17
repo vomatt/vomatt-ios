@@ -83,6 +83,8 @@ final class AppModel {
     private(set) var userId: String?
     private(set) var me: MyProfile?
     private(set) var unreadCount = 0
+    /// The unread count as shown on badges, nil when there is nothing unread.
+    var unreadBadge: String? { unreadCount > 0 ? formatUnreadCount(unreadCount) : nil }
     /// Bumped on every sign-in and sign-out, so lists reload with the viewer's Ballots.
     private(set) var sessionGeneration = 0
 

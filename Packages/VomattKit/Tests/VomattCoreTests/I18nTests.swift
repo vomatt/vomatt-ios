@@ -97,3 +97,10 @@ struct AuthErrorKeyTests {
         #expect(AuthErrorKey.codeExpired.translationKey == "authError.codeExpired")
     }
 }
+
+// Cases ported from vomatt-web's UnreadCount.test.tsx (formatUnreadCount)
+@Suite("Unread count")
+struct UnreadCountTests {
+    @Test func theAPICapReadsAs99Plus() { #expect(formatUnreadCount(100) == "99+") }
+    @Test func countsBelowTheCapAreExact() { #expect(formatUnreadCount(99) == "99") }
+}

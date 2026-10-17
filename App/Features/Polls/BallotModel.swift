@@ -11,6 +11,8 @@ final class BallotModel {
     private(set) var pollId: String
     private(set) var myOptionId: String?
     var selected: String?
+    /// nil while there is no Ballot, or while it is not known whether it is Anonymous.
+    private(set) var anonymous: Bool?
     private(set) var turnout: Int?
     private(set) var isPending = false
 
@@ -18,22 +20,31 @@ final class BallotModel {
         pollId = poll.id
         myOptionId = poll.myOptionId
         selected = poll.myOptionId
+        anonymous = poll.myBallotAnonymous
         turnout = poll.turnout
     }
 
     /// A refetched Poll carries fresh counts and the viewer's Ballot.
     func sync(_ poll: Poll) {
         guard !isPending else { return }
+        // Keep an option the voter selected but hasn't submitted unless the Ballot itself changed
+        let ballotChanged = poll.myOptionId != myOptionId
         pollId = poll.id
         myOptionId = poll.myOptionId
-        if selected == nil || poll.myOptionId != nil { selected = poll.myOptionId }
+        if selected == nil || (ballotChanged && poll.myOptionId != nil) { selected = poll.myOptionId }
+        anonymous = poll.myBallotAnonymous
         turnout = poll.turnout
     }
 
-    /// Casts a first Ballot or replaces the current one.
-    func cast(_ optionId: String, app: AppModel, onPollChanged: (Poll) -> Void, onPollEnded: () async -> Void) async -> Outcome {
-        await run(next: optionId, failure: "poll.voteFailed", app: app, onPollEnded: onPollEnded) {
-            let poll = try await app.service.castBallot(pollId: pollId, optionId: optionId)
+    /// Casts a first Ballot or replaces the current one. Recasting the current option with
+    /// `anonymous` adds the Ballot to, or drops it from, the voter list.
+    func cast(
+        _ optionId: String, anonymous: Bool? = nil, app: AppModel,
+        onPollChanged: (Poll) -> Void, onPollEnded: () async -> Void
+    ) async -> Outcome {
+        await run(next: optionId, nextAnonymous: anonymous, failure: "poll.voteFailed", app: app, onPollEnded: onPollEnded) {
+            let poll = try await app.service.castBallot(pollId: pollId, optionId: optionId, anonymous: anonymous)
+            self.anonymous = poll.myBallotAnonymous
             onPollChanged(poll)
         }
     }
@@ -48,14 +59,18 @@ final class BallotModel {
     }
 
     private func run(
-        next: String?, failure: String, app: AppModel, onPollEnded: () async -> Void,
+        next: String?, nextAnonymous: Bool? = nil, failure: String, app: AppModel, onPollEnded: () async -> Void,
         request: () async throws -> Void
     ) async -> Outcome {
         let previous = myOptionId
+        let previousAnonymous = anonymous
         let delta = (next == nil ? 0 : 1) - (previous == nil ? 0 : 1)
+        // An anonymity recast keeps an option the voter selected but hasn't submitted
+        let keepsSelection = nextAnonymous != nil
         isPending = true
         myOptionId = next
-        selected = next
+        if !keepsSelection { selected = next }
+        if let nextAnonymous { anonymous = nextAnonymous }
         turnout = shiftCount(turnout, by: delta)
         do {
             try await request()
@@ -64,7 +79,8 @@ final class BallotModel {
         } catch {
             isPending = false
             myOptionId = previous
-            selected = previous
+            if !keepsSelection { selected = previous }
+            anonymous = previousAnonymous
             turnout = shiftCount(turnout, by: -delta)
             let apiError = error as? APIError
             if apiError?.isPollEnded == true {
@@ -76,7 +92,9 @@ final class BallotModel {
                 app.signIn()
                 return .failed
             }
-            app.showToast(app.t(apiError?.isRateLimited == true ? "poll.tooManyVotes" : failure), isError: true)
+            // Still busy after the service's retry: the API's own (localized) message asks to try again
+            let busyMessage = apiError?.isBusy == true ? apiError?.message : nil
+            app.showToast(busyMessage ?? app.t(apiError?.isRateLimited == true ? "poll.tooManyVotes" : failure), isError: true)
             return .failed
         }
     }

@@ -88,6 +88,13 @@ struct PollHelperTests {
         #expect(!poll(visibility: .owner).canSeeVoters(viewerId: "x"))
         #expect(!poll(visibility: .nobody).canSeeVoters(viewerId: "owner"))
     }
+
+    // vomatt-web's Ballot: no anonymity switch on Polls whose voters nobody can see
+    @Test func anonymityOnlyWhereSomeoneSeesVoters() {
+        #expect(!poll(visibility: .nobody).allowsAnonymousBallot)
+        #expect(poll(visibility: .owner).allowsAnonymousBallot)
+        #expect(poll(visibility: .signedIn).allowsAnonymousBallot)
+    }
 }
 
 @Suite("Results")

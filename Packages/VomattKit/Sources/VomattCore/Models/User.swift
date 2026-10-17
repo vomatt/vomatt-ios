@@ -46,11 +46,14 @@ public struct MyProfile: Hashable, Sendable {
     public var totalPolls: Int
     public var totalVotes: Int
     public var visibilitySettings: [String: Bool]
+    /// Whether a first Ballot is Anonymous unless the voter says otherwise.
+    public var anonymousBallotByDefault: Bool
 
     public init(
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
         avatarUrl: String? = nil, location: String? = nil, points: Int = 0, membershipLevel: String? = nil,
-        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, visibilitySettings: [String: Bool] = [:]
+        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, visibilitySettings: [String: Bool] = [:],
+        anonymousBallotByDefault: Bool = false
     ) {
         self.id = id
         self.username = username
@@ -65,6 +68,7 @@ public struct MyProfile: Hashable, Sendable {
         self.totalPolls = totalPolls
         self.totalVotes = totalVotes
         self.visibilitySettings = visibilitySettings
+        self.anonymousBallotByDefault = anonymousBallotByDefault
     }
 
     /// The profile as visitors see it, honoring the owner's visibility switches.

@@ -72,7 +72,7 @@ struct RootView: View {
             Tab(app.t(AppTab.myPolls.titleKey), systemImage: AppTab.myPolls.icon, value: SystemTab.app(.myPolls)) {
                 tab(.myPolls) { MyPollsView() }
             }
-            .badge(app.unreadCount)
+            .badge(app.unreadBadge.map(Text.init))
             Tab(app.t(AppTab.account.titleKey), systemImage: AppTab.account.icon, value: SystemTab.app(.account)) {
                 tab(.account) { AccountTab() }
             }
@@ -171,7 +171,7 @@ struct VMTabBar: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
             .accessibilityLabel(app.t("common.createPoll"))
-            item(.myPolls, badge: app.unreadCount)
+            item(.myPolls, badge: app.unreadBadge)
             item(.account)
         }
         .frame(height: 64)
@@ -179,7 +179,7 @@ struct VMTabBar: View {
         .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
     }
 
-    private func item(_ tab: AppTab, badge: Int = 0) -> some View {
+    private func item(_ tab: AppTab, badge: String? = nil) -> some View {
         let isActive = app.selectedTab == tab
         return Button { app.select(tab) } label: {
             Image(systemName: isActive ? tab.activeIcon : tab.icon)
@@ -190,14 +190,14 @@ struct VMTabBar: View {
                     if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
                 }
                 .overlay(alignment: .topTrailing) {
-                    if badge > 0 { UnreadDot(label: "\(badge)").offset(x: -6, y: 8) }
+                    if let badge { UnreadDot(label: badge).offset(x: -6, y: 8) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(app.t(tab.titleKey))
-        .accessibilityValue(badge > 0 ? "\(badge) \(app.t("notifications.unread"))" : "")
+        .accessibilityValue(badge.map { "\($0) \(app.t("notifications.unread"))" } ?? "")
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 }

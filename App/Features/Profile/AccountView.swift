@@ -117,6 +117,13 @@ private struct AccountSettings: View {
     @Environment(AppModel.self) private var app
     let profile: MyProfile
     @State private var confirmingSignOut = false
+    /// The last Ballot default the server confirmed; quick toggles can answer out of order.
+    @State private var savedAnonymousDefault: Bool
+
+    init(profile: MyProfile) {
+        self.profile = profile
+        _savedAnonymousDefault = State(initialValue: profile.anonymousBallotByDefault)
+    }
 
     /// Profile fields other people can see, in the order shown.
     private let fields = ["displayName", "bio", "location", "points", "membershipLevel"]
@@ -145,6 +152,18 @@ private struct AccountSettings: View {
                 }
                 .card(padding: nil)
             }
+
+            Toggle(isOn: Binding(
+                get: { profile.anonymousBallotByDefault },
+                set: { value in Task { await toggleAnonymousDefault(value) } }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(app.t("account.anonymousDefault")).font(.vm(15, .medium))
+                    Text(app.t("account.anonymousDefaultBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            .tint(Tokens.primary)
+            .card()
 
             if !app.blocked.isEmpty { blockedSection }
 
@@ -185,6 +204,19 @@ private struct AccountSettings: View {
                 }
             }
             .card(padding: nil)
+        }
+    }
+
+    private func toggleAnonymousDefault(_ value: Bool) async {
+        app.updateMe { $0.anonymousBallotByDefault = value }
+        do {
+            try await app.service.updateProfile(anonymousBallotByDefault: value)
+            savedAnonymousDefault = value
+        } catch {
+            app.updateMe { $0.anonymousBallotByDefault = savedAnonymousDefault }
+            // Only the API's answers carry a localized message; network and decoding failures don't
+            let apiMessage = (error as? APIError).flatMap { $0.status != nil ? $0.message : nil }
+            app.showToast(apiMessage ?? app.t("account.saveFailed"), isError: true)
         }
     }
 

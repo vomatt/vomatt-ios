@@ -29,6 +29,15 @@ struct BallotView: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel(poll.title)
 
+            if hasBallot, let anonymous = ballot.anonymous, poll.allowsAnonymousBallot {
+                Toggle(app.t("poll.anonymousToggle"), isOn: Binding(get: { anonymous }, set: { value in setAnonymous(value) }))
+                    .font(.vmMeta)
+                    .foregroundStyle(Tokens.mutedForeground)
+                    .tint(Tokens.primary)
+                    .frame(minHeight: 44)
+                    .disabled(ballot.isPending)
+            }
+
             if !hasBallot, !isScheduled, let visibilityHint {
                 Text(visibilityHint).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
             }
@@ -168,6 +177,14 @@ struct BallotView: View {
                 if outcome == .saved { app.showToast(app.t("poll.voteCast")) }
                 if outcome == .failed { shake += 1 }
             }
+        }
+    }
+
+    private func setAnonymous(_ value: Bool) {
+        Task {
+            guard let optionId = ballot.myOptionId else { return }
+            let outcome = await ballot.cast(optionId, anonymous: value, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
+            if outcome == .failed { shake += 1 }
         }
     }
 
