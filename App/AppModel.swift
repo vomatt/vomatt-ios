@@ -193,6 +193,11 @@ final class AppModel {
         toast = Toast(text: text, isError: isError)
     }
 
+    /// Tapping the current tab goes back to its root, like UITabBar.
+    func select(_ tab: AppTab) {
+        if tab == selectedTab { paths[tab] = NavigationPath() } else { selectedTab = tab }
+    }
+
     func push(_ route: Route) {
         paths[selectedTab, default: NavigationPath()].append(route)
     }

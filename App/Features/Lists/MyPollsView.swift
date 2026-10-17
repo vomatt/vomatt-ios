@@ -66,11 +66,14 @@ struct MyPollsView: View {
     }
 
     @ViewBuilder private func pollList(_ list: CursorList<Poll>?) -> some View {
-        if let list {
+        // Before the first page (no list yet, or `.idle`) is loading too, not empty
+        if list == nil || list?.phase == .idle || list?.phase == .loading {
+            VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
+        } else if let list, list.phase == .failed {
+            LoadFailed(message: app.t("explore.loadFailed")) { await list.reload() }
+        } else if let list {
             let polls = app.visible(list.items)
-            if list.phase == .loading {
-                VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in Skeleton(height: 88, radius: Radius.xl) } }
-            } else if polls.isEmpty {
+            if polls.isEmpty {
                 EmptyState { Text(app.t("myPolls.empty")).frame(maxWidth: .infinity) }
             } else {
                 LazyVStack(spacing: 8) {

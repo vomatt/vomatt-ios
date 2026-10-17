@@ -62,11 +62,12 @@ private struct AuthErrorText: View {
     let error: AuthErrorKey?
     var body: some View {
         if let error {
-            Text(app.t(error.translationKey))
+            Label(app.t(error.translationKey), systemImage: "exclamationmark.circle")
                 .font(.vmMeta)
                 .foregroundStyle(Tokens.destructive)
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .accessibilityAddTraits(.isStaticText)
+                .task(id: error) { AccessibilityNotification.Announcement(app.t(error.translationKey)).post() }
         }
     }
 }
@@ -128,6 +129,9 @@ private struct CodeStep: View {
     @State private var isVerifying = false
     @State private var cooldown = resendCooldown
     @State private var resent = false
+    /// The server discarded the code (expired or too many tries): only a new one can succeed.
+    /// Kept apart from `error`, so a failed resend doesn't unlock the field.
+    @State private var isCodeDead = false
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -148,16 +152,17 @@ private struct CodeStep: View {
             codeField.padding(.bottom, 8)
             AuthErrorText(error: error).padding(.bottom, 16)
 
-            LoadingButton(style: .vm(.default, fullWidth: true), action: { await verify() }) {
+            LoadingButton(style: .vm(.default, fullWidth: true), isLoading: isVerifying, action: { await verify() }) {
                 Text(app.t("common.continue"))
             }
-            .disabled(code.count != codeLength || isVerifying)
+            .disabled(code.count != codeLength)
             .padding(.bottom, 12)
             Button(app.t("verificationCode.useAnotherEmail"), action: onEditEmail)
                 .buttonStyle(.vm(.outline, fullWidth: true))
                 .padding(.bottom, 32)
 
-            if cooldown > 0 {
+            // A dead code has no server-side cooldown left, so a new one can be requested right away
+            if cooldown > 0 && !isCodeDead {
                 Text(app.t("verificationCode.resendIn", ["time": countdown]))
                     .font(.vm(14)).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
             } else {
@@ -170,6 +175,7 @@ private struct CodeStep: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: error)
+        .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
         .task(id: cooldown) {
             guard cooldown > 0 else { return }
             try? await Task.sleep(for: .seconds(1))
@@ -190,7 +196,8 @@ private struct CodeStep: View {
                 .onChange(of: code) { _, value in
                     let digits = String(value.filter(\.isNumber).prefix(codeLength))
                     if digits != value { code = digits }
-                    if error != nil { error = nil }
+                    // Clearing the field after a failed attempt must not hide the error; typing again does
+                    if error != nil, !digits.isEmpty { error = nil }
                     if digits.count == codeLength { Task { await verify() } }
                 }
             HStack(spacing: 8) {
@@ -203,7 +210,9 @@ private struct CodeStep: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { isFocused = true }
-        .disabled(isVerifying)
+        // Not disabled while verifying, so focus (and the keyboard) survives a wrong code.
+        // A dead code needs a new one: resend or another email.
+        .disabled(isCodeDead)
     }
 
     private func slots(_ range: Range<Int>) -> some View {
@@ -233,12 +242,22 @@ private struct CodeStep: View {
         isVerifying = true
         defer { isVerifying = false }
         error = nil
+        let submitted = code
         do {
-            try await app.service.verifyOtp(email: email, code: code)
+            try await app.service.verifyOtp(email: email, code: submitted)
+            // The field keeps focus while verifying; drop the number pad before the next step appears
+            isFocused = false
             onVerified()
         } catch {
-            self.error = AuthErrorKey(error)
-            code = ""
+            let key = AuthErrorKey(error)
+            self.error = key
+            isCodeDead = key == .codeExpired || key == .tooManyAttempts
+            if code == submitted || isCodeDead {
+                code = ""
+            } else if code.count == codeLength {
+                // A code typed or pasted while this one was checked: send it once this check is over
+                Task { await verify() }
+            }
         }
     }
 
@@ -248,6 +267,7 @@ private struct CodeStep: View {
         do {
             _ = try await app.service.requestOtp(email: email)
             resent = true
+            isCodeDead = false
             code = ""
             cooldown = resendCooldown
         } catch {

@@ -102,6 +102,38 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Log in or sign up for Vomatt"].waitForExistence(timeout: 10))
     }
 
+    /// A wrong code stays explained and keeps the keyboard; the 5th locks the code until a new one is sent.
+    func testWrongCodeStaysVisibleThenLocks() throws {
+        let email = "ios-wrong-\(Int(Date().timeIntervalSince1970))@example.com"
+        XCTAssertTrue(app.buttons["Create a poll"].waitForExistence(timeout: 10))
+        app.buttons["Create a poll"].tap()
+        app.textFields["Email"].tap()
+        app.typeText(email)
+        app.buttons["Continue with email"].tap()
+        XCTAssertTrue(app.staticTexts["Check your email"].waitForExistence(timeout: 10))
+        let wrong = try code(for: email) == "000000" ? "111111" : "000000"
+
+        app.typeText(wrong)
+        let invalid = app.staticTexts["That code is not right. Check the email and try again."]
+        XCTAssertTrue(invalid.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertTrue(invalid.exists, "the error should not flash away")
+        XCTAssertTrue(app.keyboards.firstMatch.exists, "the keyboard should stay up to retry")
+
+        for _ in 2...5 {
+            app.typeText(wrong)
+            _ = invalid.waitForExistence(timeout: 5)
+        }
+        XCTAssertTrue(app.staticTexts["Too many wrong attempts. Request a new code."].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.textFields["6-digit verification code"].isEnabled)
+        snapshot("e2e-wrong-code-locked")
+
+        // A dead code can be replaced at once, which unlocks the field
+        app.buttons["Resend verification code"].tap()
+        XCTAssertTrue(app.staticTexts["A new code is on its way."].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["6-digit verification code"].isEnabled)
+    }
+
     /// The access token lives 120s on the test API; a request after the refresh leeway rotates it once.
     func testSessionSurvivesTokenRefresh() throws {
         let email = "ios-refresh-\(Int(Date().timeIntervalSince1970))@example.com"

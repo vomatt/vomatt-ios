@@ -96,6 +96,18 @@ Tokens live in the Keychain (this device only). The backend rotates the refresh 
 every session when a used one comes back, so `Session` refreshes single-flight and saves the new pair
 before anyone uses it, like the web's proxy.
 
+### Liquid Glass
+
+`DESIGN.md` rules out glass and backdrop blur. iOS makes one exception: on iOS 26 and later the
+**system chrome** (the tab bar and navigation bars) uses the platform's Liquid Glass, because that is
+how native chrome looks and Apple handles Reduce Transparency, contrast and dark mode for it.
+
+- `RootView` uses the system `TabView`, which floats and shrinks while scrolling down. Create is a
+  tab that opens the creator instead of being selected.
+- iOS 17–25 keep the flat `VMTabBar` from the web's `TabBar`.
+- Content stays flat: no `.glassEffect()`, materials or blur on cards, sheets or the creator's
+  bottom bar, and no custom toolbar backgrounds.
+
 ## Keeping up with the API
 
 See [docs/api-sync.md](docs/api-sync.md). In short: `scripts/sync.sh api` prints what changed in the

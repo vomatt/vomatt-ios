@@ -99,29 +99,39 @@ struct EmptyState<Content: View>: View {
 
 /// A loading placeholder with the web's shimmer, still under Reduce Motion.
 struct Skeleton: View {
-    var height: CGFloat = 16
+    /// nil fills the proposed height, e.g. as an overlay on hidden text.
+    var height: CGFloat? = 16
     var width: CGFloat? = nil
     var radius: CGFloat = Radius.md
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = -1
+    /// false when a parent runs one shimmer over several bars (`PollRowSkeleton`).
+    var shimmers = true
 
     var body: some View {
         RoundedRectangle(cornerRadius: radius)
             .fill(Tokens.muted)
             .frame(width: width, height: height)
             .overlay {
-                if !reduceMotion {
-                    GeometryReader { proxy in
-                        LinearGradient(colors: [.clear, Tokens.foreground.opacity(0.06), .clear], startPoint: .leading, endPoint: .trailing)
-                            .offset(x: phase * proxy.size.width)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: radius))
-                }
+                if shimmers { Shimmer().clipShape(RoundedRectangle(cornerRadius: radius)) }
+            }
+            .accessibilityHidden(true)
+    }
+}
+
+/// The light sweep across a `Skeleton`; nothing under Reduce Motion.
+private struct Shimmer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var phase: CGFloat = -1
+
+    var body: some View {
+        if !reduceMotion {
+            GeometryReader { proxy in
+                LinearGradient(colors: [.clear, Tokens.foreground.opacity(0.06), .clear], startPoint: .leading, endPoint: .trailing)
+                    .offset(x: phase * proxy.size.width)
             }
             .onAppear {
                 withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false)) { phase = 1 }
             }
-            .accessibilityHidden(true)
+        }
     }
 }
 
@@ -140,6 +150,32 @@ struct PollCardSkeleton: View {
             ForEach(0..<options, id: \.self) { _ in Skeleton(height: 56, radius: Radius.xl) }
         }
         .card()
+    }
+}
+
+/// A `PollRow` while it loads: the same chrome and text line heights (Dynamic Type included),
+/// so the real rows land where the placeholders were.
+struct PollRowSkeleton: View {
+    var body: some View {
+        // One shimmer for the row, masked to its bars
+        bars.overlay { Shimmer() }.mask { bars }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
+            .accessibilityHidden(true)
+    }
+
+    private var bars: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            bar(Chip(text: "Ends"), width: 110, radius: 999)
+            bar(Text(verbatim: "Title").font(.vm(17, relativeTo: .headline)), width: 240)
+            bar(Text(verbatim: "Meta").font(.vmMeta), width: 90)
+        }
+    }
+
+    /// A bar exactly as tall as `line` renders.
+    private func bar(_ line: some View, width: CGFloat, radius: CGFloat = Radius.md) -> some View {
+        line.hidden().frame(width: width, alignment: .leading)
+            .overlay { Skeleton(height: nil, radius: radius, shimmers: false) }
     }
 }
 

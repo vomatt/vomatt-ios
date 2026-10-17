@@ -57,9 +57,12 @@ struct VMButtonStyle: ButtonStyle {
         }
     }
 
-    private var foreground: Color {
+    private var foreground: Color { foreground(enabled: isEnabled) }
+
+    /// The label color, e.g. for a spinner that has to match it.
+    func foreground(enabled: Bool) -> Color {
         switch variant {
-        case .default: isEnabled ? Tokens.primaryForeground : Tokens.mutedForeground
+        case .default: enabled ? Tokens.primaryForeground : Tokens.mutedForeground
         case .destructive: Tokens.destructive
         case .link: Tokens.primary
         default: Tokens.foreground
@@ -104,28 +107,32 @@ struct PillButton: View {
     }
 }
 
-/// A button that shows a spinner while its async action runs (`ButtonLoading`).
+/// A button that shows a spinner while its async action runs (`ButtonLoading`), or while `isLoading`
+/// says the same work started elsewhere (e.g. a code field that submits itself).
 struct LoadingButton<Label: View>: View {
     var style: VMButtonStyle = .vm
+    var isLoading = false
     let action: () async -> Void
     @ViewBuilder let label: () -> Label
-    @State private var isLoading = false
+    @State private var isRunning = false
 
     var body: some View {
+        let loading = isLoading || isRunning
         Button {
-            guard !isLoading else { return }
-            isLoading = true
+            guard !loading else { return }
+            isRunning = true
             Task {
                 await action()
-                isLoading = false
+                isRunning = false
             }
         } label: {
             HStack(spacing: 8) {
-                if isLoading { ProgressView().tint(Tokens.primaryForeground).controlSize(.small) }
+                // Loading disables the button, so the spinner takes the disabled label color
+                if loading { ProgressView().tint(style.foreground(enabled: false)).controlSize(.small) }
                 label()
             }
         }
         .buttonStyle(style)
-        .disabled(isLoading)
+        .disabled(loading)
     }
 }

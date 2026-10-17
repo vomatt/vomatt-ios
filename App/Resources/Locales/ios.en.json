@@ -14,6 +14,7 @@
 		"block": "Block {name}",
 		"blockedToast": "{name} is blocked. You won't see their polls or comments.",
 		"blockedTitle": "Blocked people",
+		"create": "Create",
 		"unblock": "Unblock"
 	}
 }

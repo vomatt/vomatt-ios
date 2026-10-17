@@ -58,8 +58,8 @@ struct ExploreView: View {
 
     private var filters: some View {
         ViewThatFits(in: .horizontal) {
-            HStack { statusPills; Spacer(); if status == .open { sortPills } }
-            VStack(alignment: .leading, spacing: 8) { statusPills; if status == .open { sortPills } }
+            HStack { statusPills; Spacer(); sortPills }
+            VStack(alignment: .leading, spacing: 8) { statusPills; sortPills }
         }
     }
 
@@ -80,13 +80,17 @@ struct ExploreView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(app.t("explore.sort"))
+        // Ended Polls take no sort; hide it but keep its space so the list doesn't jump
+        .opacity(status == .open ? 1 : 0)
+        .disabled(status != .open)
+        .accessibilityHidden(status != .open)
     }
 
     @ViewBuilder private var results: some View {
         if let list {
             switch list.phase {
             case .idle, .loading:
-                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 48)
+                placeholder
             case .failed:
                 LoadFailed(message: app.t("explore.loadFailed")) { await list.reload() }
             case .loaded:
@@ -108,7 +112,14 @@ struct ExploreView: View {
                     LoadMoreFooter(list: list)
                 }
             }
+        } else {
+            // Before the first list exists is loading too, like My Polls
+            placeholder
         }
+    }
+
+    private var placeholder: some View {
+        VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
     }
 
     private func makeList() -> CursorList<Poll> {

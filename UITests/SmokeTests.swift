@@ -59,6 +59,8 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Discussion'")).firstMatch.waitForExistence(timeout: 10))
         snapshot("6-poll-discussion")
 
+        // On iOS 26 the tab bar shrinks while scrolling down; scrolling back up brings it back
+        if #available(iOS 26, *) { app.swipeDown() }
         app.buttons["Explore"].tap()
         XCTAssertTrue(app.staticTexts["Explore"].waitForExistence(timeout: 5))
         app.buttons["Ended"].firstMatch.tap()
