@@ -22,6 +22,11 @@ types are generated from it on every build, so the app can only call what the co
    ~ required   CreateVoteRequest  ['endTime', 'options', 'title'] -> ['endTime', 'options', 'title', 'audience']
    ```
 
+   The summary covers only what the app calls: operations whose tag is in `filter.tags` of
+   `openapi-generator-config.yaml`, and the schemas they use. Admin endpoints (`Admin …` tags) belong
+   to the admin console, so their changes are left out and only counted on stderr. To bring an API
+   area into the app, add its tag to `filter.tags`.
+
    The file is written with sorted keys, so the git diff is readable too.
 
 2. `make test-core`. The build regenerates the client:

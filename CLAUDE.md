@@ -27,7 +27,9 @@ Command-line `xcodebuild` needs `-skipPackagePluginValidation` (the Makefile pas
 - **The API contract is generated.** `Packages/VomattKit/Sources/VomattAPI/openapi.json` is synced
   from vomatt-web/vomatt-api with `scripts/sync.sh api` (docs/api-sync.md). Only
   `Networking/Mapping.swift` and `VomattService.swift` touch generated types; the app sees domain
-  models from `VomattCore/Models`.
+  models from `VomattCore/Models`. When checking a new contract, skip the admin endpoints (`Admin …`
+  tags, the admin console's): only the tags in `openapi-generator-config.yaml` matter, and
+  `scripts/api-diff.py` already reports only those.
 - **Never refresh tokens outside `Session`.** The backend ends the sign-in when a used refresh token
   comes back; `Session` is single-flight and saves the rotated pair first.
 - **Strings come from the web.** `App/Resources/Locales/en.json`/`zh.json` are copies: change them
