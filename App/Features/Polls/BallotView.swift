@@ -30,7 +30,7 @@ struct BallotView: View {
             .accessibilityLabel(poll.title)
 
             if hasBallot, let anonymous = ballot.anonymous, poll.allowsAnonymousBallot {
-                Toggle(app.t("poll.anonymousToggle"), isOn: Binding(get: { anonymous }, set: setAnonymous))
+                Toggle(app.t("poll.anonymousToggle"), isOn: Binding(get: { anonymous }, set: { value in setAnonymous(value) }))
                     .font(.vmMeta)
                     .foregroundStyle(Tokens.mutedForeground)
                     .tint(Tokens.primary)
