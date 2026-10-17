@@ -52,7 +52,7 @@
 - Dynamic Type through `Font.custom(_:size:relativeTo:)`, VoiceOver labels, Reduce Motion for the
   skeleton shimmer, 44pt touch targets, light and dark mode from the web's tokens
 
-## Known gaps (need the API or a decision)
+## Known gaps (need the API or a decision; specs in [backend-requests.md](backend-requests.md))
 
 - Push notifications: the API has no device-token registration, so unread Invitations and results
   show as the dot on My Polls, refreshed when the app becomes active
