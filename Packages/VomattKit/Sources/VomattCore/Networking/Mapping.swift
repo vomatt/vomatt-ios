@@ -231,6 +231,12 @@ extension UserSummary {
     }
 }
 
+extension PollOwner {
+    init(_ dto: Schemas.VoteCreatorResponse) throws {
+        self.init(username: try required(dto.username, "VoteCreatorResponse.username"), avatarUrl: dto.avatarUrl)
+    }
+}
+
 extension UserGroup {
     init(_ dto: Schemas.GroupResponse) throws {
         self.init(

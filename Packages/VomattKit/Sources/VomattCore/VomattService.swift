@@ -171,6 +171,18 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Who sent the Invitation, for a viewer who can't open the Invite-only Poll yet.
+    /// nil when the Poll doesn't exist or isn't Invite-only.
+    public func inviteOnlyOwner(pollId: String) async throws -> PollOwner? {
+        do {
+            return try await call {
+                try await PollOwner(required(client.getInviteOnlyCreator(path: .init(voteId: pollId)).ok.body.json.data, "creator.data"))
+            }
+        } catch let error as APIError where error.status == 404 || error.status == 400 {
+            return nil
+        }
+    }
+
     /// Ended Polls only. A 403 (`isSealed`) means it is still sealed.
     public func results(pollId: String) async throws -> PollResults {
         try await call {

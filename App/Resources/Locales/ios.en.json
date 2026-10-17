@@ -15,6 +15,8 @@
 		"blockedToast": "{name} is blocked. You won't see their polls or comments.",
 		"blockedTitle": "Blocked people",
 		"create": "Create",
-		"unblock": "Unblock"
+		"unblock": "Unblock",
+		"invitedBy": "{name} invited you",
+		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with."
 	}
 }

@@ -28,8 +28,8 @@ Command-line `xcodebuild` needs `-skipPackagePluginValidation` (the Makefile pas
   from vomatt-web/vomatt-api with `scripts/sync.sh api` (docs/api-sync.md). Only
   `Networking/Mapping.swift` and `VomattService.swift` touch generated types; the app sees domain
   models from `VomattCore/Models`.
-- **Never refresh tokens outside `Session`.** The backend revokes every session when a used refresh
-  token comes back; `Session` is single-flight and saves the rotated pair first.
+- **Never refresh tokens outside `Session`.** The backend ends the sign-in when a used refresh token
+  comes back; `Session` is single-flight and saves the rotated pair first.
 - **Strings come from the web.** `App/Resources/Locales/en.json`/`zh.json` are copies: change them
   in vomatt-web and run `scripts/sync.sh locales`. iOS-only keys go in `ios.en.json`/`ios.zh.json`.
 - **Colors come from the web.** Use `Tokens.*` (generated from `global.css` by `scripts/sync.sh

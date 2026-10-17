@@ -111,6 +111,20 @@ struct ServiceTests {
         #expect(try await service.poll(id: "nope") == nil)
     }
 
+    @Test func inviteOnlyOwnerComesFromTheCreatorEndpoint() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"username":"alice","avatarUrl":"bot:boba"}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let owner = try await service.inviteOnlyOwner(pollId: "p1")
+        #expect(owner == PollOwner(username: "alice", avatarUrl: "bot:boba"))
+        #expect(transport.requests.first?.path == "/api/votes/p1/creator")
+    }
+
+    @Test func ownerOfANonInviteOnlyPollIsNil() async throws {
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en },
+                                    transport: StubTransport { _, _ in (404, failure("vote.not_found"), [:]) })
+        #expect(try await service.inviteOnlyOwner(pollId: "nope") == nil)
+    }
+
     @Test func createSendsTheContractShape() async throws {
         let poll = try firstPoll()
         let transport = StubTransport { _, _ in (201, envelope(poll), [:]) }

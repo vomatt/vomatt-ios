@@ -7,7 +7,8 @@ struct PollDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let pollId: String
 
-    enum Phase { case loading, ready(Poll), notFound, failed }
+    /// `notFound` carries the owner when the Poll is Invite-only and the viewer can't open it yet.
+    enum Phase { case loading, ready(Poll), notFound(PollOwner?), failed }
     @State private var phase = Phase.loading
 
     var body: some View {
@@ -21,8 +22,8 @@ struct PollDetailView: View {
                     PollAboutView(poll: app.latest(poll))
                     CommentThreadView(pollId: poll.id, initialTotal: poll.commentCount)
                         .card(padding: nil)
-                case .notFound:
-                    notFound
+                case let .notFound(owner):
+                    notFound(owner)
                 case .failed:
                     LoadFailed(message: app.t("common.error")) { await load() }
                 }
@@ -37,19 +38,27 @@ struct PollDetailView: View {
         .task(id: "\(pollId)-\(app.sessionGeneration)") { await load() }
     }
 
-    @ViewBuilder private var notFound: some View {
+    @ViewBuilder private func notFound(_ owner: PollOwner?) -> some View {
+        if let owner {
+            UserChip(username: owner.username, avatarUrl: owner.avatarUrl,
+                     label: app.t("ios.invitedBy", ["name": owner.username]), avatarSize: 28, link: false)
+                .font(.vm(15, .semibold))
+                .foregroundStyle(Tokens.foreground)
+        }
         // Signed out, a missing Poll may be Invite-only (e.g. from an invitation email)
-        if app.isSignedIn {
-            EmptyState { Text(app.t("pollDetail.notFound")) }
-        } else {
+        if !app.isSignedIn {
             LoginPromptCard()
+        } else if let owner {
+            EmptyState { Text(app.t("ios.inviteOnlyOtherAccount", ["name": owner.username])) }
+        } else {
+            EmptyState { Text(app.t("pollDetail.notFound")) }
         }
     }
 
     private func load() async {
         do {
             guard let poll = try await app.service.poll(id: pollId) else {
-                phase = .notFound
+                phase = .notFound(try? await app.service.inviteOnlyOwner(pollId: pollId))
                 return
             }
             phase = .ready(poll)

@@ -1,8 +1,8 @@
 import Foundation
 
 /// `rejected`: the backend refused the refresh token, so the session is over
-/// (`suspicious` means it saw a used token come back and signed the user out
-/// everywhere). `unavailable`: the backend couldn't be asked; the session may still be fine.
+/// (`suspicious` means it saw a used token come back and ended this sign-in).
+/// `unavailable`: the backend couldn't be asked; the session may still be fine.
 public enum RefreshResult: Equatable, Sendable {
     case ok(AuthTokens)
     case rejected(suspicious: Bool)
@@ -16,7 +16,7 @@ public enum SessionEvent: Equatable, Sendable {
 }
 
 /// Owns the tokens. The backend rotates the refresh token on every refresh and
-/// revokes every session when a used one comes back, so refreshes are single-flight:
+/// ends the sign-in when a used one comes back, so refreshes are single-flight:
 /// concurrent callers holding the same refresh token share one request, and a
 /// rotated pair is saved before anyone uses it.
 public actor Session {

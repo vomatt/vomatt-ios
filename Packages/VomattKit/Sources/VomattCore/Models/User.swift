@@ -103,6 +103,17 @@ public struct UserSummary: Identifiable, Hashable, Sendable {
     }
 }
 
+/// The owner of an Invite-only Poll, shown on its Invitation link before the viewer can open it.
+public struct PollOwner: Hashable, Sendable {
+    public var username: String
+    public var avatarUrl: String?
+
+    public init(username: String, avatarUrl: String? = nil) {
+        self.username = username
+        self.avatarUrl = avatarUrl
+    }
+}
+
 /// A private, reusable invite list. Only its owner ever sees it.
 public struct UserGroup: Identifiable, Hashable, Sendable {
     public let id: String
