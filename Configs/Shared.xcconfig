@@ -1,0 +1,11 @@
+// Values shared by every configuration. Per-developer overrides (signing team)
+// go in Configs/Local.xcconfig, which git ignores.
+
+VOMATT_BUNDLE_ID = com.vomatt.app
+VOMATT_DEVELOPMENT_TEAM =
+VOMATT_SUPPORT_EMAIL = yi-hsien@vomatt.com
+
+// xcconfig treats `//` as a comment, so URLs are built from a slash variable
+SLASH = /
+
+#include? "Local.xcconfig"

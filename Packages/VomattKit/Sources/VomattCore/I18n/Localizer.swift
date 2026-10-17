@@ -1,0 +1,96 @@
+import Foundation
+
+/// The app's languages; the same two as vomatt-web.
+public enum Language: String, CaseIterable, Codable, Sendable {
+    case en, zh
+
+    /// What the API's `Accept-Language` and formatters expect.
+    public var localeIdentifier: String { self == .zh ? "zh-TW" : "en" }
+
+    public var displayName: String { self == .zh ? "繁體中文" : "English" }
+
+    /// The device's preferred language when it's one of ours, else English.
+    public static func preferred(_ preferredLanguages: [String] = Locale.preferredLanguages) -> Language {
+        for identifier in preferredLanguages {
+            if identifier.hasPrefix("zh") { return .zh }
+            if identifier.hasPrefix("en") { return .en }
+        }
+        return .en
+    }
+}
+
+/// Looks up the web's `src/locales/{en,zh}.json` strings by dotted key, with
+/// `{name}` placeholders, exactly like vomatt-web's `t()`. Strings the app adds
+/// for iOS live in `ios.{en,zh}.json` and override the shared ones.
+public struct Localizer: Sendable {
+    public let language: Language
+    private let strings: [String: String]
+    private let fallback: [String: String]
+
+    public init(language: Language, strings: [String: String], fallback: [String: String] = [:]) {
+        self.language = language
+        self.strings = strings
+        self.fallback = fallback
+    }
+
+    /// Loads `<language>.json` and `ios.<language>.json` from `bundle`, English filling any gaps.
+    public static func load(_ language: Language, bundle: Bundle) -> Localizer {
+        func table(_ name: String) -> [String: String] {
+            guard let url = bundle.url(forResource: name, withExtension: "json"),
+                  let data = try? Data(contentsOf: url)
+            else { return [:] }
+            return (try? flatten(json: data)) ?? [:]
+        }
+        let english = table("en").merging(table("ios.en")) { $1 }
+        let strings = language == .en ? english : table(language.rawValue).merging(table("ios.\(language.rawValue)")) { $1 }
+        return Localizer(language: language, strings: strings, fallback: english)
+    }
+
+    /// Flattens nested JSON objects into dotted keys: `{"poll":{"vote":"Vote"}}` -> `poll.vote`.
+    public static func flatten(json data: Data) throws -> [String: String] {
+        var result: [String: String] = [:]
+        func walk(_ value: Any, path: String) {
+            if let dict = value as? [String: Any] {
+                for (key, child) in dict { walk(child, path: path.isEmpty ? key : "\(path).\(key)") }
+            } else if let string = value as? String {
+                result[path] = string
+            }
+        }
+        walk(try JSONSerialization.jsonObject(with: data), path: "")
+        return result
+    }
+
+    public func has(_ key: String) -> Bool { strings[key] != nil || fallback[key] != nil }
+
+    /// The string for `key` with `{name}` placeholders filled in; the key itself when missing.
+    public func callAsFunction(_ key: String, _ values: [String: CustomStringConvertible] = [:]) -> String {
+        guard let template = strings[key] ?? fallback[key] else { return key }
+        return Self.interpolate(template, values)
+    }
+
+    /// Replaces `{name}` placeholders; unknown ones stay as they are.
+    public static func interpolate(_ template: String, _ values: [String: CustomStringConvertible]) -> String {
+        guard !values.isEmpty, template.contains("{") else { return template }
+        var output = ""
+        var index = template.startIndex
+        while index < template.endIndex {
+            let char = template[index]
+            if char == "{", let close = template[index...].firstIndex(of: "}") {
+                let name = String(template[template.index(after: index)..<close])
+                if let value = values[name], name.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }) {
+                    output += value.description
+                    index = template.index(after: close)
+                    continue
+                }
+            }
+            output.append(char)
+            index = template.index(after: index)
+        }
+        return output
+    }
+
+    /// A number with grouping separators in this language: "1,234".
+    public func number(_ value: Int) -> String {
+        value.formatted(.number.locale(Locale(identifier: language.localeIdentifier)))
+    }
+}

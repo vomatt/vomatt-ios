@@ -1,0 +1,64 @@
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "active": true,
+                "allowMultipleChoices": false,
+                "anonymous": false,
+                "audience": "PUBLIC",
+                "commentCount": 2,
+                "createdAt": "2026-10-13T15:04:58.14499Z",
+                "creatorAvatarUrl": "bot:nordic",
+                "creatorId": "01a129ab-b257-738c-bb12-3b854ea35471",
+                "creatorUsername": "chinssiang",
+                "deadline": "2026-10-20T15:04:00Z",
+                "deletable": null,
+                "description": "2026\u5e74\u9ad8\u96c4\u5e02\u5e02\u9577\u9078\u8209\u5c07\u65bc2026\u5e7411\u670828\u65e5\u8209\u884c",
+                "endTime": "2026-10-20T15:04:00Z",
+                "id": "01a135cb-9a1e-75cc-a486-4c57513d4835",
+                "inviteeCount": null,
+                "myOptionId": null,
+                "options": [
+                    {
+                        "createdAt": "2026-10-13T15:04:58.163151Z",
+                        "description": null,
+                        "displayOrder": 0,
+                        "id": "01a135cb-9a33-75ff-a199-e15936e1c388",
+                        "text": "\u8cf4\u745e\u9686",
+                        "votes": null
+                    },
+                    {
+                        "createdAt": "2026-10-13T15:04:58.161669Z",
+                        "description": null,
+                        "displayOrder": 1,
+                        "id": "01a135cb-9a31-7175-9d03-5c3c7c97049f",
+                        "text": "\u67ef\u5fd7\u6069",
+                        "votes": null
+                    },
+                    {
+                        "createdAt": "2026-10-13T15:04:58.162718Z",
+                        "description": null,
+                        "displayOrder": 2,
+                        "id": "01a135cb-9a32-7338-ad32-5b1697163903",
+                        "text": "\u5f35\u975c",
+                        "votes": null
+                    }
+                ],
+                "participantCount": 3,
+                "startTime": "2026-10-05T15:04:00Z",
+                "tags": [],
+                "title": "\u9ad8\u96c4\u5e02\u9577\u4f60\u652f\u6301\u8ab0\uff1f",
+                "totalVotes": 3,
+                "unread": null,
+                "updatedAt": "2026-10-13T15:04:58.255678Z",
+                "voterVisibility": "SIGNED_IN",
+                "votingActive": true
+            }
+        ],
+        "nextCursor": null
+    },
+    "message": null,
+    "errorCode": null,
+    "error": null
+}

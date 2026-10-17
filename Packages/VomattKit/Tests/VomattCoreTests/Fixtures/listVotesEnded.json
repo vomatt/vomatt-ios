@@ -1,0 +1,56 @@
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "active": true,
+                "allowMultipleChoices": false,
+                "anonymous": false,
+                "audience": "PUBLIC",
+                "commentCount": 1,
+                "createdAt": "2026-10-12T08:51:51.442247Z",
+                "creatorAvatarUrl": null,
+                "creatorId": "01a0fd08-5914-7273-b24b-4ef4a51d545b",
+                "creatorUsername": "ericyhlai0317",
+                "deadline": "2026-10-15T08:51:00Z",
+                "deletable": null,
+                "description": null,
+                "endTime": "2026-10-15T08:51:00Z",
+                "id": "01a12f4f-a5e5-77c0-b446-d612a1e997ff",
+                "inviteeCount": null,
+                "myOptionId": null,
+                "options": [
+                    {
+                        "createdAt": "2026-10-12T08:51:51.454558Z",
+                        "description": null,
+                        "displayOrder": 0,
+                        "id": "01a12f4f-a5f4-7533-a9b8-ae40af35f3ba",
+                        "text": "Da an",
+                        "votes": 0
+                    },
+                    {
+                        "createdAt": "2026-10-12T08:51:51.693283Z",
+                        "description": null,
+                        "displayOrder": 1,
+                        "id": "01a12f4f-a5f4-7533-a9b8-ae40af35f3bb",
+                        "text": "Dome",
+                        "votes": 0
+                    }
+                ],
+                "participantCount": 2,
+                "startTime": "2026-10-12T08:51:49.762Z",
+                "tags": [],
+                "title": "BlackWater Run",
+                "totalVotes": 2,
+                "unread": null,
+                "updatedAt": "2026-10-12T08:51:51.930757Z",
+                "voterVisibility": "OWNER",
+                "votingActive": false
+            }
+        ],
+        "nextCursor": "RkVFRF9FTkRFRHwwMWExMmY0Zi1hNWU1LTc3YzAtYjQ0Ni1kNjEyYTFlOTk3ZmZ8MjAyNi0xMC0xNVQwODo1MTowMFo"
+    },
+    "message": null,
+    "errorCode": null,
+    "error": null
+}

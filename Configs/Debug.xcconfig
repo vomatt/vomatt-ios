@@ -1,0 +1,12 @@
+#include "Shared.xcconfig"
+
+// vomatt-api origin, no path, no trailing slash (the contract's paths start with /api).
+// For a local API: http:$(SLASH)$(SLASH)localhost:8080 (the simulator reaches the host as localhost).
+VOMATT_API_URL = https:$(SLASH)$(SLASH)vomatt-api.vercel.app
+// The web site; share links and universal links use it
+VOMATT_SITE_URL = https:$(SLASH)$(SLASH)vomatt.com
+VOMATT_ASSOCIATED_DOMAINS = applinks:vomatt.com
+// One line per API request in the console
+VOMATT_LOG_REQUESTS = YES
+
+#include? "Local.xcconfig"

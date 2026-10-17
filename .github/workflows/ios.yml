@@ -1,0 +1,32 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Needs Xcode 26 or later (default actor isolation, iOS 26+ SDK)
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Core tests (domain, networking, API contract)
+        run: make test-core DEVELOPER_DIR="$(xcode-select -p)"
+
+      - name: Generate project
+        run: brew install xcodegen && make project
+
+      - name: Build app
+        run: |
+          SIM="$(xcrun simctl list devices available | grep -m1 -oE 'iPhone [0-9]+[^()]*' | sed 's/ *$//')"
+          make build SIMULATOR="$SIM" DEVELOPER_DIR="$(xcode-select -p)"

@@ -1,0 +1,16 @@
+generate:
+  - types
+  - client
+accessModifier: public
+namingStrategy: idiomatic
+# The app never calls the admin endpoints
+filter:
+  tags:
+    - Auth
+    - Vote
+    - Vote Comment
+    - Notification
+    - Group
+    - User
+    - Tag
+    - Lookup

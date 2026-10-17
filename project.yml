@@ -1,0 +1,114 @@
+# Generates Vomatt.xcodeproj: `make project` (XcodeGen). Edit this file, not the project.
+name: Vomatt
+options:
+  bundleIdPrefix: com.vomatt
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configFiles:
+  Debug: Configs/Debug.xcconfig
+  Release: Configs/Release.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+
+packages:
+  VomattKit:
+    path: Packages/VomattKit
+
+targets:
+  Vomatt:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - package: VomattKit
+        product: VomattCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(VOMATT_BUNDLE_ID)
+        PRODUCT_NAME: Vomatt
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: primary
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: $(VOMATT_DEVELOPMENT_TEAM)
+        CODE_SIGN_ENTITLEMENTS: App/Vomatt.entitlements
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: vomatt
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, zh-Hant]
+        CFBundleAllowMixedLocalizations: true
+        LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: background
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIAppFonts:
+          - Geist-Regular.ttf
+          - Geist-Medium.ttf
+          - Geist-SemiBold.ttf
+          - GeistMono-Regular.ttf
+          - GeistMono-Medium.ttf
+        CFBundleURLTypes:
+          - CFBundleURLName: com.vomatt.app
+            CFBundleURLSchemes: [vomatt]
+        LSApplicationQueriesSchemes: [mailto]
+        # Lets a Debug build reach a vomatt-api running on this Mac (http://localhost:8080)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        VMAPIURL: $(VOMATT_API_URL)
+        VMSiteURL: $(VOMATT_SITE_URL)
+        VMSupportEmail: $(VOMATT_SUPPORT_EMAIL)
+        VMLogRequests: $(VOMATT_LOG_REQUESTS)
+    entitlements:
+      path: App/Vomatt.entitlements
+      properties:
+        com.apple.developer.associated-domains: $(VOMATT_ASSOCIATED_DOMAINS)
+    scheme:
+      testTargets:
+        - VomattUITests
+      gatherCoverageData: true
+
+  VomattUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Vomatt
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(VOMATT_BUNDLE_ID).uitests
+        TEST_TARGET_NAME: Vomatt
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: $(VOMATT_DEVELOPMENT_TEAM)
+        GENERATE_INFOPLIST_FILE: YES

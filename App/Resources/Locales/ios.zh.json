@@ -1,0 +1,15 @@
+{
+	"ios": {
+		"openProfile": "開啟個人檔案",
+		"report": "檢舉",
+		"reportSubject": "檢舉 vomatt 內容",
+		"more": "更多",
+		"saveDraftTitle": "要存成草稿嗎？",
+		"saveDraftBody": "你有尚未儲存的變更。離開前要把這則投票存成草稿嗎？",
+		"scheduleStart": "選擇開始時間",
+		"language": "語言",
+		"terms": "服務條款",
+		"privacy": "隱私權政策",
+		"contact": "聯絡我們"
+	}
+}

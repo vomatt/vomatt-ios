@@ -1,0 +1,659 @@
+{
+	"common": {
+		"home": "home",
+		"createPoll": "Create a poll",
+		"myPolls": "My Polls",
+		"explore": "Explore",
+		"notifications": "Notifications",
+		"login": "login",
+		"email": "Email",
+		"welcome": "Welcome",
+		"loading": "Loading...",
+		"error": "Something went wrong",
+		"cancel": "Cancel",
+		"close": "Close",
+		"save": "Save",
+		"delete": "Delete",
+		"edit": "Edit",
+		"continue": "Continue",
+		"optional": "optional",
+		"required": "required",
+		"loadMore": "Load more",
+		"votes": "votes",
+		"comments": "comments",
+		"active": "Active",
+		"ended": "Ended",
+		"invalidEmailAddress": "Invalid email address"
+	},
+	"navigation": {
+		"home": "Home",
+		"profile": "Profile",
+		"settings": "Settings",
+		"logout": "Logout"
+	},
+	"user": {
+		"profile": {
+			"title": "User Profile",
+			"name": "Name",
+			"email": "Email",
+			"bio": "Biography"
+		}
+	},
+	"loginPrompt": {
+		"title": "Log in or sign up for Vomatt",
+		"subtitle": "See what people are talking about and join the conversation.",
+		"ctaLabel": "Log in"
+	},
+	"login": {
+		"title": "Log in or sign up",
+		"brandHeadline": "Every voice, counted.",
+		"brandBody": "Ask a clear question, give everyone an equal say, and see the result when the poll closes.",
+		"subtitle": "Enter your email and we'll send you a code. New here? We'll create your account.",
+		"sessionExpired": "Your session expired. Please log in again.",
+		"dialogDescription": "Log in or sign up with your email to continue",
+		"sessionRevoked": "For your security, you were signed out on all devices. Please sign in again."
+	},
+	"verificationCode": {
+		"title": "Check your email",
+		"subtitle": "Enter the 6-digit code we sent to",
+		"resendVerificationCode": "Resend verification code",
+		"codeSent": "A new code is on its way.",
+		"useAnotherEmail": "Use a different email",
+		"resendIn": "Resend code in {time}",
+		"inputLabel": "6-digit verification code"
+	},
+	"myPolls": {
+		"title": "My Polls",
+		"tabActive": "Active",
+		"tabDrafts": "Drafts",
+		"tabEnded": "Ended",
+		"empty": "No polls here yet.",
+		"actionEdit": "Edit",
+		"actionDelete": "Delete",
+		"actionEnd": "End Poll",
+		"draftContinue": "Continue",
+		"draftSavedAt": "Saved {date}",
+		"untitledDraft": "Untitled poll"
+	},
+	"explore": {
+		"title": "Explore",
+		"searchPlaceholder": "Search poll titles and descriptions…",
+		"filterActive": "Open",
+		"filterEnded": "Ended",
+		"sortNewest": "Newest",
+		"noResults": "No polls found.",
+		"topics": "Browse by topic",
+		"status": "Status",
+		"sort": "Sort",
+		"sortEnding": "Ending soon",
+		"searchTooShort": "Type at least 2 characters to search.",
+		"loadFailed": "Couldn't load polls.",
+		"sortTop": "Most voted"
+	},
+	"pollDetail": {
+		"backToFeed": "Back",
+		"share": "Share",
+		"notFound": "Poll not found.",
+		"askedBy": "Asked by",
+		"opened": "Opened {date}",
+		"timeline": "Voting window",
+		"revealsIn": "Results reveal {distance}",
+		"resultsIn": "Voting has closed. Results are in.",
+		"noEnd": "No end time set",
+		"participants": "people voted",
+		"topics": "Topics",
+		"sealedExplainer": "Votes stay sealed until the poll ends, so no one is swayed by the running count. You can change or withdraw your vote until then.",
+		"shareCta": "Invite others to vote",
+		"endedEarly": "Ended early. It was set to close {date}.",
+		"invited": "{count} invited",
+		"audience": {
+			"unlisted": "Only people with the link can find it. It isn't listed in the feed or search.",
+			"invite-only": "Only the people invited can see it and vote."
+		}
+	},
+	"profile": {
+		"notFoundTitle": "This profile doesn't exist",
+		"notFoundBody": "No one uses this username. It may have changed, or the account was deleted.",
+		"pageNotFoundTitle": "This page doesn't exist",
+		"pageNotFoundBody": "The link may be broken, or the page was removed.",
+		"notFoundExplore": "Explore polls",
+		"notFoundHome": "Go home",
+		"polls": "Polls",
+		"noPollsYet": "No polls yet.",
+		"stats": "Numbers",
+		"points": "{count} points",
+		"cardFailed": "Couldn't load this profile.",
+		"joined": "Joined {date}",
+		"membership": "{level} member",
+		"followers": "Followers",
+		"following": "Following",
+		"editProfile": "Edit Profile",
+		"bio": "Bio",
+		"joinedAt": "Joined",
+		"totalVotes": "Votes",
+		"displayName": "Display Name",
+		"saveChanges": "Save Changes"
+	},
+	"notifications": {
+		"title": "Notifications",
+		"empty": "No notifications yet.",
+		"unread": "Unread",
+		"intro": "Invitations, and polls you created, voted in or were invited to that have ended.",
+		"markAllHint": "Opening a poll marks it read.",
+		"loadFailed": "Couldn't load notifications.",
+		"ended": "Results are in",
+		"cancelled": "Cancelled",
+		"invitations": "Invitations",
+		"results": "Results",
+		"invitedBy": "{name} invited you"
+	},
+	"pollCreator": {
+		"title": "New poll",
+		"subtitle": "Ask a question and add options for people to vote on.",
+		"questionLabel": "Your question",
+		"questionPlaceholder": "What do you want people to weigh in on?",
+		"questionNote": "Specific, neutral questions get the most honest answers.",
+		"descriptionLabel": "Context",
+		"descriptionPlaceholder": "Why are you asking? Background helps people answer honestly.",
+		"pollOptionsLabel": "Options",
+		"optionsPlaceholder": "Option",
+		"addOptionLabel": "Add option",
+		"saveDraftLabel": "Save draft",
+		"editTitle": "Edit poll",
+		"editSubtitle": "You can edit a poll until it opens.",
+		"removeOption": "Remove option",
+		"opensLabel": "Opens",
+		"opensHint": "Leave empty to open now.",
+		"endsLabel": "Ends and reveals results",
+		"preset1h": "1 hour",
+		"preset24h": "24 hours",
+		"preset3d": "3 days",
+		"preset1w": "1 week",
+		"visibilityLabel": "After it ends, who can see what each person chose?",
+		"visibility": {
+			"nobody": "Nobody",
+			"nobodyHint": "Only totals are shown.",
+			"owner": "Only me",
+			"ownerHint": "You see who chose each option.",
+			"signed-in": "Anyone signed in",
+			"signed-inHint": "Every signed-in user sees who chose what.",
+			"invited": "Everyone invited"
+		},
+		"visibilityNote": "You can't change this once the poll opens. Voters see it before they vote.",
+		"publish": "Publish poll",
+		"saveChanges": "Save changes",
+		"draftSaved": "Draft saved",
+		"published": "Poll published",
+		"saved": "Changes saved",
+		"errors": {
+			"titleRequired": "Ask a question.",
+			"titleTooLong": "Keep the question to 200 characters.",
+			"optionRequired": "Fill in every option.",
+			"endRequired": "Choose when the poll ends.",
+			"endBeforeStart": "The end must be after the poll opens.",
+			"inviteesRequired": "Invite at least one person or group."
+		},
+		"discardEditTitle": "Discard your changes?",
+		"discardEditBody": "Your edits to this poll won't be saved.",
+		"keepEditing": "Keep editing",
+		"discardEdit": "Discard",
+		"addContext": "Add context (optional)",
+		"optionsHint": "Press Return to add the next option.",
+		"settingsTitle": "Timing & privacy",
+		"settingsChange": "Change",
+		"settingsDone": "Done",
+		"summaryOpensNow": "Opens now, closes {end}",
+		"summaryOpensLater": "Opens {start}, closes {end}",
+		"summaryNoEnd": "Choose when it closes",
+		"summaryVisibility": "After it ends: {level}",
+		"review": "Review",
+		"reviewTitle": "Review your poll",
+		"reviewPreview": "How voters will see it",
+		"ruleSealed": "Counts stay hidden until it closes. Voters only see how many people took part.",
+		"ruleVisibility": {
+			"nobody": "Nobody will see who chose what.",
+			"owner": "Only you will see who chose what once it ends.",
+			"signed-in": "Anyone signed in will see who chose what once it ends.",
+			"invited": "Everyone invited will see who chose what once it ends."
+		},
+		"ruleFixed": "You can't change this after it opens.",
+		"ruleOneVote": "One vote per person. Voters can change or withdraw it until the poll closes.",
+		"audienceLabel": "Who can see and vote?",
+		"audienceHint": {
+			"public": "Listed in the feed, Explore and search. Anyone can vote.",
+			"unlisted": "Not listed anywhere. Anyone with the link can vote.",
+			"invite-only": "Only the people you invite can see it and vote."
+		},
+		"audienceNote": "You can't change this once the poll opens.",
+		"inviteesLabel": "Invite people",
+		"inviteesHint": "People you add get an invitation. Emails without an account get access once they sign up with that address.",
+		"inviteesManaged": "Add or remove people with Invitees on the poll.",
+		"ruleAudience": {
+			"public": "Anyone can find it and vote.",
+			"unlisted": "Only people with the link can find it.",
+			"invite-only": "Only the people you invited can see it and vote. The poll ends early once all of them have voted."
+		}
+	},
+	"homePage": {
+		"feedListNoData": "Start the poll, lead the crowd.",
+		"allTopics": "For you",
+		"topics": "Topics",
+		"feedFailed": "Couldn't load polls right now.",
+		"topicEmpty": "No polls on this topic yet.",
+		"createFirst": "Create the first poll",
+		"joinToCreate": "Join to start a poll"
+	},
+	"poll": {
+		"vote": "Vote",
+		"updateVote": "Update vote",
+		"withdrawVote": "Withdraw vote",
+		"withdrawConfirm": "Withdraw your vote? You won't be counted or notified.",
+		"withdraw": "Withdraw",
+		"keep": "Keep",
+		"yourVote": "Your vote",
+		"yourVoteShort": "your vote",
+		"revealHint": "Results are revealed when the poll ends",
+		"sealed": "Results are sealed until {date}. We'll notify you when they're in.",
+		"opensHint": "Voting opens {distance}",
+		"voted": "{count} voted",
+		"comments": "{count} comments",
+		"comment": "1 comment",
+		"share": "Share",
+		"linkCopied": "Link copied",
+		"justEnded": "This poll just ended.",
+		"voteCast": "Vote cast.",
+		"voteFailed": "Couldn't save your vote. Try again.",
+		"withdrawFailed": "Couldn't withdraw your vote. Try again.",
+		"tooManyVotes": "You're voting too fast. Wait a minute and try again.",
+		"resultsFailed": "Couldn't load the results.",
+		"won": "{option} won. Support is the share of {count} participants",
+		"tie": "Tie between {options}",
+		"and": " and ",
+		"noVotes": "No votes were cast",
+		"chipOpens": "Opens {date}",
+		"chipEnds": "Ends {date}",
+		"chipEndsIn": "Ends {distance}",
+		"chipEnded": "Ended {date}",
+		"chipEndedShort": "Ended",
+		"visibility": {
+			"nobody": "After it ends, no one can see what you chose.",
+			"owner": "After it ends, only the poll owner can see what you chose.",
+			"signed-in": "After it ends, anyone signed in can see what you chose.",
+			"invited": "After it ends, everyone invited can see what you chose."
+		},
+		"edit": "Edit",
+		"keepPoll": "Keep poll",
+		"stamp": "Voted",
+		"discuss": "Discuss",
+		"votersHint": "Select an option to see who chose it",
+		"voters": "Who voted",
+		"votersHidden": "You can't see who voted in this poll.",
+		"votersTruncated": "Only the first {count} voters can be listed here.",
+		"votersNone": "No one to show.",
+		"votersFailed": "Couldn't load who voted.",
+		"deletePoll": "Delete poll",
+		"deletePollTitle": "Delete this poll?",
+		"deletePollBody": "It's removed for everyone, with its votes and comments. No one is notified.",
+		"deleted": "Poll deleted.",
+		"deleteFailed": "Couldn't delete the poll. Try again.",
+		"endNow": "End now",
+		"endNowTitle": "End this poll now?",
+		"endNowBody": "Voting stops and the results are revealed. This can't be undone.",
+		"endFailed": "Couldn't end the poll. Try again.",
+		"audience": {
+			"public": "Public",
+			"unlisted": "Unlisted",
+			"invite-only": "Invite only"
+		}
+	},
+	"auth": {
+		"continueWithEmail": "Continue with email"
+	},
+	"authError": {
+		"invalidCode": "That code is not right. Check the email and try again.",
+		"codeExpired": "This code has expired. Request a new one.",
+		"tooManyAttempts": "Too many wrong attempts. Request a new code.",
+		"resendCooldown": "A code was sent recently. Please wait before requesting another.",
+		"emailSendFailed": "We could not send the email. Check the address and try again.",
+		"accountSuspended": "This account has been suspended.",
+		"rateLimited": "Too many requests. Please wait a moment and try again.",
+		"invalidEmail": "Please enter a valid email address.",
+		"serverError": "Something went wrong. Please try again later."
+	},
+	"onboarding": {
+		"title": "What should we call you?",
+		"subtitle": "This is how other voters will see you.",
+		"displayName": "Display name",
+		"displayNameHint": "You can change it later in your account.",
+		"displayNameTooLong": "Keep it under 100 characters.",
+		"finish": "Finish",
+		"skip": "Skip for now"
+	},
+	"comments": {
+		"title": "Discussion",
+		"placeholder": "Why did you vote the way you did?",
+		"post": "Post",
+		"you": "You",
+		"empty": "No comments yet. Make the case for your choice.",
+		"loadFailed": "Couldn't load comments.",
+		"retry": "Try again",
+		"loadMore": "Show older comments",
+		"edited": "edited",
+		"edit": "Edit",
+		"like": "Like",
+		"deleteConfirm": "Delete this comment?",
+		"postFailed": "Couldn't post your comment. Try again.",
+		"editFailed": "Couldn't save your edit.",
+		"deleteFailed": "Couldn't delete the comment.",
+		"reply": "Reply",
+		"replyPlaceholder": "Write a reply…",
+		"viewReply": "View 1 reply",
+		"viewReplies": "View {count} replies",
+		"moreReplies": "Show more replies",
+		"deleted": "This comment was deleted."
+	},
+	"account": {
+		"usernameLabel": "Username",
+		"usernameHint": "Your profile lives at {path}. Old links stop working after a change.",
+		"usernameInvalid": "Usernames are 3–50 lowercase letters, numbers or underscores.",
+		"stats": "Your numbers",
+		"votesCast": "Votes cast",
+		"pollsCreated": "Polls created",
+		"peopleReached": "People reached",
+		"majorityRate": "With the majority",
+		"majorityNone": "n/a",
+		"majorityHint": "How often your pick won or tied, among decided polls you voted in",
+		"tabActivity": "Your votes",
+		"tabPolls": "Your polls",
+		"tabSettings": "Settings",
+		"noVotes": "You haven't voted on any recent polls yet.",
+		"findPolls": "Find a poll",
+		"youChose": "You chose",
+		"noPolls": "You haven't started a poll yet.",
+		"outcome": {
+			"pending": "Results pending",
+			"won": "Your pick won",
+			"tied": "Tied for first",
+			"lost": "Outvoted",
+			"unknown": "Ended"
+		},
+		"privacyTitle": "What others can see",
+		"privacyBody": "Choose which profile details appear on your public profile.",
+		"field": {
+			"displayName": "Display name",
+			"bio": "Bio",
+			"location": "Location",
+			"points": "Points",
+			"membershipLevel": "Membership level"
+		},
+		"saveFailed": "Couldn't save. Try again.",
+		"signOutTitle": "Signed in as",
+		"signOut": "Log out",
+		"deleteTitle": "Delete account",
+		"deleteBody": "Removes your account and signs you out everywhere. This cannot be undone.",
+		"deleteCta": "Delete account",
+		"deleteConfirmTitle": "Delete your account?",
+		"deleteConfirmBody": "Type {username} to confirm. Your account will be removed permanently.",
+		"deleteConfirmLabel": "Type your username to confirm",
+		"tabGroups": "Groups"
+	},
+	"cookieConsent": {
+		"label": "Cookie consent",
+		"message": "We'd like to use analytics cookies to understand how vomatt is used. Sign-in and language cookies are always on.",
+		"policy": "Cookies Policy",
+		"accept": "Accept analytics",
+		"decline": "Decline",
+		"settings": "Cookie settings"
+	},
+	"invitees": {
+		"title": "Invitees",
+		"description": "People who can see this poll and vote.",
+		"summary": "{count} invited · {voted} voted",
+		"placeholder": "Username or email",
+		"inviteEmail": "Invite {email}",
+		"suggestions": "Matching people",
+		"noUsers": "No one with that username.",
+		"searchFailed": "Couldn't search. Try again.",
+		"picked": "Invited",
+		"remove": "Remove {name}",
+		"groups": "Your groups",
+		"groupPill": "{name} · {count}",
+		"voted": "Voted",
+		"empty": "No one is invited yet.",
+		"loadFailed": "Couldn't load the invitees.",
+		"addLabel": "Invite more people",
+		"add": "Invite",
+		"addFailed": "Couldn't invite them. Try again.",
+		"removeFailed": "Couldn't remove them. Try again."
+	},
+	"groups": {
+		"title": "Groups",
+		"intro": "Reusable lists of people to invite to Invite-only polls. Only you can see them, and nobody is told they're in one.",
+		"nameLabel": "Group name",
+		"namePlaceholder": "e.g. Book club",
+		"create": "New group",
+		"empty": "No groups yet.",
+		"loadFailed": "Couldn't load your groups.",
+		"memberCount": "{count} members",
+		"dialogIntro": "Inviting a group invites its members at that moment. Later changes don't affect polls already sent.",
+		"rename": "Rename",
+		"members": "Members",
+		"noMembers": "No members yet.",
+		"membersFailed": "Couldn't load the members.",
+		"addLabel": "Add people",
+		"add": "Add",
+		"delete": "Delete group",
+		"deleteConfirm": "Delete this group? Polls you invited it to keep their invitees.",
+		"saveFailed": "Couldn't save. Try again.",
+		"memberCountOne": "1 member"
+	},
+	"avatar": {
+		"title": "Avatar",
+		"change": "Change avatar",
+		"body": "We picked one for you when you joined. Swap it any time.",
+		"surprise": "Surprise me",
+		"save": "Save avatar",
+		"savedToast": "Avatar updated",
+		"choose": "Choose {name}",
+		"families": {
+			"bites": "Taiwan bites",
+			"guardians": "Temple guardians",
+			"visitors": "Visitors",
+			"animals": "Island animals"
+		},
+		"bots": {
+			"boba": {
+				"name": "Boba",
+				"trait": "Less ice, half sugar"
+			},
+			"bao": {
+				"name": "Bao",
+				"trait": "Eighteen pleats"
+			},
+			"oolong": {
+				"name": "Oolong",
+				"trait": "High-mountain, second steep"
+			},
+			"su": {
+				"name": "Su",
+				"trait": "Pineapple cake, one bite in"
+			},
+			"egg": {
+				"name": "Tea Egg",
+				"trait": "Simmering since morning"
+			},
+			"ice": {
+				"name": "Shaved Ice",
+				"trait": "Mango on top, Yongkang St"
+			},
+			"youtiao": {
+				"name": "Youtiao",
+				"trait": "Dunked in soy milk"
+			},
+			"tofu": {
+				"name": "Stinky Tofu",
+				"trait": "Smell first, then love"
+			},
+			"sausage": {
+				"name": "Sausage",
+				"trait": "Night-market grill"
+			},
+			"chip": {
+				"name": "Chip",
+				"trait": "Made in Hsinchu"
+			},
+			"tower": {
+				"name": "101",
+				"trait": "Fireworks every New Year"
+			},
+			"lumen": {
+				"name": "Lumen",
+				"trait": "Pingxi sky lantern"
+			},
+			"mazu": {
+				"name": "Mazu",
+				"trait": "Watches over the sea"
+			},
+			"tudi": {
+				"name": "Earth God",
+				"trait": "Keeps the neighbourhood"
+			},
+			"yuelao": {
+				"name": "Yue Lao",
+				"trait": "Ties the red thread"
+			},
+			"qiye": {
+				"name": "Qiye",
+				"trait": "White Wuchang, walks tall"
+			},
+			"baye": {
+				"name": "Baye",
+				"trait": "Black Wuchang, walks fierce"
+			},
+			"shi": {
+				"name": "Stone Lion",
+				"trait": "Paw on the ball"
+			},
+			"long": {
+				"name": "Long",
+				"trait": "Rides the temple roof"
+			},
+			"denglong": {
+				"name": "Lantern",
+				"trait": "Red, by the gate"
+			},
+			"ding": {
+				"name": "Ding",
+				"trait": "The bronze burner"
+			},
+			"jiaobei": {
+				"name": "Jiaobei",
+				"trait": "Asks the gods yes or no"
+			},
+			"xiang": {
+				"name": "Xiang",
+				"trait": "Three sticks for the ancestors"
+			},
+			"banyan": {
+				"name": "Banyan",
+				"trait": "The old tree by the temple"
+			},
+			"gray": {
+				"name": "Gray",
+				"trait": "Came for the night market"
+			},
+			"nordic": {
+				"name": "Nordic",
+				"trait": "Suspiciously calm"
+			},
+			"reptile": {
+				"name": "Reptilian",
+				"trait": "Totally normal human"
+			},
+			"mantis": {
+				"name": "Mantis",
+				"trait": "Sees every option"
+			},
+			"anu": {
+				"name": "Anunnaki",
+				"trait": "Older than Sumer"
+			},
+			"tallwhite": {
+				"name": "Tall White",
+				"trait": "Shades on, indoors"
+			},
+			"moth": {
+				"name": "Mothman",
+				"trait": "Seen before the bridge"
+			},
+			"blob": {
+				"name": "Blob",
+				"trait": "No fixed opinion"
+			},
+			"cyclops": {
+				"name": "Cyclops",
+				"trait": "One eye, one vote"
+			},
+			"probe": {
+				"name": "Probe",
+				"trait": "Listening since 1977"
+			},
+			"saucer": {
+				"name": "Saucer",
+				"trait": "Just visiting"
+			},
+			"trio": {
+				"name": "Trio",
+				"trait": "Three eyes, three opinions"
+			},
+			"bear": {
+				"name": "Black Bear",
+				"trait": "A moon on its chest"
+			},
+			"magpie": {
+				"name": "Blue Magpie",
+				"trait": "Long tail, loud family"
+			},
+			"pangolin": {
+				"name": "Pangolin",
+				"trait": "Armour, no attitude"
+			},
+			"shihu": {
+				"name": "Leopard Cat",
+				"trait": "Shihu, from Miaoli"
+			},
+			"macaque": {
+				"name": "Macaque",
+				"trait": "Runs Shoushan"
+			},
+			"deer": {
+				"name": "Sika Deer",
+				"trait": "Plum-blossom spots"
+			},
+			"pheasant": {
+				"name": "Mikado",
+				"trait": "Emperor pheasant, Alishan"
+			},
+			"firefly": {
+				"name": "Firefly",
+				"trait": "April nights in the hills"
+			},
+			"crab": {
+				"name": "Land Crab",
+				"trait": "Crosses the road in Kenting"
+			},
+			"flyfish": {
+				"name": "Flying Fish",
+				"trait": "Lanyu, every spring"
+			},
+			"turtle": {
+				"name": "Sea Turtle",
+				"trait": "Regular at Xiaoliuqiu"
+			},
+			"dog": {
+				"name": "Tugou",
+				"trait": "Taiwan dog, curly tail"
+			}
+		}
+	}
+}
