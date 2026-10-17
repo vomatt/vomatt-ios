@@ -84,6 +84,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var commentCount: Int?
     /// The viewer's Ballot; nil without one (or signed out).
     public var myOptionId: String?
+    /// Whether the viewer's Ballot is left out of the voter list; nil without a Ballot.
+    public var myBallotAnonymous: Bool?
     /// Only set on My Polls: an unread Invitation or Ended Notification.
     public var unread: Bool?
     public var options: [PollOption]
@@ -96,7 +98,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
         participantCount: Int? = nil, commentCount: Int? = nil, myOptionId: String? = nil,
-        unread: Bool? = nil, options: [PollOption], tags: [Tag] = []
+        myBallotAnonymous: Bool? = nil, unread: Bool? = nil, options: [PollOption], tags: [Tag] = []
     ) {
         self.id = id
         self.title = title
@@ -117,6 +119,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         self.participantCount = participantCount
         self.commentCount = commentCount
         self.myOptionId = myOptionId
+        self.myBallotAnonymous = myBallotAnonymous
         self.unread = unread
         self.options = options
         self.tags = tags

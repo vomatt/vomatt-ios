@@ -191,17 +191,27 @@ public final class VomattService: Sendable {
     // MARK: Ballot
 
     /// Casts or replaces the Ballot. Resolves to the Poll, which has already Ended when
-    /// this was the last Invitee's Ballot of an Invite-only Poll.
-    public func castBallot(pollId: String, optionId: String) async throws -> Poll {
-        try await call {
-            try await Poll(required(client.vote(path: .init(voteId: pollId), body: .json(.init(optionIds: [optionId])))
+    /// this was the last Invitee's Ballot of an Invite-only Poll. `anonymous` nil keeps the
+    /// current Ballot's flag, or the account default for a first Ballot.
+    public func castBallot(pollId: String, optionId: String, anonymous: Bool? = nil) async throws -> Poll {
+        try await retryingWhenBusy {
+            try await Poll(required(client.vote(path: .init(voteId: pollId), body: .json(.init(anonymous: anonymous, optionIds: [optionId])))
                 .ok.body.json.data, "vote.data"))
         }
     }
 
     /// The voter is no longer a Participant and won't be notified. Idempotent.
     public func retractBallot(pollId: String) async throws {
-        _ = try await call { try await client.retract(path: .init(voteId: pollId)).ok }
+        _ = try await retryingWhenBusy { try await client.retract(path: .init(voteId: pollId)).ok }
+    }
+
+    /// A busy Poll (409) recorded nothing; the API asks for one retry.
+    private func retryingWhenBusy<T>(_ request: () async throws -> T) async throws -> T {
+        do {
+            return try await call(request)
+        } catch let error as APIError where error.isBusy {
+            return try await call(request)
+        }
     }
 
     // MARK: Owner
@@ -381,10 +391,13 @@ public final class VomattService: Sendable {
 
     /// Omitted fields stay as they are. Errors carry the API's localized message.
     @discardableResult
-    public func updateProfile(username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil) async throws -> UserProfile {
+    public func updateProfile(
+        username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
+        anonymousBallotByDefault: Bool? = nil
+    ) async throws -> UserProfile {
         try await call {
             try await UserProfile(required(client.updateMyProfile(body: .json(.init(
-                avatarUrl: avatarUrl, bio: bio, displayName: displayName, username: username
+                anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, displayName: displayName, username: username
             ))).ok.body.json.data, "updateMyProfile.data"))
         }
     }

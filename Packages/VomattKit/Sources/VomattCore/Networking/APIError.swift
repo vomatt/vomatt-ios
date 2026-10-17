@@ -38,6 +38,8 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
     public var isRateLimited: Bool { status == 429 }
     /// A Ballot arrived after the Poll Ended.
     public var isPollEnded: Bool { errorCode == "vote.ended" }
+    /// 409: the Poll stayed busy with other changes; nothing was recorded.
+    public var isBusy: Bool { errorCode == "common.conflict" }
     /// Results are sealed while the Poll is Open; `/results` answers 403.
     public var isSealed: Bool { status == 403 }
     public var isNotFound: Bool { status == 404 }

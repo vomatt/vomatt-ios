@@ -67,6 +67,9 @@ extension Poll {
     }
 
     /// Whether the viewer may see who chose what once it has Ended.
+    /// Whether hiding the viewer's name means anything: nobody sees a "nobody" Poll's voter list.
+    public var allowsAnonymousBallot: Bool { voterVisibility != .nobody }
+
     public func canSeeVoters(viewerId: String?) -> Bool {
         switch voterVisibility {
         case .signedIn: return viewerId != nil

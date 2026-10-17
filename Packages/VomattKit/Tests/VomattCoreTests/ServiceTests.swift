@@ -112,10 +112,8 @@ struct ServiceTests {
     }
 
     @Test func createSendsTheContractShape() async throws {
-        let poll = try fixture("listVotes")
-        let item = try #require(try JSONSerialization.jsonObject(with: Data(poll.utf8)) as? [String: Any])
-        let first = try JSONSerialization.data(withJSONObject: ((item["data"] as! [String: Any])["items"] as! [Any])[0])
-        let transport = StubTransport { _, _ in (201, envelope(String(decoding: first, as: UTF8.self)), [:]) }
+        let poll = try firstPoll()
+        let transport = StubTransport { _, _ in (201, envelope(poll), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let start = Date(timeIntervalSince1970: 1_791_766_800)
         _ = try await service.createPoll(PollInput(
@@ -132,6 +130,61 @@ struct ServiceTests {
         #expect(json["startTime"] as? String == "2026-10-12T01:00:00Z")
         let options = try #require(json["options"] as? [[String: Any]])
         #expect(options.map { $0["displayOrder"] as? Int } == [0, 1])
+    }
+
+    private func firstPoll(_ extra: [String: Any] = [:]) throws -> String {
+        let item = try #require(try JSONSerialization.jsonObject(with: Data(try fixture("listVotes").utf8)) as? [String: Any])
+        var first = ((item["data"] as! [String: Any])["items"] as! [[String: Any]])[0]
+        first.merge(extra) { $1 }
+        return String(decoding: try JSONSerialization.data(withJSONObject: first), as: UTF8.self)
+    }
+
+    @Test func castSendsAnonymousOnlyWhenGiven() async throws {
+        let poll = try firstPoll(["myOptionId": "o", "myBallotAnonymous": true])
+        let transport = StubTransport { _, _ in (200, envelope(poll), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let cast = try await service.castBallot(pollId: "p", optionId: "o", anonymous: true)
+        _ = try await service.castBallot(pollId: "p", optionId: "o")
+        #expect(cast.myBallotAnonymous == true)
+        let bodies = try transport.requests.map { try #require(JSONSerialization.jsonObject(with: Data(($0.body ?? "").utf8)) as? [String: Any]) }
+        #expect(bodies[0]["anonymous"] as? Bool == true)
+        #expect(bodies[1]["anonymous"] == nil)
+    }
+
+    // vomatt-api #44: 409 common.conflict means nothing was recorded; retry once
+    @Test func aBusyBallotWriteIsRetriedOnce() async throws {
+        let counter = Counter()
+        let poll = try firstPoll()
+        let transport = StubTransport { _, _ in
+            await counter.increment()
+            return await counter.value == 1 ? (409, failure("common.conflict"), [:]) : (200, envelope(poll), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        _ = try await service.castBallot(pollId: "p", optionId: "o")
+        #expect(transport.requests.count == 2)
+    }
+
+    @Test func stillBusyAfterTheRetryThrows() async throws {
+        let transport = StubTransport { _, _ in (409, failure("common.conflict", "Busy, try again"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.retractBallot(pollId: "p") }
+        #expect(error?.isBusy == true)
+        #expect(error?.message == "Busy, try again")
+        #expect(transport.requests.count == 2)
+    }
+
+    @Test func profileCarriesTheBallotDefault() async throws {
+        let transport = StubTransport { request, _ in
+            if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }
+            return (200, envelope(#"{"id":"u1","username":"alice","anonymousBallotByDefault":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.myProfile().anonymousBallotByDefault == true)
+        _ = try await service.updateProfile(anonymousBallotByDefault: false)
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json.keys.sorted() == ["anonymousBallotByDefault"])
+        #expect(json["anonymousBallotByDefault"] as? Bool == false)
     }
 }
 

@@ -36,6 +36,7 @@ extension Poll {
             participantCount: dto.participantCount.map(Int.init),
             commentCount: dto.commentCount.map(Int.init),
             myOptionId: dto.myOptionId,
+            myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,
             options: try (dto.options ?? []).map(PollOption.init).sorted { $0.displayOrder < $1.displayOrder },
             tags: try (dto.tags ?? []).map(Tag.init)
@@ -213,7 +214,8 @@ extension MyProfile {
             joinedAt: dto.joinedAt,
             totalPolls: dto.totalPolls.map(Int.init) ?? 0,
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
-            visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:]
+            visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:],
+            anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false
         )
     }
 }
