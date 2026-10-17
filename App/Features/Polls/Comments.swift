@@ -202,7 +202,7 @@ struct CommentThreadView: View {
             }
 
             LazyVStack(alignment: .leading, spacing: 16) {
-                ForEach(model.comments) { comment in
+                ForEach(model.comments.filter { !app.isBlocked($0.author) }) { comment in
                     CommentItemView(comment: comment, model: model)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -233,7 +233,7 @@ private struct CommentItemView: View {
             CommentBodyView(comment: comment, model: model) { openComposer(nil) }
             if comment.replyCount > 0 || replyList != nil || replyPrefix != nil {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(replyList?.items ?? []) { reply in
+                    ForEach((replyList?.items ?? []).filter { !app.isBlocked($0.author) }) { reply in
                         CommentBodyView(comment: reply, model: model) { openComposer(reply.author) }
                     }
                     if replyList?.status == .loading { Skeleton(height: 40, radius: Radius.lg) }
@@ -377,6 +377,7 @@ private struct CommentBodyView: View {
             } else {
                 Menu {
                     ReportButton(subject: "Comment \(comment.id) on poll \(model.pollId)", url: app.config.pollURL(model.pollId))
+                    if let author = comment.author { BlockButton(username: author) }
                 } label: {
                     Image(systemName: "ellipsis").frame(width: 28, height: 28)
                 }

@@ -146,6 +146,8 @@ private struct AccountSettings: View {
                 .card(padding: nil)
             }
 
+            if !app.blocked.isEmpty { blockedSection }
+
             AppSettingsSection()
 
             HStack(spacing: 12) {
@@ -162,6 +164,27 @@ private struct AccountSettings: View {
             }
 
             DeleteAccountSection(username: profile.username)
+        }
+    }
+
+    private var blockedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(text: app.t("ios.blockedTitle"))
+            VStack(spacing: 0) {
+                ForEach(app.blocked, id: \.self) { username in
+                    HStack {
+                        UserChip(username: username, avatarUrl: nil, avatarSize: 28, link: false).font(.vm(15))
+                        Spacer()
+                        Button(app.t("ios.unblock")) { app.unblock(username) }.buttonStyle(.vm(.outline, size: .sm))
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 56)
+                    .overlay(alignment: .bottom) {
+                        if username != app.blocked.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                    }
+                }
+            }
+            .card(padding: nil)
         }
     }
 

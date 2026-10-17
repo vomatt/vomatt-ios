@@ -18,8 +18,9 @@
 - [ ] Universal links: vomatt-web serves `/.well-known/apple-app-site-association` once
       `IOS_APP_IDS` is set on Vercel; the entitlement already lists `applinks:vomatt.com`.
       Until then `vomatt://poll/<id>` works.
-- [ ] Content moderation (App Review guideline 1.2): the app lets people report a poll or comment by
-      email. A report endpoint and blocking users need the API (see "Known gaps").
+- [x] Content moderation (App Review guideline 1.2): people can report a poll or comment (by email)
+      and block a user, which hides their polls and comments on that device (Settings lists them
+      to unblock). Server-side reports and blocks need the API (see "Known gaps").
 
 ## App Store Connect
 
@@ -58,4 +59,4 @@
 - Sign in with Apple: the API has `/api/auth/apple`; wiring it needs the Apple service ID configured
   on the API (`APPLE_CLIENT_ID`) to accept this app's bundle ID
 - Follows: hidden on the web too until the API supports them
-- Reporting and blocking users: reports go by email today
+- Reports go by email and blocks stay on the device until the API has endpoints for them

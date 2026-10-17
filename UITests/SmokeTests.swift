@@ -73,6 +73,19 @@ final class SmokeTests: XCTestCase {
         snapshot("8-profile-signed-out")
     }
 
+    func testBlockingHidesTheirPolls() {
+        let title = app.buttons.matching(identifier: "poll-title").firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 20))
+        let label = title.label
+        title.press(forDuration: 1.0)
+        let block = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Block '")).firstMatch
+        XCTAssertTrue(block.waitForExistence(timeout: 5))
+        snapshot("9-block-menu")
+        block.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'is blocked'")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier == 'poll-title' AND label == %@", label)).firstMatch.exists)
+    }
+
     func testCreateAsksToSignIn() {
         XCTAssertTrue(app.buttons["Create a poll"].waitForExistence(timeout: 10))
         app.buttons["Create a poll"].tap()

@@ -83,6 +83,9 @@ struct PollCardView: View {
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
             ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
+            if app.userId != poll.creatorId {
+                BlockButton(username: poll.creatorUsername)
+            }
         }
     }
 
@@ -274,6 +277,18 @@ struct ReportButton: View {
             URLQueryItem(name: "body", value: url?.absoluteString ?? ""),
         ]
         return components.url
+    }
+}
+
+/// Hides someone's polls and comments on this device.
+struct BlockButton: View {
+    @Environment(AppModel.self) private var app
+    let username: String
+
+    var body: some View {
+        Button(role: .destructive) { app.block(username) } label: {
+            Label(app.t("ios.block", ["name": username]), systemImage: "hand.raised")
+        }
     }
 }
 

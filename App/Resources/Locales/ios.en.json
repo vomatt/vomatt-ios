@@ -10,6 +10,10 @@
 		"language": "Language",
 		"terms": "Terms of service",
 		"privacy": "Privacy policy",
-		"contact": "Contact us"
+		"contact": "Contact us",
+		"block": "Block {name}",
+		"blockedToast": "{name} is blocked. You won't see their polls or comments.",
+		"blockedTitle": "Blocked people",
+		"unblock": "Unblock"
 	}
 }

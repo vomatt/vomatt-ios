@@ -10,6 +10,10 @@
 		"language": "語言",
 		"terms": "服務條款",
 		"privacy": "隱私權政策",
-		"contact": "聯絡我們"
+		"contact": "聯絡我們",
+		"block": "封鎖 {name}",
+		"blockedToast": "已封鎖 {name}，你不會再看到對方的投票或留言。",
+		"blockedTitle": "已封鎖的人",
+		"unblock": "解除封鎖"
 	}
 }

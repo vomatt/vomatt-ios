@@ -65,6 +65,9 @@ final class AppModel {
     let config: AppConfig
     let service: VomattService
     let drafts = DraftStore()
+    @ObservationIgnored private let blockList = BlockList()
+    /// Usernames blocked on this device; their polls and comments are hidden.
+    private(set) var blocked: [String] = []
     @ObservationIgnored private let languageBox: LanguageBox
 
     var language: Language {
@@ -108,7 +111,10 @@ final class AppModel {
     init(config: AppConfig = .current, tokenStore: TokenStore = KeychainTokenStore()) {
         #if DEBUG
         // UI tests start signed out
-        if ProcessInfo.processInfo.arguments.contains("-reset-session") { tokenStore.clear() }
+        if ProcessInfo.processInfo.arguments.contains("-reset-session") {
+            tokenStore.clear()
+            for name in BlockList().usernames() { BlockList().unblock(name) }
+        }
         #endif
         let stored = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(Language.init(rawValue:))
         let language = stored ?? Language.preferred()
@@ -117,6 +123,7 @@ final class AppModel {
         self.languageBox = box
         self.language = language
         self.t = Localizer.load(language, bundle: .main)
+        self.blocked = blockList.usernames()
         self.service = VomattService(
             baseURL: config.apiURL,
             tokenStore: tokenStore,
@@ -227,8 +234,24 @@ final class AppModel {
         latestPolls[pollId] = nil
     }
 
-    /// Lists drop Polls deleted elsewhere and show the newest copy of the rest.
+    /// Lists drop Polls deleted elsewhere or by blocked people, and show the newest copy of the rest.
     func visible(_ polls: [Poll]) -> [Poll] {
-        polls.filter { !deletedPollIds.contains($0.id) }.map(latest)
+        polls.filter { !deletedPollIds.contains($0.id) && !isBlocked($0.creatorUsername) }.map(latest)
+    }
+
+    // MARK: Blocking
+
+    func isBlocked(_ username: String?) -> Bool {
+        guard let username else { return false }
+        return blocked.contains(username.lowercased())
+    }
+
+    func block(_ username: String) {
+        blocked = blockList.block(username)
+        showToast(t("ios.blockedToast", ["name": username]))
+    }
+
+    func unblock(_ username: String) {
+        blocked = blockList.unblock(username)
     }
 }

@@ -249,3 +249,17 @@ struct UsernameTests {
         #expect(!Email.isValid("a b@example.com"))
     }
 }
+
+@Suite("Block list")
+struct BlockListTests {
+    @Test func blocksCaseInsensitivelyAndUnblocks() {
+        let list = BlockList(key: "test-blocks-\(UUID().uuidString)")
+        #expect(!list.contains("Alice"))
+        #expect(list.block("Alice") == ["alice"])
+        list.block("bob")
+        #expect(list.contains("ALICE"))
+        #expect(!list.contains(nil))
+        #expect(list.unblock("alice") == ["bob"])
+        #expect(!list.contains("alice"))
+    }
+}
