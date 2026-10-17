@@ -7,10 +7,11 @@
       `Shared.xcconfig`) and `IOS_APP_IDS=<TEAMID>.com.vomatt.app` on vomatt-web
 - [x] **Production API origin**: `https://vomatt-api.vercel.app` (`VOMATT_API_URL`)
 - [x] **Site origin**: `https://vomatt.com` (`VOMATT_SITE_URL`): share links and universal links
-- [ ] **Support email** (`VOMATT_SUPPORT_EMAIL`, from the API contract): content reports and
+- [x] **Support email**: `team@vomatt.com` (`VOMATT_SUPPORT_EMAIL`): content reports and
       "Contact us" go there
-- [ ] **Terms and privacy URLs**: the app links `<site>/terms` and `<site>/privacy`
-      (`AppSettingsSection` in `Features/Profile/AccountView.swift`); match the Sanity page slugs
+- [x] **Terms and privacy URLs**: the app links `<site>/terms-of-service` and
+      `<site>/privacy-policy` (`AppSettingsSection` in `Features/Profile/AccountView.swift`), the
+      live Sanity page slugs (checked 2026-10-17)
 
 ## Backend and web
 

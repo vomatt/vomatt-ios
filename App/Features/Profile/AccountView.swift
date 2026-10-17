@@ -219,8 +219,8 @@ struct AppSettingsSection: View {
             .frame(minHeight: 52)
             .overlay(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
 
-            link(app.t("ios.terms"), url: app.config.siteURL.appending(path: "terms"))
-            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy"))
+            link(app.t("ios.terms"), url: app.config.siteURL.appending(path: "terms-of-service"))
+            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy-policy"))
             if !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
                 link(app.t("ios.contact"), url: mail, last: true)
             }

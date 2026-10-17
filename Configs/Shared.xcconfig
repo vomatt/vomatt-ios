@@ -3,7 +3,7 @@
 
 VOMATT_BUNDLE_ID = com.vomatt.app
 VOMATT_DEVELOPMENT_TEAM =
-VOMATT_SUPPORT_EMAIL = yi-hsien@vomatt.com
+VOMATT_SUPPORT_EMAIL = team@vomatt.com
 
 // xcconfig treats `//` as a comment, so URLs are built from a slash variable
 SLASH = /
