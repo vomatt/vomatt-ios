@@ -104,3 +104,59 @@ struct UnreadCountTests {
     @Test func theAPICapReadsAs99Plus() { #expect(formatUnreadCount(100) == "99+") }
     @Test func countsBelowTheCapAreExact() { #expect(formatUnreadCount(99) == "99") }
 }
+
+@Suite("API error messages")
+struct APIErrorMessageTests {
+    private let t = Localizer(
+        language: .zh,
+        strings: [
+            "apiError.vote.ended": "投票已結束，無法再投票或撤回",
+            "apiError.vote.options.min": "至少需要 {0} 個選項",
+            "groups.saveFailed": "儲存失敗",
+        ],
+        fallback: [:]
+    )
+
+    @Test func knownCodeUsesTheAppString() {
+        let error = APIError(.http(400), errorCode: "vote.ended", message: "Poll ended")
+        #expect(t.message(for: error, fallback: "groups.saveFailed") == "投票已結束，無法再投票或撤回")
+    }
+
+    @Test func codeWithAValuePrefersTheAPIMessage() {
+        let error = APIError(.http(400), errorCode: "vote.options.min", message: "至少需要 2 個選項")
+        #expect(t.message(for: error, fallback: "groups.saveFailed") == "至少需要 2 個選項")
+        #expect(t.message(for: APIError(.http(400), errorCode: "vote.options.min"), fallback: "groups.saveFailed") == "儲存失敗")
+    }
+
+    @Test func detailedCodePrefersTheAPIMessage() {
+        let t = Localizer(language: .en, strings: ["apiError.common.validation_failed": "Validation failed"])
+        let error = APIError(.http(400), errorCode: "common.validation_failed", message: "title: size must be between 1 and 200")
+        #expect(t.message(for: error, fallback: "x") == "title: size must be between 1 and 200")
+        #expect(t.message(for: APIError(.http(400), errorCode: "common.validation_failed"), fallback: "x") == "Validation failed")
+    }
+
+    @Test func localeFilesShareTheSameCodesAndPlaceholders() throws {
+        let locales = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../../App/Resources/Locales").standardized
+        func table(_ name: String) throws -> [String: String] {
+            try Localizer.flatten(json: Data(contentsOf: locales.appending(path: "\(name).json")))
+                .filter { $0.key.hasPrefix("apiError.") }
+        }
+        func placeholders(_ text: String) -> [String] {
+            text.matches(of: /\{[A-Za-z0-9_-]+\}/).map { String($0.output) }.sorted()
+        }
+        let en = try table("ios.en"), zh = try table("ios.zh")
+        #expect(!en.isEmpty)
+        #expect(Set(en.keys) == Set(zh.keys))
+        for (key, text) in en { #expect(placeholders(text) == placeholders(zh[key] ?? ""), "\(key)") }
+    }
+
+    @Test func unknownCodeUsesTheAPIMessageThenTheFallback() {
+        #expect(t.message(for: APIError(.http(400), errorCode: "new.code", message: "新錯誤"), fallback: "groups.saveFailed") == "新錯誤")
+        #expect(t.message(for: APIError(.http(500)), fallback: "groups.saveFailed") == "儲存失敗")
+    }
+
+    @Test func transportFailuresUseTheFallback() {
+        #expect(t.message(for: APIError(.network, message: "The Internet connection appears to be offline."), fallback: "groups.saveFailed") == "儲存失敗")
+        #expect(t.message(for: CancellationError(), fallback: "groups.saveFailed") == "儲存失敗")
+    }
+}
