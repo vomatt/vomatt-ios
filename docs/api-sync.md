@@ -24,9 +24,13 @@ types are generated from it on every build, so the app can only call what the co
    ```
 
    The summary covers only what the app calls: operations whose tag is in `filter.tags` of
-   `openapi-generator-config.yaml`, and the schemas they use. Admin endpoints (`Admin …` tags) belong
+   `openapi-generator-config.yaml` or whose `operationId` is in its `filter.operations`, and the
+   schemas they use. Admin endpoints (`Admin …` tags) belong
    to the admin console, so their changes are left out and only counted on stderr. To bring an API
-   area into the app, add its tag to `filter.tags`.
+   area into the app, add its tag to `filter.tags`. `Auth` is listed by operation in
+   `filter.operations` instead, to leave out the admin console's sign-in. A changed Auth operation
+   that isn't listed is named on a `? operation` line; add its `operationId` there if the app
+   needs it.
 
    The file is written with sorted keys, so the git diff is readable too.
 
@@ -63,7 +67,7 @@ ios.yml does not run on it), and
 
 | Concern | File |
 |---|---|
-| Which operations are generated | `openapi-generator-config.yaml` (`filter.tags`; the admin tags are left out) |
+| Which operations are generated | `openapi-generator-config.yaml` (`filter.tags`, plus the Auth operations in `filter.operations`; admin is left out) |
 | Envelope and errors | `Networking/Middleware.swift`: non-2xx answers become `APIError` with the API's `errorCode`, `message` and `Retry-After` |
 | Tokens and refresh | `Networking/Session.swift`, `AuthMiddleware` |
 | Dates | `Networking/LenientDateTranscoder.swift` (the API mixes fractional and whole seconds) |

@@ -102,7 +102,7 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Log in or sign up for Vomatt"].waitForExistence(timeout: 10))
     }
 
-    /// A wrong code stays explained and keeps the keyboard; the 5th locks the email for 15 minutes.
+    /// A wrong code stays explained and keeps the keyboard; the 3rd locks the email for this IP.
     func testWrongCodeStaysVisibleThenLocks() throws {
         let email = "ios-wrong-\(Int(Date().timeIntervalSince1970))@example.com"
         XCTAssertTrue(app.buttons["Create a poll"].waitForExistence(timeout: 10))
@@ -120,16 +120,15 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(invalid.exists, "the error should not flash away")
         XCTAssertTrue(app.keyboards.firstMatch.exists, "the keyboard should stay up to retry")
 
-        for _ in 2...5 {
-            app.typeText(wrong)
-            _ = invalid.waitForExistence(timeout: 5)
-        }
+        app.typeText(wrong)
+        _ = invalid.waitForExistence(timeout: 5)
+        app.typeText(wrong)
         let locked = app.staticTexts["Too many wrong attempts. Try again in 15 minutes."]
         XCTAssertTrue(locked.waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["6-digit verification code"].isEnabled)
         snapshot("e2e-wrong-code-locked")
 
-        // The lockout also refuses a new code for 15 minutes (vomatt-api #44), so the field stays locked
+        // The lockout also refuses a new code while it lasts (vomatt-api #44), so the field stays locked
         app.buttons["Resend verification code"].tap()
         XCTAssertTrue(locked.waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["6-digit verification code"].isEnabled)

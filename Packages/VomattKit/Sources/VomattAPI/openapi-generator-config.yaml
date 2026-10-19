@@ -3,10 +3,21 @@ generate:
   - client
 accessModifier: public
 namingStrategy: idiomatic
-# The app never calls the admin endpoints
+# The app never calls the admin endpoints. The filter only includes, so the Auth operations are
+# listed one by one to leave out the admin console's sign-in (adminSendOtp, adminVerifyOtp)
 filter:
+  operations:
+    - appleLogin
+    - checkEmail
+    - googleLogin
+    - lineLogin
+    - logout
+    - phoneSendOtp
+    - phoneVerifyOtp
+    - refresh
+    - sendOtp
+    - verifyOtp
   tags:
-    - Auth
     - Vote
     - Vote Comment
     - Notification

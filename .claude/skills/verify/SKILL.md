@@ -23,6 +23,6 @@ app with a temporary XCUITest instead (`DEVELOPER_DIR=/Applications/Xcode.app/Co
 6. Clean up: delete the driver and `Configs/Local.xcconfig`, run `xcodegen generate`, stop the loop,
    and `docker rm -f vomatt-api-local vomatt-ios-pg vomatt-ios-redis`.
 
-Gotchas: the API's 5th wrong code returns `auth.otp.too_many_attempts`. A fresh DB has no polls, so
+Gotchas: the API's 3rd wrong code returns `auth.otp.too_many_attempts`. A fresh DB has no polls, so
 start sign-in from the "Create a poll" tab. To change the email after "Use a different email", run a
 new launch rather than clearing the field (select-all is unreliable).
