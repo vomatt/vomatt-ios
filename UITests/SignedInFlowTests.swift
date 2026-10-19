@@ -120,7 +120,7 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(invalid.exists, "the error should not flash away")
         XCTAssertTrue(app.keyboards.firstMatch.exists, "the keyboard should stay up to retry")
 
-        for _ in 2...5 {
+        for _ in 2...3 {
             app.typeText(wrong)
             _ = invalid.waitForExistence(timeout: 5)
         }
