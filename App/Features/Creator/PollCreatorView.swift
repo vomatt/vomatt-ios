@@ -410,7 +410,7 @@ struct PollCreatorView: View {
             // A new poll's first job is collecting votes: land on it, next to the share button
             if !isEdit { app.push(.poll(poll.id)) }
         } catch {
-            submitError = (error as? APIError)?.message ?? app.t("common.error")
+            submitError = app.t.message(for: error, fallback: "common.error")
         }
     }
 }

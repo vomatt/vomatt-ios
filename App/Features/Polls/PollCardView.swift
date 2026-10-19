@@ -238,7 +238,7 @@ struct OwnerActionsView: View {
             onDeleted()
         } catch {
             // The API explains a passed delete window
-            app.showToast((error as? APIError)?.message ?? app.t("poll.deleteFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "poll.deleteFailed"), isError: true)
         }
     }
 
@@ -247,7 +247,7 @@ struct OwnerActionsView: View {
             try await app.service.closePoll(id: poll.id)
             await onChanged()
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("poll.endFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "poll.endFailed"), isError: true)
         }
     }
 }

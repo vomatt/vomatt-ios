@@ -227,7 +227,7 @@ struct InviteeManagerView: View {
             adding = InviteeSelection()
             onChanged(list)
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("invitees.addFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "invitees.addFailed"), isError: true)
         }
     }
 
@@ -237,7 +237,7 @@ struct InviteeManagerView: View {
             invitees = list
             onChanged(list)
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("invitees.removeFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "invitees.removeFailed"), isError: true)
         }
     }
 }

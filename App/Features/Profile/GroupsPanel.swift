@@ -76,7 +76,7 @@ struct GroupsPanel: View {
             newName = ""
             editing = group
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("groups.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)
         }
     }
 }
@@ -182,7 +182,7 @@ private struct GroupEditor: View {
             group = try await app.service.renameGroup(id: group.id, name: String(name.prefix(groupNameMax)))
             onChange(.updated(group))
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("groups.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)
         }
     }
 
@@ -191,7 +191,7 @@ private struct GroupEditor: View {
             setMembers(try await app.service.addGroupMembers(groupId: group.id, userIds: adding.users.map(\.id), emails: adding.emails))
             adding = InviteeSelection()
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("groups.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)
         }
     }
 
@@ -199,7 +199,7 @@ private struct GroupEditor: View {
         do {
             setMembers(try await app.service.removeGroupMember(groupId: group.id, member.person))
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("groups.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)
         }
     }
 
@@ -209,7 +209,7 @@ private struct GroupEditor: View {
             onChange(.deleted(group.id))
             dismiss()
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("groups.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)
         }
     }
 }

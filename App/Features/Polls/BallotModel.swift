@@ -93,7 +93,7 @@ final class BallotModel {
                 return .failed
             }
             // Still busy after the service's retry: the API's own (localized) message asks to try again
-            let busyMessage = apiError?.isBusy == true ? apiError?.message : nil
+            let busyMessage = apiError?.isBusy == true ? apiError?.message ?? app.t.message(for: error, fallback: failure) : nil
             app.showToast(busyMessage ?? app.t(apiError?.isRateLimited == true ? "poll.tooManyVotes" : failure), isError: true)
             return .failed
         }

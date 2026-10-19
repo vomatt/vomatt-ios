@@ -94,3 +94,24 @@ public struct Localizer: Sendable {
         value.formatted(.number.locale(Locale(identifier: language.localeIdentifier)))
     }
 }
+
+public extension Localizer {
+    /// Codes whose API message carries detail (which field, which value) the app's string drops.
+    private static let detailedErrorCodes: Set<String> = ["common.bad_request", "common.validation_failed"]
+
+    /// What to show for a failed request: the `apiError.<errorCode>` string when there is one,
+    /// else the API's own localized `message`, else `fallback`. A string that takes a value
+    /// (`{0}`), or a detailed code, yields to the API's message, which carries that detail.
+    func message(for error: Error, fallback: String) -> String {
+        guard let error = error as? APIError else { return self(fallback) }
+        // Only the API's answers carry a localized message; network and decoding failures don't
+        let apiMessage = error.kind == .network || error.kind == .decoding ? nil : error.message
+        if let code = error.errorCode, has("apiError.\(code)") {
+            let text = self("apiError.\(code)")
+            let takesValue = text.range(of: #"\{[A-Za-z0-9_-]+\}"#, options: .regularExpression) != nil
+            guard takesValue || Self.detailedErrorCodes.contains(code) else { return text }
+            return apiMessage ?? (takesValue ? self(fallback) : text)
+        }
+        return apiMessage ?? self(fallback)
+    }
+}

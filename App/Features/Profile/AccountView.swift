@@ -214,9 +214,7 @@ private struct AccountSettings: View {
             savedAnonymousDefault = value
         } catch {
             app.updateMe { $0.anonymousBallotByDefault = savedAnonymousDefault }
-            // Only the API's answers carry a localized message; network and decoding failures don't
-            let apiMessage = (error as? APIError).flatMap { $0.status != nil ? $0.message : nil }
-            app.showToast(apiMessage ?? app.t("account.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
     }
 
@@ -228,7 +226,7 @@ private struct AccountSettings: View {
             app.updateMe { $0.visibilitySettings = settings }
         } catch {
             app.updateMe { $0.visibilitySettings = previous }
-            app.showToast(app.t("account.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
     }
 }
@@ -321,7 +319,7 @@ private struct DeleteAccountSection: View {
             try await app.service.deleteMyAccount()
             app.selectedTab = .home
         } catch {
-            app.showToast((error as? APIError)?.message ?? app.t("common.error"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "common.error"), isError: true)
         }
     }
 }
@@ -387,7 +385,7 @@ struct EditProfileSheet: View {
             dismiss()
         } catch {
             // The API's message is localized and explains, e.g., a taken username
-            self.error = (error as? APIError)?.message ?? app.t("account.saveFailed")
+            self.error = app.t.message(for: error, fallback: "account.saveFailed")
         }
     }
 }
@@ -454,7 +452,7 @@ struct AvatarPickerSheet: View {
             app.showToast(app.t("avatar.savedToast"))
             dismiss()
         } catch {
-            app.showToast(app.t("account.saveFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
     }
 }

@@ -68,7 +68,7 @@ final class CommentsModel {
     }
 
     /// Shows the Comment at once as pending, then swaps in the saved one.
-    func add(_ text: String, author: String, avatarUrl: String?, rootId: String?, _ service: VomattService) async -> Bool {
+    func add(_ text: String, author: String, avatarUrl: String?, rootId: String?, _ service: VomattService) async throws {
         let tempId = "pending-\(UUID().uuidString)"
         let pending = Comment(id: tempId, author: author, authorAvatarUrl: avatarUrl, text: text, createdAt: .now, parentId: rootId)
         // Replies read oldest first, top-level Comments newest first
@@ -83,7 +83,6 @@ final class CommentsModel {
         do {
             let saved = try await service.postComment(pollId: pollId, text: text, parentId: rootId)
             replace(tempId) { _ in saved }
-            return true
         } catch {
             if let rootId {
                 replies[rootId]?.items.removeAll { $0.id == tempId }
@@ -92,23 +91,18 @@ final class CommentsModel {
                 comments.removeAll { $0.id == tempId }
             }
             total = shiftCount(total, by: -1)
-            return false
+            throw error
         }
     }
 
-    func edit(_ commentId: String, text: String, _ service: VomattService) async -> Bool {
-        guard let saved = try? await service.updateComment(pollId: pollId, commentId: commentId, text: text) else { return false }
+    func edit(_ commentId: String, text: String, _ service: VomattService) async throws {
+        let saved = try await service.updateComment(pollId: pollId, commentId: commentId, text: text)
         replace(commentId) { _ in saved }
-        return true
     }
 
     /// A top-level Comment with Replies becomes a placeholder; anything else leaves the list.
-    func remove(_ comment: Comment, _ service: VomattService) async -> Bool {
-        do {
-            try await service.deleteComment(pollId: pollId, commentId: comment.id)
-        } catch {
-            return false
-        }
+    func remove(_ comment: Comment, _ service: VomattService) async throws {
+        try await service.deleteComment(pollId: pollId, commentId: comment.id)
         total = shiftCount(total, by: -1)
         guard let rootId = comment.parentId else {
             if comment.replyCount > 0 {
@@ -123,13 +117,12 @@ final class CommentsModel {
             } else {
                 comments.removeAll { $0.id == comment.id }
             }
-            return true
+            return
         }
         replies[rootId]?.items.removeAll { $0.id == comment.id }
         shiftReplyCount(rootId, by: -1)
         // A placeholder with no Replies left isn't listed by the API either
         comments.removeAll { $0.id == rootId && $0.deleted && $0.replyCount == 0 }
-        return true
     }
 
     func toggleLike(_ comment: Comment, _ service: VomattService) async {
@@ -180,10 +173,14 @@ struct CommentThreadView: View {
         VStack(alignment: .leading, spacing: 16) {
             SectionTitle(text: app.t("comments.title") + (model.total.map { " · \($0)" } ?? ""))
             CommentComposer(placeholder: app.t("comments.placeholder")) { text in
-                let ok = await model.add(text, author: app.me?.username ?? app.t("comments.you"),
-                                         avatarUrl: app.me?.avatarUrl, rootId: nil, app.service)
-                if !ok { app.showToast(app.t("comments.postFailed"), isError: true) }
-                return ok
+                do {
+                    try await model.add(text, author: app.me?.username ?? app.t("comments.you"),
+                                        avatarUrl: app.me?.avatarUrl, rootId: nil, app.service)
+                    return true
+                } catch {
+                    app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
+                    return false
+                }
             }
 
             switch model.status {
@@ -249,10 +246,15 @@ private struct CommentItemView: View {
                         ) { text in
                             // Show the thread the Reply lands in
                             if replyList == nil, comment.replyCount > 0 { await model.loadReplies(comment.id, app.service) }
-                            let ok = await model.add(text, author: app.me?.username ?? app.t("comments.you"),
-                                                     avatarUrl: app.me?.avatarUrl, rootId: comment.id, app.service)
-                            if ok { self.replyPrefix = nil } else { app.showToast(app.t("comments.postFailed"), isError: true) }
-                            return ok
+                            do {
+                                try await model.add(text, author: app.me?.username ?? app.t("comments.you"),
+                                                    avatarUrl: app.me?.avatarUrl, rootId: comment.id, app.service)
+                                self.replyPrefix = nil
+                                return true
+                            } catch {
+                                app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
+                                return false
+                            }
                         }
                         .id(replyPrefix)
                     }
@@ -396,16 +398,21 @@ private struct CommentBodyView: View {
             isEditing = false
             return
         }
-        if await model.edit(comment.id, text: text, app.service) {
+        do {
+            try await model.edit(comment.id, text: text, app.service)
             isEditing = false
-        } else {
-            app.showToast(app.t("comments.editFailed"), isError: true)
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "comments.editFailed"), isError: true)
         }
     }
 
     private func delete() async {
         confirmingDelete = false
-        if !(await model.remove(comment, app.service)) { app.showToast(app.t("comments.deleteFailed"), isError: true) }
+        do {
+            try await model.remove(comment, app.service)
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "comments.deleteFailed"), isError: true)
+        }
     }
 }
 
