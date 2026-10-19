@@ -7,8 +7,10 @@ so an API update can be read in one screen before it is committed.
 
 Only what the app can call is reported: operations tagged with one of the
 tags in openapi-generator-config.yaml (`filter.tags`) or listed in
-`filter.operations`, and the schemas they reach. The admin endpoints belong to the admin console, so their changes are
-counted on stderr, not reported.
+`filter.operations`, and the schemas they reach. Other operations sharing a
+tag with a listed one are named with `?`, so a new one isn't missed. The
+admin endpoints belong to the admin console, so their changes are counted on
+stderr, not reported.
 
 Usage: api-diff.py <old openapi.json> <new openapi.json>
 Exit code 0 always; the report is the output.
@@ -153,10 +155,20 @@ def main():
         if before["enum"] != after["enum"]:
             report.append(f"~ enum       {name}  {before['enum']} -> {after['enum']}")
 
-    print("\n".join(report) if report else "No contract changes.")
     skipped = [key for key in all_old_ops.keys() | all_new_ops.keys()
                if key not in old_ops and key not in new_ops
                and json.dumps(all_old_ops.get(key), sort_keys=True) != json.dumps(all_new_ops.get(key), sort_keys=True)]
+    # Tags included op by op (Auth): their other operations may be new ones the app needs, so name them
+    listed_tags = {tag for op in {**old_ops, **new_ops}.values() for tag in op.get("tags", [])} - app["tags"]
+    for key in sorted(skipped):
+        op = all_new_ops.get(key) or all_old_ops[key]
+        tags = listed_tags & set(op.get("tags", []))
+        if tags:
+            report.append(f"? operation  {key}  ({op.get('operationId')}) tagged {', '.join(sorted(tags))},"
+                          " not in filter.operations")
+    skipped = [key for key in skipped if not listed_tags & set((all_new_ops.get(key) or all_old_ops[key]).get("tags", []))]
+
+    print("\n".join(report) if report else "No contract changes.")
     if skipped:
         print(f"({len(skipped)} admin operation(s) changed; not used by the app, skipped)", file=sys.stderr)
 

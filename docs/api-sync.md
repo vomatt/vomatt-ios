@@ -24,11 +24,13 @@ types are generated from it on every build, so the app can only call what the co
    ```
 
    The summary covers only what the app calls: operations whose tag is in `filter.tags` of
-   `openapi-generator-config.yaml`, and the schemas they use. Admin endpoints (`Admin …` tags) belong
+   `openapi-generator-config.yaml` or whose `operationId` is in its `filter.operations`, and the
+   schemas they use. Admin endpoints (`Admin …` tags) belong
    to the admin console, so their changes are left out and only counted on stderr. To bring an API
    area into the app, add its tag to `filter.tags`. `Auth` is listed by operation in
-   `filter.operations` instead, to leave out the admin console's sign-in, so a new consumer Auth
-   operation shows up only in that stderr count until you add its `operationId` there.
+   `filter.operations` instead, to leave out the admin console's sign-in. A changed Auth operation
+   that isn't listed is named on a `? operation` line; add its `operationId` there if the app
+   needs it.
 
    The file is written with sorted keys, so the git diff is readable too.
 
