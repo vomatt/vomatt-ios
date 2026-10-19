@@ -6,8 +6,8 @@ responses) and schemas whose properties, required fields or enums changed,
 so an API update can be read in one screen before it is committed.
 
 Only what the app can call is reported: operations tagged with one of the
-tags in openapi-generator-config.yaml (`filter.tags`), and the schemas they
-reach. The admin endpoints belong to the admin console, so their changes are
+tags in openapi-generator-config.yaml (`filter.tags`) or listed in
+`filter.operations`, and the schemas they reach. The admin endpoints belong to the admin console, so their changes are
 counted on stderr, not reported.
 
 Usage: api-diff.py <old openapi.json> <new openapi.json>
@@ -22,30 +22,31 @@ CONFIG = os.path.join(os.path.dirname(__file__), "..", "Packages", "VomattKit", 
                       "openapi-generator-config.yaml")
 
 
-def app_tags():
-    """The `filter.tags` list of the generator config (a plain YAML list, so no YAML parser)."""
-    tags, in_filter, in_tags = set(), False, False
+def app_filter():
+    """The `filter.tags` and `filter.operations` lists of the generator config (plain YAML lists, so no
+    YAML parser)."""
+    lists, in_filter, current = {"tags": set(), "operations": set()}, False, None
     for line in open(CONFIG):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         indent = len(line) - len(line.lstrip())
         if indent == 0:
-            in_filter, in_tags = stripped == "filter:", False
-        elif in_filter and stripped == "tags:":
-            in_tags = True
-        elif in_tags and stripped.startswith("- "):
-            tags.add(stripped[2:].strip().strip("'\""))
+            in_filter, current = stripped == "filter:", None
+        elif in_filter and stripped.rstrip(":") in lists:
+            current = lists[stripped.rstrip(":")]
+        elif current is not None and stripped.startswith("- "):
+            current.add(stripped[2:].strip().strip("'\""))
         elif in_filter:
-            in_tags = False
-    return tags
+            current = None
+    return lists
 
 
-def is_app_op(op, tags):
-    return bool(tags & set(op.get("tags", [])))
+def is_app_op(op, app):
+    return bool(app["tags"] & set(op.get("tags", []))) or op.get("operationId") in app["operations"]
 
 
-def reachable_schemas(doc, tags):
+def reachable_schemas(doc, app):
     """Schema names referenced, directly or through other schemas, by the app's operations."""
     schemas = doc.get("components", {}).get("schemas", {})
     found, stack = set(), []
@@ -62,7 +63,7 @@ def reachable_schemas(doc, tags):
                 refs(value)
 
     for op in operations(doc).values():
-        if is_app_op(op, tags):
+        if is_app_op(op, app):
             refs(op)
     while stack:
         name = stack.pop()
@@ -107,11 +108,11 @@ def schema_shape(schema):
 def main():
     old, new = (json.load(open(path)) for path in sys.argv[1:3])
     report = []
-    tags = app_tags()
+    app = app_filter()
 
     all_old_ops, all_new_ops = operations(old), operations(new)
-    old_ops = {key: op for key, op in all_old_ops.items() if is_app_op(op, tags)}
-    new_ops = {key: op for key, op in all_new_ops.items() if is_app_op(op, tags)}
+    old_ops = {key: op for key, op in all_old_ops.items() if is_app_op(op, app)}
+    new_ops = {key: op for key, op in all_new_ops.items() if is_app_op(op, app)}
     for key in sorted(new_ops.keys() - old_ops.keys()):
         report.append(f"+ operation  {key}  ({new_ops[key].get('operationId')})")
     for key in sorted(old_ops.keys() - new_ops.keys()):
@@ -129,7 +130,7 @@ def main():
         if old_ops[key].get("description") != new_ops[key].get("description"):
             report.append(f"~ operation  {key}  description changed")
 
-    used = reachable_schemas(old, tags) | reachable_schemas(new, tags)
+    used = reachable_schemas(old, app) | reachable_schemas(new, app)
     old_schemas = {k: v for k, v in old.get("components", {}).get("schemas", {}).items() if k in used}
     new_schemas = {k: v for k, v in new.get("components", {}).get("schemas", {}).items() if k in used}
     for name in sorted(new_schemas.keys() - old_schemas.keys()):
