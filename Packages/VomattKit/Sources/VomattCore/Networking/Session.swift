@@ -89,10 +89,13 @@ public actor Session {
             inFlight = (current.refreshToken, task)
         }
         let result = await task.value
-        if inFlight?.refreshToken == current.refreshToken { inFlight = nil }
+        // Only this request's task: after an unavailable result a newer one can carry the same refresh token
+        if inFlight?.task == task { inFlight = nil }
 
+        // Signed out while refreshing: the result is not ours to keep
+        guard let active = tokens else { return nil }
         // Another caller may already have applied this result
-        if let tokens, tokens.refreshToken != current.refreshToken { return tokens.accessToken }
+        if active.refreshToken != current.refreshToken { return active.accessToken }
 
         switch result {
         case let .ok(rotated):

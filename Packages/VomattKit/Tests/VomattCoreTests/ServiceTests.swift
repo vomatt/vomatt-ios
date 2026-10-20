@@ -256,6 +256,57 @@ struct SessionTests {
         #expect(await session.isSignedIn)
     }
 
+    /// F1 in .claude/skills/verify-session-refresh: a waiter from an earlier refresh must not clear the
+    /// record of a newer in-flight refresh that happens to carry the same refresh token, or the next
+    /// caller starts a duplicate and the backend ends the sign-in. Sign-out/sign-in with the same pair
+    /// is the deterministic way to put a newer refresh behind an older waiter.
+    @Test func aStaleWaiterDoesNotClearANewerRefresh() async throws {
+        let calls = Counter()
+        let gates = [Gate(), Gate()]
+        let rotated = tokens(2)
+        let session = Session(store: InMemoryTokenStore(tokens(1, exp: Date.now.timeIntervalSince1970 + 10))) { _ in
+            let n = await calls.increment()
+            switch n {
+            case 1: await gates[0].wait(); return .unavailable
+            case 2: await gates[1].wait(); return .ok(rotated)
+            default: Issue.record("a third refresh was started"); return .unavailable
+            }
+        }
+        async let a = session.accessToken()
+        try await eventually { await calls.value == 1 }
+        await session.signOut()
+        await session.signIn(tokens(1, exp: Date.now.timeIntervalSince1970 + 10))
+        async let c = session.accessToken()
+        try await eventually { await calls.value == 2 }
+        await gates[0].open()
+        #expect(await a != nil) // unavailable: keeps the (re-signed-in) session's token
+        async let d = session.accessToken() // must join the second refresh, not start a third
+        await gates[1].open()
+        let late = await [c, d]
+        #expect(late.allSatisfy { $0 == rotated.accessToken })
+        #expect(await calls.value == 2)
+    }
+
+    /// F2: a refresh that completes after signOut() must not bring the session back.
+    @Test func aRefreshFinishingAfterSignOutIsDropped() async throws {
+        let started = Counter()
+        let gate = Gate()
+        let store = InMemoryTokenStore(tokens(1))
+        let session = Session(store: store) { _ in
+            _ = await started.increment()
+            await gate.wait()
+            return .ok(tokens(2))
+        }
+        let token = try #require(await session.accessToken())
+        async let retry = session.accessTokenAfterRejection(of: token)
+        try await eventually { await started.value == 1 }
+        await session.signOut()
+        await gate.open()
+        #expect(await retry == nil)
+        #expect(await !session.isSignedIn)
+        #expect(store.load() == nil)
+    }
+
     @Test func aStaleRejectionReusesTheNewerToken() async throws {
         let current = tokens(1)
         let session = Session(store: InMemoryTokenStore(current)) { _ in Issue.record("should not refresh"); return .unavailable }
@@ -296,5 +347,31 @@ struct SessionTests {
 
 actor Counter {
     private(set) var value = 0
-    func increment() { value += 1 }
+    @discardableResult func increment() -> Int { value += 1; return value }
+}
+
+/// Holds async callers until opened.
+actor Gate {
+    private var opened = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        if opened { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        opened = true
+        for waiter in waiters { waiter.resume() }
+        waiters = []
+    }
+}
+
+/// Polls `condition` for up to a second.
+func eventually(_ condition: () async -> Bool) async throws {
+    for _ in 0..<200 {
+        if await condition() { return }
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    Issue.record("condition not met in time")
 }
