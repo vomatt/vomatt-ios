@@ -7,7 +7,7 @@ DESTINATION = platform=iOS Simulator,name=$(SIMULATOR)
 # The OpenAPI generator runs as a build plugin; in Xcode, trust it once when asked
 XCODEBUILD = xcodebuild -project Vomatt.xcodeproj -scheme Vomatt -skipPackagePluginValidation
 
-.PHONY: bootstrap project test test-core test-ui build sync sync-check api-diff archive open clean
+.PHONY: bootstrap project test test-core test-ui build formal sync sync-check api-diff archive open clean
 
 bootstrap: ## Install XcodeGen and generate the project
 	@command -v xcodegen >/dev/null || brew install xcodegen
@@ -29,6 +29,9 @@ test-ui: project ## UI smoke tests in the simulator
 	$(XCODEBUILD) -destination '$(DESTINATION)' -quiet test
 
 test: test-core build ## Everything CI runs
+
+formal: ## Model-check the Session refresh with TLC (.claude/skills/verify-session-refresh)
+	Formal/check-session.sh
 
 sync: ## Pull the API contract, strings, color tokens and avatars from ../vomatt-web
 	scripts/sync.sh all
