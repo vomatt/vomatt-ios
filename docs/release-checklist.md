@@ -5,7 +5,7 @@
 - [x] **Bundle ID**: `com.vomatt.app` (`VOMATT_BUNDLE_ID`)
 - [ ] **Apple Developer team ID**: set `VOMATT_DEVELOPMENT_TEAM` (in `Configs/Local.xcconfig` or
       `Shared.xcconfig`) and `IOS_APP_IDS=<TEAMID>.com.vomatt.app` on vomatt-web
-- [x] **Production API origin**: `https://vomatt-api.vercel.app` (`VOMATT_API_URL`)
+- [x] **Production API origin**: `https://vomatt-api-production.up.railway.app` (`VOMATT_API_URL`)
 - [x] **Site origin**: `https://vomatt.com` (`VOMATT_SITE_URL`): share links and universal links
 - [x] **Support email**: `team@vomatt.com` (`VOMATT_SUPPORT_EMAIL`): content reports and
       "Contact us" go there

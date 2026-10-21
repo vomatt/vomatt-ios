@@ -45,6 +45,17 @@ extension Font {
     static let vmMeta = vm(13, relativeTo: .footnote)
 }
 
+extension AnyTransition {
+    /// Inline messages and toasts: fade in rising 12pt over 0.3s, fade out rising 12pt over 0.15s.
+    /// Only the fade under Reduce Motion.
+    static func vmEnterExit(reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: 12)).animation(.easeOut(duration: 0.3)),
+            removal: .opacity.combined(with: .offset(y: -12)).animation(.easeOut(duration: 0.15))
+        )
+    }
+}
+
 extension View {
     /// The `display-heading` utility: weight 400, leading 1.25, -0.03em tracking.
     func displayHeading(_ size: CGFloat) -> some View {

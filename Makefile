@@ -40,7 +40,7 @@ sync-check: ## Fail when anything differs from ../vomatt-web
 	scripts/sync.sh check
 
 api-diff: ## Compare the contract with the deployed API (API_URL=https://...)
-	@test -n "$(API_URL)" || (echo "Set API_URL, e.g. make api-diff API_URL=https://vomatt-api.vercel.app" && exit 1)
+	@test -n "$(API_URL)" || (echo "Set API_URL, e.g. make api-diff API_URL=https://vomatt-api-production.up.railway.app" && exit 1)
 	curl -fsSL "$(API_URL)/v3/api-docs" -o /tmp/vomatt-live-api.json
 	python3 scripts/api-diff.py Packages/VomattKit/Sources/VomattAPI/openapi.json /tmp/vomatt-live-api.json
 

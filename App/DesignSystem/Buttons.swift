@@ -12,6 +12,7 @@ struct VMButtonStyle: ButtonStyle {
     var pill = false
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: pill ? 999 : Radius.lg)
@@ -27,8 +28,8 @@ struct VMButtonStyle: ButtonStyle {
             .overlay(shape.strokeBorder(border, lineWidth: variant == .outline ? 1 : 0))
             .contentShape(shape)
             .opacity(isEnabled || variant == .default ? 1 : 0.5)
-            // `active:translate-y-px`
-            .offset(y: configuration.isPressed ? 1 : 0)
+            // `motion-safe:active:translate-y-px`; the pressed background stays under Reduce Motion
+            .offset(y: configuration.isPressed && !reduceMotion ? 1 : 0)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 

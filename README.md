@@ -52,7 +52,7 @@ Per-configuration values live in `Configs/*.xcconfig` and reach the app through 
 
 | Setting | Debug | Release |
 |---|---|---|
-| `VOMATT_API_URL` | `https://vomatt-api.vercel.app` | `https://vomatt-api.vercel.app` |
+| `VOMATT_API_URL` | `https://vomatt-api-production.up.railway.app` | `https://vomatt-api-production.up.railway.app` |
 | `VOMATT_SITE_URL` | `https://vomatt.com` | `https://vomatt.com` (share links, universal links) |
 | `VOMATT_LOG_REQUESTS` | `YES` (one console line per request, no bodies or tokens) | `NO` |
 | `VOMATT_BUNDLE_ID` | `com.vomatt.app` | |

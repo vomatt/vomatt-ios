@@ -41,6 +41,7 @@ struct VMTextField: View {
     var submitLabel: SubmitLabel = .done
     var onSubmit: () -> Void = {}
     @FocusState private var isFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -62,7 +63,7 @@ struct VMTextField: View {
             }
             if let error {
                 Text(error).font(.vmMeta).foregroundStyle(Tokens.destructive)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.vmEnterExit(reduceMotion: reduceMotion))
             }
         }
         .animation(.easeOut(duration: 0.2), value: error)

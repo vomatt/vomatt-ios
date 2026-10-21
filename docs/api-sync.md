@@ -10,7 +10,7 @@ types are generated from it on every build, so the app can only call what the co
 
    ```bash
    scripts/sync.sh api                                     # from ../vomatt-web/api-docs.json
-   scripts/sync.sh api --url https://vomatt-api.vercel.app # or straight from a deployed API
+   scripts/sync.sh api --url https://vomatt-api-production.up.railway.app # or straight from a deployed API
    scripts/sync.sh api --file ../vomatt-api/docs/frontend/openapi.json  # or vomatt-api's snapshot
    ```
 

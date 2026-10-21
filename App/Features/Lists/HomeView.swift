@@ -29,22 +29,22 @@ struct HomeView: View {
             }
             .padding(.horizontal, Metrics.gutter - 4)
         }
-        .overlay(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        // Behind the tabs, so the active underline covers it (as in `LineTabs`)
+        .background(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
         .accessibilityLabel(app.t("homePage.topics"))
     }
 
     private func topicTab(_ tag: Tag?, label: String) -> some View {
         let isActive = tag?.id == activeTag?.id
         return Button { activeTag = tag } label: {
-            VStack(spacing: 2) {
-                Text(label).font(.vm(14, .medium))
-                    .foregroundStyle(isActive ? Tokens.foreground : Tokens.mutedForeground)
-                Capsule().fill(isActive ? Tokens.foreground : .clear).frame(height: 2)
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
-            .fixedSize()
+            Text(label).font(.vm(14, .medium))
+                .foregroundStyle(isActive ? Tokens.foreground : Tokens.mutedForeground)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .fixedSize()
+                .overlay(alignment: .bottom) {
+                    if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
+                }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isActive ? .isSelected : [])

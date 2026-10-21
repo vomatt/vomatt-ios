@@ -164,11 +164,9 @@ struct VMTabBar: View {
             item(.explore)
             Button { app.openCreator() } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(Tokens.primaryForeground)
-                    .frame(width: 52, height: 44)
-                    .background(Tokens.primary, in: RoundedRectangle(cornerRadius: Radius.lg))
+                    .frame(width: 52)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.vm(.default, size: .icon))
             .frame(maxWidth: .infinity)
             .accessibilityLabel(app.t("common.createPoll"))
             item(.myPolls, badge: app.unreadBadge)

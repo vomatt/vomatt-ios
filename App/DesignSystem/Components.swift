@@ -238,15 +238,13 @@ struct UserChip: View {
 struct LineTabs<Value: Hashable>: View {
     let items: [(value: Value, label: String)]
     @Binding var selection: Value
-    @Namespace private var underline
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(items, id: \.value) { item in
                 let isActive = item.value == selection
-                Button {
-                    withAnimation(.snappy(duration: 0.25)) { selection = item.value }
-                } label: {
+                // Instant: tab switches are too frequent to animate
+                Button { selection = item.value } label: {
                     Text(item.label)
                         .font(.vm(15, .medium))
                         .foregroundStyle(isActive ? Tokens.foreground : Tokens.foreground.opacity(0.6))
@@ -254,17 +252,15 @@ struct LineTabs<Value: Hashable>: View {
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
                         .overlay(alignment: .bottom) {
-                            if isActive {
-                                Rectangle().fill(Tokens.foreground).frame(height: 2)
-                                    .matchedGeometryEffect(id: "underline", in: underline)
-                            }
+                            if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
                         }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
             }
         }
-        .overlay(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        // Behind the tabs, so the active underline covers it
+        .background(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
     }
 }
 
@@ -299,8 +295,9 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 8) {
             if toast.isError { Image(systemName: "exclamationmark.circle") }
-            Text(toast.text).font(.vm(14, .medium)).multilineTextAlignment(.leading)
+            Text(toast.text).multilineTextAlignment(.leading)
         }
+        .font(.vm(14, .medium))
         .foregroundStyle(toast.isError ? Tokens.destructive : Tokens.primaryForeground)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -315,11 +312,20 @@ struct ToastView: View {
 extension View {
     /// Shows `app.toast` for a few seconds and announces it to VoiceOver.
     func toastHost(_ app: AppModel) -> some View {
-        overlay(alignment: .bottom) {
+        modifier(ToastHost(app: app))
+    }
+}
+
+private struct ToastHost: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let app: AppModel
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
             if let toast = app.toast {
                 ToastView(toast: toast)
                     .padding(.bottom, 80)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.vmEnterExit(reduceMotion: reduceMotion))
                     .id(toast.id)
                     .task(id: toast.id) {
                         AccessibilityNotification.Announcement(toast.text).post()

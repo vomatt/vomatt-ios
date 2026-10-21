@@ -59,13 +59,14 @@ struct AuthSheet: View {
 
 private struct AuthErrorText: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let error: AuthErrorKey?
     var body: some View {
         if let error {
             Label(app.t(error.translationKey), systemImage: "exclamationmark.circle")
                 .font(.vmMeta)
                 .foregroundStyle(Tokens.destructive)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.vmEnterExit(reduceMotion: reduceMotion))
                 .accessibilityAddTraits(.isStaticText)
                 .task(id: error) { AccessibilityNotification.Announcement(app.t(error.translationKey)).post() }
         }
@@ -220,15 +221,15 @@ private struct CodeStep: View {
             ForEach(range, id: \.self) { index in
                 let digits = Array(code)
                 let isCurrent = isFocused && index == min(digits.count, codeLength - 1)
+                let shape = RoundedRectangle(cornerRadius: Radius.lg)
+                // `FieldChrome`'s focus: the edge stays and a ring goes outside it
                 Text(index < digits.count ? String(digits[index]) : "")
                     .font(.vmMono(22))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isCurrent ? Tokens.card : Tokens.field, in: RoundedRectangle(cornerRadius: Radius.lg))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(
-                        error != nil ? Tokens.destructive : (isCurrent ? Tokens.ring : Tokens.borderStrong),
-                        lineWidth: isCurrent ? 2 : 1
-                    ))
+                    .background(isCurrent ? Tokens.card : Tokens.field, in: shape)
+                    .overlay(shape.strokeBorder(error != nil ? Tokens.destructive : Tokens.borderStrong, lineWidth: 1))
+                    .overlay(shape.inset(by: -2).strokeBorder(Tokens.ring, lineWidth: isCurrent ? 2 : 0))
             }
         }
     }
