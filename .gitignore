@@ -12,3 +12,7 @@ build/
 *.xcresult
 *.ipa
 *.dSYM.zip
+
+# Formal verification tooling and run output (Formal/)
+Formal/.tools/
+Formal/out/

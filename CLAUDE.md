@@ -17,6 +17,7 @@ make test-core    # Packages/VomattKit tests: domain, networking, contract (swif
 make build        # simulator build; SIMULATOR="iPhone 17" by default
 make test-ui      # UI smoke tests (E2E against a local API: docs/e2e.md)
 make sync-check   # contract, strings, avatars still match ../vomatt-web
+make formal       # TLC model check of Session's refresh (.claude/skills/verify-session-refresh)
 ```
 
 `DEVELOPER_DIR` is set by the Makefile, so it works while `xcode-select` points at the CLT.
