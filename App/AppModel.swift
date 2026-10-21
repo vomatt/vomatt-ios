@@ -152,6 +152,10 @@ final class AppModel {
             case let .signedOut(expired):
                 userId = nil
                 me = nil
+                // The account's blocks stay with the account; only those made signed out remain
+                for name in blockedIds.keys { blockList.unblock(name) }
+                blockedIds = [:]
+                blocked = blockList.usernames()
                 unreadCount = 0
                 sessionGeneration += 1
                 if expired { showToast(t("login.sessionExpired")) }
@@ -262,12 +266,18 @@ final class AppModel {
         blocked = blockList.block(username)
         showToast(t("ios.blockedToast", ["name": username]))
         guard isSignedIn, let id else { return }
+        let key = username.lowercased()
+        // Recorded before the call so a quick unblock reaches the API too
+        let wasBlocked = blockedIds[key] != nil
+        blockedIds[key] = id
         Task {
             do {
                 try await service.blockUser(id: id)
-                blockedIds[username.lowercased()] = id
             } catch {
-                blocked = blockList.unblock(username)
+                if !wasBlocked {
+                    blockedIds[key] = nil
+                    blocked = blockList.unblock(username)
+                }
                 showToast(t.message(for: error, fallback: "ios.blockFailed"), isError: true)
             }
         }
@@ -294,7 +304,12 @@ final class AppModel {
     func syncBlocked() async {
         guard isSignedIn, let remote = try? await service.allBlockedUsers() else { return }
         let known = Set(remote.map { $0.username.lowercased() })
-        for name in blockList.usernames() where !known.contains(name) {
+        // Synced before but gone from the API: unblocked on another device
+        for name in blockedIds.keys where !known.contains(name) {
+            blockedIds[name] = nil
+            blockList.unblock(name)
+        }
+        for name in blockList.usernames() where !known.contains(name) && blockedIds[name] == nil {
             let match = try? await service.searchUsers(name).items.first { $0.username.lowercased() == name }
             if let id = match?.id, (try? await service.blockUser(id: id)) != nil { blockedIds[name] = id }
         }
