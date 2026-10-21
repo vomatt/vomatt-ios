@@ -84,7 +84,7 @@ struct PollCardView: View {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
             ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
             if app.userId != poll.creatorId {
-                BlockButton(username: poll.creatorUsername)
+                BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
             }
         }
     }
@@ -280,13 +280,14 @@ struct ReportButton: View {
     }
 }
 
-/// Hides someone's polls and comments on this device.
+/// Hides someone's polls and comments; signed in, the API keeps the block.
 struct BlockButton: View {
     @Environment(AppModel.self) private var app
     let username: String
+    let userId: String?
 
     var body: some View {
-        Button(role: .destructive) { app.block(username) } label: {
+        Button(role: .destructive) { app.block(username, userId: userId) } label: {
             Label(app.t("ios.block", ["name": username]), systemImage: "hand.raised")
         }
     }

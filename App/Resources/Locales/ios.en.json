@@ -14,6 +14,8 @@
 		"block": "Block {name}",
 		"blockedToast": "{name} is blocked. You won't see their polls or comments.",
 		"blockedTitle": "Blocked people",
+		"blockFailed": "Couldn't block this person. Try again.",
+		"unblockFailed": "Couldn't unblock this person. Try again.",
 		"create": "Create",
 		"unblock": "Unblock",
 		"invitedBy": "{name} invited you",

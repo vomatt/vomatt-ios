@@ -66,8 +66,11 @@ final class AppModel {
     let service: VomattService
     let drafts = DraftStore()
     @ObservationIgnored private let blockList = BlockList()
-    /// Usernames blocked on this device; their polls and comments are hidden.
+    /// Lowercased usernames the viewer blocked; their polls and comments are hidden. Signed in, the API
+    /// holds the list and filters its answers too; signed out, it lives on this device only.
     private(set) var blocked: [String] = []
+    /// Ids of the blocked people the API knows, by lowercased username, to unblock them.
+    @ObservationIgnored private var blockedIds: [String: String] = [:]
     @ObservationIgnored private let languageBox: LanguageBox
 
     var language: Language {
@@ -161,6 +164,7 @@ final class AppModel {
         async let unread = try? service.unreadCount()
         if let profile = await profile { me = profile }
         if let unread = await unread { unreadCount = unread }
+        await syncBlocked()
     }
 
     func refreshUnread() async {
@@ -253,12 +257,51 @@ final class AppModel {
         return blocked.contains(username.lowercased())
     }
 
-    func block(_ username: String) {
+    /// Hides the person at once; signed in, the API is told too and the block is undone when it fails.
+    func block(_ username: String, userId id: String?) {
         blocked = blockList.block(username)
         showToast(t("ios.blockedToast", ["name": username]))
+        guard isSignedIn, let id else { return }
+        Task {
+            do {
+                try await service.blockUser(id: id)
+                blockedIds[username.lowercased()] = id
+            } catch {
+                blocked = blockList.unblock(username)
+                showToast(t.message(for: error, fallback: "ios.blockFailed"), isError: true)
+            }
+        }
     }
 
     func unblock(_ username: String) {
+        let key = username.lowercased()
         blocked = blockList.unblock(username)
+        guard isSignedIn, let id = blockedIds[key] else { return }
+        blockedIds[key] = nil
+        Task {
+            do {
+                try await service.unblockUser(id: id)
+            } catch {
+                blocked = blockList.block(username)
+                blockedIds[key] = id
+                showToast(t.message(for: error, fallback: "ios.unblockFailed"), isError: true)
+            }
+        }
+    }
+
+    /// Takes the API's list as the truth once signed in. People blocked on this device while signed
+    /// out are sent up first, so nothing comes back into view.
+    func syncBlocked() async {
+        guard isSignedIn, let remote = try? await service.allBlockedUsers() else { return }
+        let known = Set(remote.map { $0.username.lowercased() })
+        for name in blockList.usernames() where !known.contains(name) {
+            let match = try? await service.searchUsers(name).items.first { $0.username.lowercased() == name }
+            if let id = match?.id, (try? await service.blockUser(id: id)) != nil { blockedIds[name] = id }
+        }
+        for user in remote {
+            blockedIds[user.username.lowercased()] = user.id
+            blockList.block(user.username)
+        }
+        blocked = blockList.usernames()
     }
 }

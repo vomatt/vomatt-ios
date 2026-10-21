@@ -1,7 +1,8 @@
 import Foundation
 
 /// People the viewer blocked on this device: their polls and comments are hidden
-/// (App Review guideline 1.2). The API has no block endpoint yet, so it stays local.
+/// (App Review guideline 1.2). Signed in, the API holds the real list and `AppModel` mirrors it
+/// here; signed out, this is the only copy.
 public struct BlockList: Sendable {
     private let key: String
     private let suiteName: String?

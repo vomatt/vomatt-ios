@@ -379,7 +379,7 @@ private struct CommentBodyView: View {
             } else {
                 Menu {
                     ReportButton(subject: "Comment \(comment.id) on poll \(model.pollId)", url: app.config.pollURL(model.pollId))
-                    if let author = comment.author { BlockButton(username: author) }
+                    if let author = comment.author { BlockButton(username: author, userId: comment.userId) }
                 } label: {
                     Image(systemName: "ellipsis").frame(width: 28, height: 28)
                 }

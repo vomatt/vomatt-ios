@@ -233,6 +233,25 @@ struct ServiceTests {
         #expect(json["birthday"] as? String == "1995-04-12")
         #expect(json["lastName"] as? String == "")
     }
+
+    @Test func blocksAreWrittenAndListedAcrossPages() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if request.method != .get { return (200, envelope(#"{"success":true}"#), [:]) }
+            if path.contains("cursor=c1") {
+                return (200, envelope(#"{"items":[{"id":"u2","username":"bob"}],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"{"items":[{"id":"u1","username":"alice","displayName":"Alice","avatarUrl":"bot:boba"}],"nextCursor":"c1"}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.blockUser(id: "u1")
+        try await service.unblockUser(id: "u1")
+        let users = try await service.allBlockedUsers()
+        #expect(users.map(\.username) == ["alice", "bob"])
+        #expect(users.first?.avatarUrl == "bot:boba")
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls.prefix(2) == ["POST /api/users/me/blocks/u1", "DELETE /api/users/me/blocks/u1"])
+    }
 }
 
 @Suite("Session")

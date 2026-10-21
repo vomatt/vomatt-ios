@@ -14,6 +14,8 @@
 		"block": "封鎖 {name}",
 		"blockedToast": "已封鎖 {name}，你不會再看到對方的投票或留言。",
 		"blockedTitle": "已封鎖的人",
+		"blockFailed": "無法封鎖對方，請再試一次。",
+		"unblockFailed": "無法解除封鎖，請再試一次。",
 		"create": "建立",
 		"unblock": "解除封鎖",
 		"invitedBy": "{name} 邀請了你",

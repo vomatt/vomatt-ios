@@ -439,6 +439,29 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Signed-in only. Idempotent. From now on the API leaves their Polls and Comments out of the viewer's lists.
+    public func blockUser(id: String) async throws {
+        _ = try await call { try await client.blockUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only. Idempotent.
+    public func unblockUser(id: String) async throws {
+        _ = try await call { try await client.unblockUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only; most recently blocked first.
+    public func blockedUsers(cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listBlockedUsers(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Every blocked user, following the cursor to the end.
+    public func allBlockedUsers() async throws -> [UserSummary] {
+        try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
+    }
+
     /// Permanently deletes the signed-in user's account; the backend revokes every session.
     public func deleteMyAccount() async throws {
         let id = try await myProfile().id
