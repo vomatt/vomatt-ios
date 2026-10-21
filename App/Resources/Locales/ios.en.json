@@ -14,6 +14,8 @@
 		"block": "Block {name}",
 		"blockedToast": "{name} is blocked. You won't see their polls or comments.",
 		"blockedTitle": "Blocked people",
+		"blockFailed": "Couldn't block this person. Try again.",
+		"unblockFailed": "Couldn't unblock this person. Try again.",
 		"create": "Create",
 		"unblock": "Unblock",
 		"invitedBy": "{name} invited you",
@@ -103,6 +105,14 @@
 		"tag.in_use": "Cannot delete tag that is referenced by votes",
 		"tag.ids.invalid": "Some tag IDs do not exist",
 		"lookup.not_found": "Lookup not found",
-		"lookup.exists": "Dictionary item already exists: {0}/{1}"
+		"lookup.exists": "Dictionary item already exists: {0}/{1}",
+		"firstName": "First name",
+		"lastName": "Last name",
+		"birthday": "Birthday",
+		"setBirthday": "Add birthday",
+		"birthdayHint": "Once set, a birthday can be changed but not removed.",
+		"field.firstName": "First name",
+		"field.lastName": "Last name",
+		"field.birthday": "Birthday"
 	}
 }

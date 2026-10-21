@@ -213,6 +213,45 @@ struct ServiceTests {
         #expect(json.keys.sorted() == ["anonymousBallotByDefault"])
         #expect(json["anonymousBallotByDefault"] as? Bool == false)
     }
+
+    @Test func profileCarriesNamesAndBirthday() async throws {
+        let transport = StubTransport { request, _ in
+            if request.method == .patch { return (200, envelope(#"{"username":"alice","birthday":"1995-04-12"}"#), [:]) }
+            return (200, envelope(#"{"id":"u1","username":"alice","firstName":"Alice","lastName":"Chen","birthday":"1995-04-12","visibilitySettings":{"birthday":true}}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.firstName == "Alice" && me.lastName == "Chen" && me.birthday == "1995-04-12")
+        #expect(me.asPublicProfile.birthday == "1995-04-12")
+        #expect(MyProfile(id: "u1", username: "alice", birthday: "1995-04-12").asPublicProfile.birthday == nil)
+
+        let saved = try await service.updateProfile(firstName: "Alice", lastName: "", birthday: "1995-04-12")
+        #expect(saved.birthday == "1995-04-12")
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json.keys.sorted() == ["birthday", "firstName", "lastName"])
+        #expect(json["birthday"] as? String == "1995-04-12")
+        #expect(json["lastName"] as? String == "")
+    }
+
+    @Test func blocksAreWrittenAndListedAcrossPages() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if request.method != .get { return (200, envelope(#"{"success":true}"#), [:]) }
+            if path.contains("cursor=c1") {
+                return (200, envelope(#"{"items":[{"id":"u2","username":"bob"}],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"{"items":[{"id":"u1","username":"alice","displayName":"Alice","avatarUrl":"bot:boba"}],"nextCursor":"c1"}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.blockUser(id: "u1")
+        try await service.unblockUser(id: "u1")
+        let users = try await service.allBlockedUsers()
+        #expect(users.map(\.username) == ["alice", "bob"])
+        #expect(users.first?.avatarUrl == "bot:boba")
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls.prefix(2) == ["POST /api/users/me/blocks/u1", "DELETE /api/users/me/blocks/u1"])
+    }
 }
 
 @Suite("Session")

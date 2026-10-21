@@ -125,8 +125,10 @@ private struct AccountSettings: View {
         _savedAnonymousDefault = State(initialValue: profile.anonymousBallotByDefault)
     }
 
+    /// Fields whose labels are iOS-only strings.
+    private let extraFields: Set = ["firstName", "lastName", "birthday"]
     /// Profile fields other people can see, in the order shown.
-    private let fields = ["displayName", "bio", "location", "points", "membershipLevel"]
+    private let fields = ["displayName", "firstName", "lastName", "birthday", "bio", "location", "points", "membershipLevel"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
@@ -137,7 +139,7 @@ private struct AccountSettings: View {
                 }
                 VStack(spacing: 0) {
                     ForEach(fields, id: \.self) { field in
-                        Toggle(app.t("account.field.\(field)"), isOn: Binding(
+                        Toggle(app.t(extraFields.contains(field) ? "ios.field.\(field)" : "account.field.\(field)"), isOn: Binding(
                             get: { profile.visibilitySettings[field] == true },
                             set: { value in Task { await toggle(field, value) } }
                         ))
@@ -332,7 +334,23 @@ struct EditProfileSheet: View {
     @State private var username = ""
     @State private var displayName = ""
     @State private var bio = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var birthday: Date?
     @State private var error: String?
+
+    private static let earliestBirthday = Calendar.current.date(from: DateComponents(year: 1900, month: 1, day: 1)) ?? .distantPast
+    /// Yesterday as the API counts it: the earlier of the local and Taipei dates, minus a day.
+    private static var latestBirthday: Date {
+        var taipei = Calendar(identifier: .gregorian)
+        taipei.timeZone = TimeZone(identifier: "Asia/Taipei") ?? .current
+        let today = [Calendar.current, taipei].map { cal -> Date in
+            let c = cal.dateComponents([.year, .month, .day], from: .now)
+            return Calendar.current.date(from: c) ?? .now
+        }.min() ?? .now
+        return Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
+    }
+    private static let birthdayFormat = Date.ISO8601FormatStyle(timeZone: .current).year().month().day()
 
     private var usernameError: String? {
         username == profile.username || Username.isValid(username) ? nil : app.t("account.usernameInvalid")
@@ -346,6 +364,9 @@ struct EditProfileSheet: View {
                                 hint: app.t("account.usernameHint", ["path": app.config.profileURL(username).absoluteString]),
                                 error: usernameError, contentType: .username, autocapitalization: .never)
                     VMTextField(label: app.t("profile.displayName"), placeholder: "", text: $displayName, contentType: .nickname)
+                    VMTextField(label: app.t("ios.firstName"), placeholder: "", text: $firstName, contentType: .givenName)
+                    VMTextField(label: app.t("ios.lastName"), placeholder: "", text: $lastName, contentType: .familyName)
+                    birthdayField
                     VStack(alignment: .leading, spacing: 8) {
                         Text(app.t("profile.bio")).font(.vm(14, .medium))
                         VMTextEditor(placeholder: "", text: $bio, minHeight: 96)
@@ -369,6 +390,29 @@ struct EditProfileSheet: View {
             username = profile.username
             displayName = profile.displayName ?? ""
             bio = profile.bio ?? ""
+            firstName = profile.firstName ?? ""
+            lastName = profile.lastName ?? ""
+            birthday = profile.birthday.flatMap { try? Date($0, strategy: Self.birthdayFormat) }
+        }
+    }
+
+    private var birthdayField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(app.t("ios.birthday")).font(.vm(14, .medium))
+            if birthday == nil {
+                Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }
+                    .buttonStyle(.vm(.outline))
+            } else {
+                DatePicker(
+                    app.t("ios.birthday"),
+                    selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
+                    in: Self.earliestBirthday...Self.latestBirthday,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(app.t("ios.birthdayHint")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
         }
     }
 
@@ -376,8 +420,19 @@ struct EditProfileSheet: View {
         error = nil
         do {
             let newUsername = username == profile.username ? nil : username
-            try await app.service.updateProfile(username: newUsername, displayName: displayName, bio: bio)
+            let first = firstName.trimmingCharacters(in: .whitespaces)
+            let last = lastName.trimmingCharacters(in: .whitespaces)
+            let formatted = birthday.map { $0.formatted(Self.birthdayFormat) }
+            // A birthday can't be cleared, so only send one the user changed.
+            let newBirthday = formatted == profile.birthday ? nil : formatted
+            try await app.service.updateProfile(
+                username: newUsername, displayName: displayName, bio: bio,
+                firstName: first, lastName: last, birthday: newBirthday
+            )
             app.updateMe {
+                $0.firstName = first.isEmpty ? nil : first
+                $0.lastName = last.isEmpty ? nil : last
+                $0.birthday = formatted ?? $0.birthday
                 $0.username = username
                 $0.displayName = displayName.isEmpty ? nil : displayName
                 $0.bio = bio.isEmpty ? nil : bio

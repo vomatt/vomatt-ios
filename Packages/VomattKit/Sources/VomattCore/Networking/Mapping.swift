@@ -194,7 +194,8 @@ extension UserProfile {
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
             location: dto.location,
             points: dto.points.map(Int.init),
-            membershipLevel: dto.membershipLevel
+            membershipLevel: dto.membershipLevel,
+            birthday: dto.birthday
         )
     }
 }
@@ -208,7 +209,10 @@ extension MyProfile {
             displayName: dto.displayName,
             bio: dto.bio,
             avatarUrl: dto.avatarUrl,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
             location: dto.location,
+            birthday: dto.birthday,
             points: dto.points.map(Int.init) ?? 0,
             membershipLevel: dto.membershipLevel,
             joinedAt: dto.joinedAt,

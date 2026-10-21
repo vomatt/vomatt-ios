@@ -155,6 +155,39 @@
         },
         "type": "object"
       },
+      "AdminUserBlockResponse": {
+        "description": "The other side of a block relationship, as shown in the back office",
+        "properties": {
+          "active": {
+            "description": "False when suspended",
+            "example": true,
+            "type": "boolean"
+          },
+          "blockedAt": {
+            "description": "When the block was made",
+            "example": "2026-10-20T09:15:00+08:00",
+            "format": "date-time",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Display name; null when unset",
+            "example": "Bob",
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "description": "User ID (UUIDv7) of the other user",
+            "example": "0199c1a2-8c4f-7e5b-a021-3d6f9b2c4e58",
+            "type": "string"
+          },
+          "username": {
+            "description": "Username",
+            "example": "bob",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "AdminUserDetail": {
         "description": "An account with its activity counts, as shown in the back office",
         "nullable": true,
@@ -173,6 +206,25 @@
           "ballotCount": {
             "description": "Ballots the user currently holds",
             "example": 35,
+            "format": "int64",
+            "type": "integer"
+          },
+          "birthday": {
+            "description": "Birthday (ISO date), shown regardless of the user's visibility settings; null when unset",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "blockedByCount": {
+            "description": "Users who block this user",
+            "example": 1,
+            "format": "int64",
+            "type": "integer"
+          },
+          "blockingCount": {
+            "description": "Users this user blocks",
+            "example": 2,
             "format": "int64",
             "type": "integer"
           },
@@ -200,6 +252,12 @@
             "nullable": true,
             "type": "string"
           },
+          "firstName": {
+            "description": "First name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "User ID (UUIDv7)",
             "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
@@ -209,6 +267,12 @@
             "description": "Last sign-in; null if never",
             "example": "2026-10-16T21:04:11+08:00",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name; null when unset",
+            "example": "Chen",
             "nullable": true,
             "type": "string"
           },
@@ -318,6 +382,13 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "Birthday (ISO date), shown regardless of the user's visibility settings; null when unset",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "createdAt": {
             "description": "When the account was created",
             "example": "2026-09-01T10:00:00+08:00",
@@ -336,6 +407,12 @@
             "nullable": true,
             "type": "string"
           },
+          "firstName": {
+            "description": "First name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "User ID (UUIDv7)",
             "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
@@ -345,6 +422,12 @@
             "description": "Last sign-in; null if never",
             "example": "2026-10-16T21:04:11+08:00",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name; null when unset",
+            "example": "Chen",
             "nullable": true,
             "type": "string"
           },
@@ -1153,6 +1236,38 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/PageResponseAdminCommentResponse"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiResponsePageResponseAdminUserBlockResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAdminUserBlockResponse"
           },
           "error": {
             "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
@@ -2552,6 +2667,13 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "Birthday (ISO date); null if not set",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "displayName": {
             "description": "Display name; null if not set",
             "example": "Alice",
@@ -2637,11 +2759,11 @@
           },
           "visibilitySettings": {
             "additionalProperties": {
-              "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel",
+              "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel",
               "example": false,
               "type": "boolean"
             },
-            "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel",
+            "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel",
             "example": {
               "bio": true,
               "displayName": true,
@@ -2660,6 +2782,38 @@
             "description": "Items of this page",
             "items": {
               "$ref": "#/components/schemas/AdminCommentResponse"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "example": 20,
+            "format": "int32",
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-based)",
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items across all pages",
+            "example": 123,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseAdminUserBlockResponse": {
+        "description": "Offset-style page container (page number and total count); most list endpoints use CursorResponse instead",
+        "nullable": true,
+        "properties": {
+          "content": {
+            "description": "Items of this page",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserBlockResponse"
             },
             "type": "array"
           },
@@ -3115,10 +3269,33 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "New birthday as an ISO date (yyyy-MM-dd), from 1900-01-01 to yesterday in Asia/Taipei; null or omitted keeps the current value. Cannot be cleared once set",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "displayName": {
             "description": "New display name (max 100 characters); null or omitted keeps the current value",
             "example": "Alice C.",
             "maxLength": 100,
+            "minLength": 0,
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "New first name (max 50 characters, surrounding whitespace removed); null or omitted keeps the current value",
+            "example": "Alice",
+            "maxLength": 50,
+            "minLength": 0,
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "New last name (max 50 characters, surrounding whitespace removed); null or omitted keeps the current value",
+            "example": "Chen",
+            "maxLength": 50,
             "minLength": 0,
             "nullable": true,
             "type": "string"
@@ -3206,11 +3383,11 @@
         "properties": {
           "visibility": {
             "additionalProperties": {
-              "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
+              "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
               "example": false,
               "type": "boolean"
             },
-            "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
+            "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
             "example": {
               "email": false,
               "firstName": true,
@@ -3328,6 +3505,13 @@
           "bio": {
             "description": "Bio; null if the owner hid it (public by default) or never set one",
             "example": "Poll enthusiast",
+            "nullable": true,
+            "type": "string"
+          },
+          "birthday": {
+            "description": "Birthday (ISO date); null when hidden (default) or not set",
+            "example": "1995-04-12",
+            "format": "date",
             "nullable": true,
             "type": "string"
           },
@@ -3556,7 +3740,7 @@
           },
           "percentage": {
             "description": "Support: share of the Participants whose Ballot chose this option, 0-100 (not rounded). 0 when there are no Participants",
-            "example": 64.2857142857143,
+            "example": 64.28571428571429,
             "format": "double",
             "type": "number"
           },
@@ -5666,11 +5850,11 @@
     },
     "/api/admin/users": {
       "get": {
-        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every account, suspended included, newest first. `q` matches (case-insensitive contains) username, email, phone number or display name; `status` is `active` or `suspended`; `role` is `user`, `moderator` or `admin`. All filters are optional and combine with AND. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `active` nor `suspended`\n- 400 `common.validation_failed`: `role` is not `user`, `moderator` or `admin`",
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every account, suspended included, newest first. `q` matches (case-insensitive contains) username, email, phone number, display name, first name, last name or full name (`firstName lastName`, `lastName firstName`, or `lastNamefirstName` with no space); `status` is `active` or `suspended`; `role` is `user`, `moderator` or `admin`. All filters are optional and combine with AND. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `active` nor `suspended`\n- 400 `common.validation_failed`: `role` is not `user`, `moderator` or `admin`",
         "operationId": "listUsers",
         "parameters": [
           {
-            "description": "Text matched against username, email, phone number and display name",
+            "description": "Text matched against username, email, phone number, display name, first name, last name and full name",
             "example": "alice",
             "in": "query",
             "name": "q",
@@ -5733,11 +5917,14 @@
                           {
                             "active": true,
                             "authMethod": "email_otp",
+                            "birthday": "1995-04-12",
                             "createdAt": "2026-09-01T10:00:00+08:00",
                             "displayName": "Alice",
                             "email": "alice@example.com",
+                            "firstName": "Alice",
                             "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                             "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                            "lastName": "Chen",
                             "phoneNumber": null,
                             "roles": [
                               "user"
@@ -5910,7 +6097,7 @@
     },
     "/api/admin/users/{userId}": {
       "get": {
-        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: returns the account with sign-in details, points and counts of Polls created (any Audience, Deleted included), Ballots held and Comments written (deleted included)\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 404 `user.not_found`: no account with this ID",
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: returns the account with sign-in details, points and counts of Polls created (any Audience, Deleted included), Ballots held, Comments written (deleted included), users this user blocks (`blockingCount`) and users who block them (`blockedByCount`)\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 404 `user.not_found`: no account with this ID",
         "operationId": "getUser",
         "parameters": [
           {
@@ -5936,12 +6123,17 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
+                        "blockedByCount": 1,
+                        "blockingCount": 2,
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6038,6 +6230,161 @@
         ]
       }
     },
+    "/api/admin/users/{userId}/blocks": {
+      "get": {
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of the user's block relationships, most recently blocked first. `direction=blocking` (default) lists users this user blocks; `direction=blocked-by` lists users who block this user. Each item is the other user plus `blockedAt`. Read-only; the admin's own blocks never filter back-office views. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 400 `common.invalid_direction`: `direction` is neither `blocking` nor `blocked-by`\n- 404 `user.not_found`: no account with this ID",
+        "operationId": "listBlocks",
+        "parameters": [
+          {
+            "description": "User ID (UUIDv7)",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`blocking` (default) or `blocked-by`",
+            "example": "blocked-by",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page number, 1-based (default 1)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Blocks": {
+                    "description": "Blocks",
+                    "value": {
+                      "data": {
+                        "content": [
+                          {
+                            "active": true,
+                            "blockedAt": "2026-10-20T09:15:00+08:00",
+                            "displayName": "Bob",
+                            "userId": "0199c1a2-8c4f-7e5b-a021-3d6f9b2c4e58",
+                            "username": "bob"
+                          }
+                        ],
+                        "limit": 20,
+                        "page": 1,
+                        "total": 1
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageResponseAdminUserBlockResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UserNotFound": {
+                    "description": "UserNotFound",
+                    "value": {
+                      "data": null,
+                      "error": "User not found",
+                      "errorCode": "user.not_found",
+                      "message": "User not found",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "User not found (`user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List User Blocks",
+        "tags": [
+          "Admin - User"
+        ]
+      }
+    },
     "/api/admin/users/{userId}/roles": {
       "put": {
         "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: the account exists; when the change drops the admin role, the account is not the caller and not the last active admin\n**Behavior**: replaces the account's roles with `roles` (each `user`, `moderator` or `admin`; duplicates ignored) and returns the account\n**Side effects**: when the role set actually changes, every refresh token of the user is revoked once the change commits, so the new roles apply from their next sign-in; an access token already issued keeps its old roles until it expires, except that a removed admin role stops working on `/api/admin/**` on the next request. An unchanged role set changes nothing. Written to the audit log with the new roles in `details`\n**Errors**:\n- 400 `common.type_mismatch`: `userId` is not a valid UUID\n- 400 `common.validation_failed`: `roles` is empty or holds an unknown role\n- 403 `admin.self_action_forbidden`: the caller tried to drop their own admin role\n- 404 `user.not_found`: no account with this ID\n- 409 `admin.last_admin`: the change would demote the only active admin\n- 409 `common.conflict`: another admin change holds the admin rows; retry",
@@ -6087,12 +6434,17 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
+                        "blockedByCount": 1,
+                        "blockingCount": 2,
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6256,12 +6608,17 @@
                         "active": false,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
+                        "blockedByCount": 1,
+                        "blockingCount": 2,
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6546,12 +6903,17 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
+                        "blockedByCount": 1,
+                        "blockingCount": 2,
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -10568,6 +10930,7 @@
                     "anonymousBallotByDefault": false,
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": "1995-04-12",
                     "displayName": "Alice",
                     "email": "alice@example.com",
                     "firstName": "Alice",
@@ -10584,6 +10947,7 @@
                     "username": "alice",
                     "visibilitySettings": {
                       "bio": true,
+                      "birthday": false,
                       "displayName": true,
                       "email": false,
                       "firstName": false,
@@ -10673,7 +11037,7 @@
         ]
       },
       "patch": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl`, which cannot be cleared). Returns the public profile after the update, so the optional fields are masked by the caller's own visibility settings.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>`\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `firstName`, `lastName`, `birthday`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds. `firstName` and `lastName` are stored without surrounding whitespace, and a blank value clears them. `birthday` is an ISO date (`yyyy-MM-dd`) from 1900-01-01 to yesterday in Asia/Taipei. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl` and `birthday`, which cannot be cleared). Returns the public profile after the update, so the optional fields are masked by the caller's own visibility settings.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `firstName` or `lastName` exceeds 50 characters, `birthday` is before 1900-01-01 or not before today (Asia/Taipei), `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>`\n- 400 `common.bad_request`: `birthday` is not a valid `yyyy-MM-dd` date\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
         "operationId": "updateMyProfile",
         "requestBody": {
           "content": {
@@ -10693,6 +11057,7 @@
                   "data": {
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": null,
                     "displayName": "Alice C.",
                     "email": null,
                     "firstName": "Alice",
@@ -10802,6 +11167,305 @@
         ]
       }
     },
+    "/api/users/me/blocks": {
+      "get": {
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: users the caller blocked, most recently blocked first, cursor-paged (`limit` 1-50, default 20; out-of-range values are clamped). `nextCursor` is `null` on the last page. Each item carries only public profile fields, like user search.\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` is malformed or was issued by another list",
+        "operationId": "listBlockedUsers",
+        "parameters": [
+          {
+            "description": "`nextCursor` returned by the previous page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (1-50, default 20)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "items": [
+                      {
+                        "avatarUrl": "bot:boba",
+                        "displayName": "Alice",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "username": "alice"
+                      }
+                    ],
+                    "nextCursor": null
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseCursorResponseUserDto"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List blocked users",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/me/blocks/{userId}": {
+      "delete": {
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: removes the caller's block on the user, so their Polls and Comments show again. Idempotent: succeeds when the user was not blocked or does not exist.\n**Side effects**: the unblock is written to the audit log\n**Errors**:\n- 400 `common.bad_request`: `userId` is not a valid id",
+        "operationId": "unblockUser",
+        "parameters": [
+          {
+            "description": "Id of the user to unblock",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": null,
+                    "message": null,
+                    "status": null,
+                    "success": true
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Unblock a user",
+        "tags": [
+          "User"
+        ]
+      },
+      "post": {
+        "description": "**Auth**: required\n**Precondition**: `userId` is another existing account\n**Behavior**: one-way block. From then on the caller no longer sees, in `GET /api/votes` (Feed / Explore / Search / Top), Polls the blocked user created, nor, in `GET /api/votes/{voteId}/comments` and its replies, Comment threads the blocked user started or Replies they wrote. Nothing else changes: the Poll detail, voter list, profile and My Polls still show them, and the blocked user is not told and sees the caller's content as before. Idempotent: blocking an already blocked user succeeds.\n**Side effects**: the block is written to the audit log\n**Errors**:\n- 400 `user.block.self`: `userId` is the caller's own id\n- 400 `common.bad_request`: `userId` is not a valid id\n- 404 `user.not_found`: no account with this id\n- 409 `common.conflict`: the same block was added concurrently; it is in place, nothing to retry",
+        "operationId": "blockUser",
+        "parameters": [
+          {
+            "description": "Id of the user to block",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": null,
+                    "message": null,
+                    "status": null,
+                    "success": true
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "User not found",
+                  "errorCode": "user.not_found",
+                  "message": "User not found",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Account does not exist (errorCode `user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Block a user",
+        "tags": [
+          "User"
+        ]
+      }
+    },
     "/api/users/me/visibility": {
       "patch": {
         "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: sets which fields other users can see on the public profile. Send only the fields to change; omitted fields keep their current setting and unknown keys are ignored. Returns the complete settings map after the update (one boolean per controllable field).\n**Side effects**: persists the settings; takes effect immediately on `GET /api/users/{username}`\n**Errors**:\n- 400 `common.validation_failed`: `visibility` is missing\n- 404 `user.not_found`: the account no longer exists",
@@ -10823,6 +11487,7 @@
                 "example": {
                   "data": {
                     "bio": true,
+                    "birthday": false,
                     "displayName": true,
                     "email": false,
                     "firstName": true,
@@ -11140,7 +11805,7 @@
     },
     "/api/users/{username}": {
       "get": {
-        "description": "**Auth**: public (the response is the same whether or not the caller is signed in)\n**Precondition**: none\n**Behavior**: returns the public view of a user. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `email`, `firstName`, `lastName`, `location`, `points` and `membershipLevel` are hidden by default. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
+        "description": "**Auth**: public (the response is the same whether or not the caller is signed in)\n**Precondition**: none\n**Behavior**: returns the public view of a user. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `email`, `firstName`, `lastName`, `birthday`, `location`, `points` and `membershipLevel` are hidden by default. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
         "operationId": "getUserProfile",
         "parameters": [
           {
@@ -11162,6 +11827,7 @@
                   "data": {
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": null,
                     "displayName": "Alice",
                     "email": null,
                     "firstName": "Alice",
@@ -11357,7 +12023,7 @@
     },
     "/api/votes": {
       "get": {
-        "description": "**Auth**: public (optional login changes response: `myOptionId` of each item is filled for the caller's Ballots)\n**Precondition**: none\n**Behavior**: cursor-paged list of Open or Ended PUBLIC Polls; Scheduled, UNLISTED and INVITE_ONLY Polls never appear.\n- `status=open` (default) + `sort=newest` (default): most recently opened first (the Feed)\n- `status=open` + `sort=closing`: closing soonest first\n- `status=open` + `sort=top`: highest Turnout (`participantCount`) first, ties most recently opened first (Top); Turnout can change between pages, so dedupe items by `id`\n- `status=ended`: most recently ended first; `sort` must be omitted\n- `tag`: only Polls under that tag slug (Explore); `q`: free-text match on title and description, option text is not matched (Search), at least 2 characters\n- Filters combine. `nextCursor` null means the last page; pass it back unchanged as `cursor`. `limit` is clamped to 1-50 (default 20).\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `open` nor `ended`\n- 400 `common.invalid_sort`: `sort` is not `newest`, `closing` or `top`\n- 400 `vote.list.sort_not_allowed`: `sort` was sent together with `status=ended`\n- 400 `vote.search.query_too_short`: `q` is shorter than 2 characters\n- 400 `common.cursor_invalid`: `cursor` is malformed or was issued by another list or another ordering of this list\n",
+        "description": "**Auth**: public (optional login changes response: `myOptionId` of each item is filled for the caller's Ballots, and Polls created by users the caller blocked are left out)\n**Precondition**: none\n**Behavior**: cursor-paged list of Open or Ended PUBLIC Polls; Scheduled, UNLISTED and INVITE_ONLY Polls never appear, nor, for a signed-in caller, Polls created by users they blocked (`POST /api/users/me/blocks/{userId}`).\n- `status=open` (default) + `sort=newest` (default): most recently opened first (the Feed)\n- `status=open` + `sort=closing`: closing soonest first\n- `status=open` + `sort=top`: highest Turnout (`participantCount`) first, ties most recently opened first (Top); Turnout can change between pages, so dedupe items by `id`\n- `status=ended`: most recently ended first; `sort` must be omitted\n- `tag`: only Polls under that tag slug (Explore); `q`: free-text match on title and description, option text is not matched (Search), at least 2 characters\n- Filters combine. `nextCursor` null means the last page; pass it back unchanged as `cursor`. `limit` is clamped to 1-50 (default 20).\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `open` nor `ended`\n- 400 `common.invalid_sort`: `sort` is not `newest`, `closing` or `top`\n- 400 `vote.list.sort_not_allowed`: `sort` was sent together with `status=ended`\n- 400 `vote.search.query_too_short`: `q` is shorter than 2 characters\n- 400 `common.cursor_invalid`: `cursor` is malformed or was issued by another list or another ordering of this list\n",
         "operationId": "listVotes",
         "parameters": [
           {
@@ -12341,7 +13007,7 @@
     },
     "/api/votes/{voteId}/comments": {
       "get": {
-        "description": "**Auth**: public (optional login changes response: `likedByCurrentUser` reflects the signed-in user's likes, and is always false when not logged in; nothing else differs)\n**Precondition**: the Poll exists\n**Behavior**: returns top-level Comments only, newest first, cursor-paged (`limit` default 20, max 50; pass `nextCursor` back as `cursor`). Each item carries `replyCount`; load Replies with the replies endpoint. A deleted Comment that still has non-deleted Replies stays as a placeholder (`deleted` = true; `userId`, `author` and `text` are null); a deleted Comment without Replies is omitted\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` is not a token returned by this endpoint\n- 404 `vote.not_found`: Poll does not exist or is Deleted\n",
+        "description": "**Auth**: public (optional login changes response: `likedByCurrentUser` reflects the signed-in user's likes, and is always false when not logged in; threads started by and Replies written by users the caller blocked are left out)\n**Precondition**: the Poll exists\n**Behavior**: returns top-level Comments only, newest first, cursor-paged (`limit` default 20, max 50; pass `nextCursor` back as `cursor`). Each item carries `replyCount`; load Replies with the replies endpoint. A deleted Comment that still has non-deleted Replies stays as a placeholder (`deleted` = true; `userId`, `author` and `text` are null); a deleted Comment without Replies is omitted. For a signed-in caller, a thread whose top-level Comment was written by a user they blocked (`POST /api/users/me/blocks/{userId}`) is omitted with all its Replies, Replies by blocked users do not count in `replyCount`, and a deleted placeholder whose only Replies are by blocked users is omitted\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` is not a token returned by this endpoint\n- 404 `vote.not_found`: Poll does not exist or is Deleted\n",
         "operationId": "getComments",
         "parameters": [
           {
@@ -13092,7 +13758,7 @@
     },
     "/api/votes/{voteId}/comments/{commentId}/replies": {
       "get": {
-        "description": "**Auth**: public (optional login changes response: `likedByCurrentUser` reflects the signed-in user's likes, and is always false when not logged in; nothing else differs)\n**Precondition**: `commentId` is a top-level Comment of the Poll in the path. It may itself be a deleted placeholder; its Replies are still readable\n**Behavior**: returns the non-deleted Replies, oldest first, cursor-paged (`limit` default 20, max 50). Replies are one level deep and `replyCount` is always 0 on them\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` is not a token returned by this endpoint\n- 404 `comment.not_found`: Comment does not exist, is a Reply rather than a top-level Comment, or belongs to another Poll\n- 404 `vote.not_found`: the Comment's Poll is Deleted\n",
+        "description": "**Auth**: public (optional login changes response: `likedByCurrentUser` reflects the signed-in user's likes, and is always false when not logged in; Replies written by users the caller blocked are left out)\n**Precondition**: `commentId` is a top-level Comment of the Poll in the path. It may itself be a deleted placeholder; its Replies are still readable\n**Behavior**: returns the non-deleted Replies, oldest first, cursor-paged (`limit` default 20, max 50). Replies are one level deep and `replyCount` is always 0 on them\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` is not a token returned by this endpoint\n- 404 `comment.not_found`: Comment does not exist, is a Reply rather than a top-level Comment, belongs to another Poll, or was written by a user the caller blocked\n- 404 `vote.not_found`: the Comment's Poll is Deleted\n",
         "operationId": "getReplies",
         "parameters": [
           {
@@ -14147,7 +14813,7 @@
                             "description": null,
                             "displayOrder": 0,
                             "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
-                            "percentage": 64.2857142857143,
+                            "percentage": 64.28571428571429,
                             "text": "Java",
                             "voteCount": 27
                           },
@@ -14155,7 +14821,7 @@
                             "description": null,
                             "displayOrder": 1,
                             "id": "0199f2a4-8d12-7f60-9b17-2a4c8e0d5f39",
-                            "percentage": 35.7142857142857,
+                            "percentage": 35.714285714285715,
                             "text": "Kotlin",
                             "voteCount": 15
                           }
@@ -14923,11 +15589,11 @@
   "servers": [
     {
       "description": "Development",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "http://localhost:8080"
     },
     {
       "description": "Production",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "https://api.example.com"
     }
   ],
   "tags": [

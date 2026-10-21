@@ -14,6 +14,8 @@
 		"block": "封鎖 {name}",
 		"blockedToast": "已封鎖 {name}，你不會再看到對方的投票或留言。",
 		"blockedTitle": "已封鎖的人",
+		"blockFailed": "無法封鎖對方，請再試一次。",
+		"unblockFailed": "無法解除封鎖，請再試一次。",
 		"create": "建立",
 		"unblock": "解除封鎖",
 		"invitedBy": "{name} 邀請了你",
@@ -103,6 +105,14 @@
 		"tag.in_use": "標籤仍被投票使用，無法刪除",
 		"tag.ids.invalid": "部分標籤 ID 不存在",
 		"lookup.not_found": "找不到字典資料",
-		"lookup.exists": "字典資料已存在：{0}/{1}"
+		"lookup.exists": "字典資料已存在：{0}/{1}",
+		"firstName": "名字",
+		"lastName": "姓氏",
+		"birthday": "生日",
+		"setBirthday": "新增生日",
+		"birthdayHint": "設定後可以修改，但無法移除。",
+		"field.firstName": "名字",
+		"field.lastName": "姓氏",
+		"field.birthday": "生日"
 	}
 }

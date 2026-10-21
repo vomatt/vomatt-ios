@@ -401,15 +401,16 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted fields stay as they are. Errors carry the API's localized message.
+    /// Omitted fields stay as they are; a blank name clears it, a birthday can't be cleared. Errors carry the API's localized message.
     @discardableResult
     public func updateProfile(
         username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
-        anonymousBallotByDefault: Bool? = nil
+        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil
     ) async throws -> UserProfile {
         try await call {
             try await UserProfile(required(client.updateMyProfile(body: .json(.init(
-                anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, displayName: displayName, username: username
+                anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, birthday: birthday,
+                displayName: displayName, firstName: firstName, lastName: lastName, username: username
             ))).ok.body.json.data, "updateMyProfile.data"))
         }
     }
@@ -436,6 +437,29 @@ public final class VomattService: Sendable {
             )).ok.body.json.data
             return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
         }
+    }
+
+    /// Signed-in only. Idempotent. From now on the API leaves their Polls and Comments out of the viewer's lists.
+    public func blockUser(id: String) async throws {
+        _ = try await call { try await client.blockUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only. Idempotent.
+    public func unblockUser(id: String) async throws {
+        _ = try await call { try await client.unblockUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only; most recently blocked first.
+    public func blockedUsers(cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listBlockedUsers(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Every blocked user, following the cursor to the end.
+    public func allBlockedUsers() async throws -> [UserSummary] {
+        try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
     }
 
     /// Permanently deletes the signed-in user's account; the backend revokes every session.
