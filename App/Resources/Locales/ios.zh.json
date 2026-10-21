@@ -103,6 +103,14 @@
 		"tag.in_use": "標籤仍被投票使用，無法刪除",
 		"tag.ids.invalid": "部分標籤 ID 不存在",
 		"lookup.not_found": "找不到字典資料",
-		"lookup.exists": "字典資料已存在：{0}/{1}"
+		"lookup.exists": "字典資料已存在：{0}/{1}",
+		"firstName": "名字",
+		"lastName": "姓氏",
+		"birthday": "生日",
+		"setBirthday": "新增生日",
+		"birthdayHint": "設定後可以修改，但無法移除。",
+		"field.firstName": "名字",
+		"field.lastName": "姓氏",
+		"field.birthday": "生日"
 	}
 }

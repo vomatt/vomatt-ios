@@ -12,11 +12,13 @@ public struct UserProfile: Hashable, Sendable {
     public var location: String?
     public var points: Int?
     public var membershipLevel: String?
+    /// `yyyy-MM-dd`; nil unless the owner shows it.
+    public var birthday: String?
 
     public init(
         username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
         joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, location: String? = nil,
-        points: Int? = nil, membershipLevel: String? = nil
+        points: Int? = nil, membershipLevel: String? = nil, birthday: String? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -28,6 +30,7 @@ public struct UserProfile: Hashable, Sendable {
         self.location = location
         self.points = points
         self.membershipLevel = membershipLevel
+        self.birthday = birthday
     }
 }
 
@@ -39,7 +42,11 @@ public struct MyProfile: Hashable, Sendable {
     public var displayName: String?
     public var bio: String?
     public var avatarUrl: String?
+    public var firstName: String?
+    public var lastName: String?
     public var location: String?
+    /// `yyyy-MM-dd`; once set it can be changed but not cleared.
+    public var birthday: String?
     public var points: Int
     public var membershipLevel: String?
     public var joinedAt: Date?
@@ -51,8 +58,9 @@ public struct MyProfile: Hashable, Sendable {
 
     public init(
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
-        avatarUrl: String? = nil, location: String? = nil, points: Int = 0, membershipLevel: String? = nil,
-        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, visibilitySettings: [String: Bool] = [:],
+        avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, location: String? = nil,
+        birthday: String? = nil, points: Int = 0,
+        membershipLevel: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, visibilitySettings: [String: Bool] = [:],
         anonymousBallotByDefault: Bool = false
     ) {
         self.id = id
@@ -61,7 +69,10 @@ public struct MyProfile: Hashable, Sendable {
         self.displayName = displayName
         self.bio = bio
         self.avatarUrl = avatarUrl
+        self.firstName = firstName
+        self.lastName = lastName
         self.location = location
+        self.birthday = birthday
         self.points = points
         self.membershipLevel = membershipLevel
         self.joinedAt = joinedAt
@@ -83,7 +94,8 @@ public struct MyProfile: Hashable, Sendable {
             totalVotes: totalVotes,
             location: visibilitySettings["location"] == true ? location : nil,
             points: visibilitySettings["points"] == true ? points : nil,
-            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil
+            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil,
+            birthday: visibilitySettings["birthday"] == true ? birthday : nil
         )
     }
 }

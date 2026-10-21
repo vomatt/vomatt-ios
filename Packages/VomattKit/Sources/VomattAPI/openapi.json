@@ -176,6 +176,13 @@
             "format": "int64",
             "type": "integer"
           },
+          "birthday": {
+            "description": "Birthday (ISO date), shown regardless of the user's visibility settings; null when unset",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "commentCount": {
             "description": "Comments and Replies the user wrote, deleted ones included",
             "example": 14,
@@ -200,6 +207,12 @@
             "nullable": true,
             "type": "string"
           },
+          "firstName": {
+            "description": "First name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "User ID (UUIDv7)",
             "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
@@ -209,6 +222,12 @@
             "description": "Last sign-in; null if never",
             "example": "2026-10-16T21:04:11+08:00",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name; null when unset",
+            "example": "Chen",
             "nullable": true,
             "type": "string"
           },
@@ -318,6 +337,13 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "Birthday (ISO date), shown regardless of the user's visibility settings; null when unset",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "createdAt": {
             "description": "When the account was created",
             "example": "2026-09-01T10:00:00+08:00",
@@ -336,6 +362,12 @@
             "nullable": true,
             "type": "string"
           },
+          "firstName": {
+            "description": "First name; null when unset",
+            "example": "Alice",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "User ID (UUIDv7)",
             "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
@@ -345,6 +377,12 @@
             "description": "Last sign-in; null if never",
             "example": "2026-10-16T21:04:11+08:00",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Last name; null when unset",
+            "example": "Chen",
             "nullable": true,
             "type": "string"
           },
@@ -2552,6 +2590,13 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "Birthday (ISO date); null if not set",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "displayName": {
             "description": "Display name; null if not set",
             "example": "Alice",
@@ -2637,11 +2682,11 @@
           },
           "visibilitySettings": {
             "additionalProperties": {
-              "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel",
+              "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel",
               "example": false,
               "type": "boolean"
             },
-            "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel",
+            "description": "Field name to visible flag, i.e. what other users see on the public profile; keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel",
             "example": {
               "bio": true,
               "displayName": true,
@@ -3115,10 +3160,33 @@
             "nullable": true,
             "type": "string"
           },
+          "birthday": {
+            "description": "New birthday as an ISO date (yyyy-MM-dd), from 1900-01-01 to yesterday in Asia/Taipei; null or omitted keeps the current value. Cannot be cleared once set",
+            "example": "1995-04-12",
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "displayName": {
             "description": "New display name (max 100 characters); null or omitted keeps the current value",
             "example": "Alice C.",
             "maxLength": 100,
+            "minLength": 0,
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "New first name (max 50 characters, surrounding whitespace removed); null or omitted keeps the current value",
+            "example": "Alice",
+            "maxLength": 50,
+            "minLength": 0,
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "New last name (max 50 characters, surrounding whitespace removed); null or omitted keeps the current value",
+            "example": "Chen",
+            "maxLength": 50,
             "minLength": 0,
             "nullable": true,
             "type": "string"
@@ -3206,11 +3274,11 @@
         "properties": {
           "visibility": {
             "additionalProperties": {
-              "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
+              "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
               "example": false,
               "type": "boolean"
             },
-            "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
+            "description": "Field name to visible flag. Allowed keys: email, firstName, lastName, birthday, location, points, displayName, bio, membershipLevel. Omitted fields keep their current setting; unknown keys are ignored",
             "example": {
               "email": false,
               "firstName": true,
@@ -3328,6 +3396,13 @@
           "bio": {
             "description": "Bio; null if the owner hid it (public by default) or never set one",
             "example": "Poll enthusiast",
+            "nullable": true,
+            "type": "string"
+          },
+          "birthday": {
+            "description": "Birthday (ISO date); null when hidden (default) or not set",
+            "example": "1995-04-12",
+            "format": "date",
             "nullable": true,
             "type": "string"
           },
@@ -3556,7 +3631,7 @@
           },
           "percentage": {
             "description": "Support: share of the Participants whose Ballot chose this option, 0-100 (not rounded). 0 when there are no Participants",
-            "example": 64.2857142857143,
+            "example": 64.28571428571429,
             "format": "double",
             "type": "number"
           },
@@ -5666,11 +5741,11 @@
     },
     "/api/admin/users": {
       "get": {
-        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every account, suspended included, newest first. `q` matches (case-insensitive contains) username, email, phone number or display name; `status` is `active` or `suspended`; `role` is `user`, `moderator` or `admin`. All filters are optional and combine with AND. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `active` nor `suspended`\n- 400 `common.validation_failed`: `role` is not `user`, `moderator` or `admin`",
+        "description": "**Auth**: admin (role ADMIN; 403 `common.forbidden` otherwise)\n**Precondition**: caller holds role ADMIN\n**Behavior**: offset page of every account, suspended included, newest first. `q` matches (case-insensitive contains) username, email, phone number, display name, first name, last name or full name (`firstName lastName`, `lastName firstName`, or `lastNamefirstName` with no space); `status` is `active` or `suspended`; `role` is `user`, `moderator` or `admin`. All filters are optional and combine with AND. `page` is 1-based (default 1), `limit` 1-50 (default 20)\n**Side effects**: none\n**Errors**:\n- 400 `common.invalid_status`: `status` is neither `active` nor `suspended`\n- 400 `common.validation_failed`: `role` is not `user`, `moderator` or `admin`",
         "operationId": "listUsers",
         "parameters": [
           {
-            "description": "Text matched against username, email, phone number and display name",
+            "description": "Text matched against username, email, phone number, display name, first name, last name and full name",
             "example": "alice",
             "in": "query",
             "name": "q",
@@ -5733,11 +5808,14 @@
                           {
                             "active": true,
                             "authMethod": "email_otp",
+                            "birthday": "1995-04-12",
                             "createdAt": "2026-09-01T10:00:00+08:00",
                             "displayName": "Alice",
                             "email": "alice@example.com",
+                            "firstName": "Alice",
                             "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                             "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                            "lastName": "Chen",
                             "phoneNumber": null,
                             "roles": [
                               "user"
@@ -5936,12 +6014,15 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6087,12 +6168,15 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6256,12 +6340,15 @@
                         "active": false,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -6546,12 +6633,15 @@
                         "active": true,
                         "authMethod": "email_otp",
                         "ballotCount": 35,
+                        "birthday": "1995-04-12",
                         "commentCount": 14,
                         "createdAt": "2026-09-01T10:00:00+08:00",
                         "displayName": "Alice",
                         "email": "alice@example.com",
+                        "firstName": "Alice",
                         "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
                         "lastLoginAt": "2026-10-16T21:04:11+08:00",
+                        "lastName": "Chen",
                         "membershipLevel": "BASIC",
                         "phoneNumber": null,
                         "points": 120,
@@ -10568,6 +10658,7 @@
                     "anonymousBallotByDefault": false,
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": "1995-04-12",
                     "displayName": "Alice",
                     "email": "alice@example.com",
                     "firstName": "Alice",
@@ -10584,6 +10675,7 @@
                     "username": "alice",
                     "visibilitySettings": {
                       "bio": true,
+                      "birthday": false,
                       "displayName": true,
                       "email": false,
                       "firstName": false,
@@ -10673,7 +10765,7 @@
         ]
       },
       "patch": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl`, which cannot be cleared). Returns the public profile after the update, so the optional fields are masked by the caller's own visibility settings.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>`\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `firstName`, `lastName`, `birthday`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds. `firstName` and `lastName` are stored without surrounding whitespace, and a blank value clears them. `birthday` is an ISO date (`yyyy-MM-dd`) from 1900-01-01 to yesterday in Asia/Taipei. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl` and `birthday`, which cannot be cleared). Returns the public profile after the update, so the optional fields are masked by the caller's own visibility settings.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `firstName` or `lastName` exceeds 50 characters, `birthday` is before 1900-01-01 or not before today (Asia/Taipei), `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>`\n- 400 `common.bad_request`: `birthday` is not a valid `yyyy-MM-dd` date\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
         "operationId": "updateMyProfile",
         "requestBody": {
           "content": {
@@ -10693,6 +10785,7 @@
                   "data": {
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": null,
                     "displayName": "Alice C.",
                     "email": null,
                     "firstName": "Alice",
@@ -10823,6 +10916,7 @@
                 "example": {
                   "data": {
                     "bio": true,
+                    "birthday": false,
                     "displayName": true,
                     "email": false,
                     "firstName": true,
@@ -11140,7 +11234,7 @@
     },
     "/api/users/{username}": {
       "get": {
-        "description": "**Auth**: public (the response is the same whether or not the caller is signed in)\n**Precondition**: none\n**Behavior**: returns the public view of a user. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `email`, `firstName`, `lastName`, `location`, `points` and `membershipLevel` are hidden by default. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
+        "description": "**Auth**: public (the response is the same whether or not the caller is signed in)\n**Precondition**: none\n**Behavior**: returns the public view of a user. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `email`, `firstName`, `lastName`, `birthday`, `location`, `points` and `membershipLevel` are hidden by default. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
         "operationId": "getUserProfile",
         "parameters": [
           {
@@ -11162,6 +11256,7 @@
                   "data": {
                     "avatarUrl": "bot:boba",
                     "bio": "Poll enthusiast",
+                    "birthday": null,
                     "displayName": "Alice",
                     "email": null,
                     "firstName": "Alice",
@@ -14147,7 +14242,7 @@
                             "description": null,
                             "displayOrder": 0,
                             "id": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
-                            "percentage": 64.2857142857143,
+                            "percentage": 64.28571428571429,
                             "text": "Java",
                             "voteCount": 27
                           },
@@ -14155,7 +14250,7 @@
                             "description": null,
                             "displayOrder": 1,
                             "id": "0199f2a4-8d12-7f60-9b17-2a4c8e0d5f39",
-                            "percentage": 35.7142857142857,
+                            "percentage": 35.714285714285715,
                             "text": "Kotlin",
                             "voteCount": 15
                           }
@@ -14923,11 +15018,11 @@
   "servers": [
     {
       "description": "Development",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "http://localhost:8080"
     },
     {
       "description": "Production",
-      "url": "https://vomatt-api.vercel.app"
+      "url": "https://api.example.com"
     }
   ],
   "tags": [

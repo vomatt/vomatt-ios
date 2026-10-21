@@ -401,15 +401,16 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted fields stay as they are. Errors carry the API's localized message.
+    /// Omitted fields stay as they are; a blank name clears it, a birthday can't be cleared. Errors carry the API's localized message.
     @discardableResult
     public func updateProfile(
         username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
-        anonymousBallotByDefault: Bool? = nil
+        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil
     ) async throws -> UserProfile {
         try await call {
             try await UserProfile(required(client.updateMyProfile(body: .json(.init(
-                anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, displayName: displayName, username: username
+                anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, birthday: birthday,
+                displayName: displayName, firstName: firstName, lastName: lastName, username: username
             ))).ok.body.json.data, "updateMyProfile.data"))
         }
     }

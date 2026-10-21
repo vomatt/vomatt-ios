@@ -213,6 +213,26 @@ struct ServiceTests {
         #expect(json.keys.sorted() == ["anonymousBallotByDefault"])
         #expect(json["anonymousBallotByDefault"] as? Bool == false)
     }
+
+    @Test func profileCarriesNamesAndBirthday() async throws {
+        let transport = StubTransport { request, _ in
+            if request.method == .patch { return (200, envelope(#"{"username":"alice","birthday":"1995-04-12"}"#), [:]) }
+            return (200, envelope(#"{"id":"u1","username":"alice","firstName":"Alice","lastName":"Chen","birthday":"1995-04-12","visibilitySettings":{"birthday":true}}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.firstName == "Alice" && me.lastName == "Chen" && me.birthday == "1995-04-12")
+        #expect(me.asPublicProfile.birthday == "1995-04-12")
+        #expect(MyProfile(id: "u1", username: "alice", birthday: "1995-04-12").asPublicProfile.birthday == nil)
+
+        let saved = try await service.updateProfile(firstName: "Alice", lastName: "", birthday: "1995-04-12")
+        #expect(saved.birthday == "1995-04-12")
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json.keys.sorted() == ["birthday", "firstName", "lastName"])
+        #expect(json["birthday"] as? String == "1995-04-12")
+        #expect(json["lastName"] as? String == "")
+    }
 }
 
 @Suite("Session")
