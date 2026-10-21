@@ -125,9 +125,9 @@ private struct AccountSettings: View {
         _savedAnonymousDefault = State(initialValue: profile.anonymousBallotByDefault)
     }
 
-    /// Profile fields other people can see, in the order shown.
     /// Fields whose labels are iOS-only strings.
     private let extraFields: Set = ["firstName", "lastName", "birthday"]
+    /// Profile fields other people can see, in the order shown.
     private let fields = ["displayName", "firstName", "lastName", "birthday", "bio", "location", "points", "membershipLevel"]
 
     var body: some View {
@@ -340,6 +340,16 @@ struct EditProfileSheet: View {
     @State private var error: String?
 
     private static let earliestBirthday = Calendar.current.date(from: DateComponents(year: 1900, month: 1, day: 1)) ?? .distantPast
+    /// Yesterday as the API counts it: the earlier of the local and Taipei dates, minus a day.
+    private static var latestBirthday: Date {
+        var taipei = Calendar(identifier: .gregorian)
+        taipei.timeZone = TimeZone(identifier: "Asia/Taipei") ?? .current
+        let today = [Calendar.current, taipei].map { cal -> Date in
+            let c = cal.dateComponents([.year, .month, .day], from: .now)
+            return Calendar.current.date(from: c) ?? .now
+        }.min() ?? .now
+        return Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
+    }
     private static let birthdayFormat = Date.ISO8601FormatStyle(timeZone: .current).year().month().day()
 
     private var usernameError: String? {
@@ -390,13 +400,13 @@ struct EditProfileSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(app.t("ios.birthday")).font(.vm(14, .medium))
             if birthday == nil {
-                Button(app.t("ios.setBirthday")) { birthday = Calendar.current.date(byAdding: .year, value: -25, to: .now) }
+                Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }
                     .buttonStyle(.vm(.outline))
             } else {
                 DatePicker(
                     app.t("ios.birthday"),
                     selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
-                    in: Self.earliestBirthday...Date.now.addingTimeInterval(-86_400),
+                    in: Self.earliestBirthday...Self.latestBirthday,
                     displayedComponents: .date
                 )
                 .labelsHidden()
@@ -412,15 +422,17 @@ struct EditProfileSheet: View {
             let newUsername = username == profile.username ? nil : username
             let first = firstName.trimmingCharacters(in: .whitespaces)
             let last = lastName.trimmingCharacters(in: .whitespaces)
-            let newBirthday = birthday.map { $0.formatted(Self.birthdayFormat) }
+            let formatted = birthday.map { $0.formatted(Self.birthdayFormat) }
+            // A birthday can't be cleared, so only send one the user changed.
+            let newBirthday = formatted == profile.birthday ? nil : formatted
             try await app.service.updateProfile(
                 username: newUsername, displayName: displayName, bio: bio,
-                firstName: firstName, lastName: lastName, birthday: newBirthday
+                firstName: first, lastName: last, birthday: newBirthday
             )
             app.updateMe {
                 $0.firstName = first.isEmpty ? nil : first
                 $0.lastName = last.isEmpty ? nil : last
-                $0.birthday = newBirthday ?? $0.birthday
+                $0.birthday = formatted ?? $0.birthday
                 $0.username = username
                 $0.displayName = displayName.isEmpty ? nil : displayName
                 $0.bio = bio.isEmpty ? nil : bio
