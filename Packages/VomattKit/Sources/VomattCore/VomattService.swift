@@ -263,7 +263,7 @@ public final class VomattService: Sendable {
     public func addInvitees(pollId: String, _ invitees: InviteesInput) async throws -> [Invitee] {
         try await call {
             (try await client.addInvitees(path: .init(voteId: pollId), body: .json(.init(
-                emails: invitees.emails, groupIds: invitees.groupIds, userIds: invitees.userIds
+                emails: invitees.emails, inviteListIds: invitees.groupIds, userIds: invitees.userIds
             ))).ok.body.json.data ?? []).map(Invitee.init)
         }
     }
@@ -339,35 +339,35 @@ public final class VomattService: Sendable {
 
     /// The signed-in user's Groups, by name.
     public func groups() async throws -> [UserGroup] {
-        try await call { try (try await client.getGroups().ok.body.json.data ?? []).map(UserGroup.init) }
+        try await call { try (try await client.getInviteLists().ok.body.json.data ?? []).map(UserGroup.init) }
     }
 
-    /// At most 50 Groups per owner (`group.max_reached`).
+    /// At most 50 Groups per owner (`invite_list.max_reached`).
     public func createGroup(name: String) async throws -> UserGroup {
         try await call {
-            try await UserGroup(required(client.createGroup(body: .json(.init(name: name))).created.body.json.data, "createGroup.data"))
+            try await UserGroup(required(client.createInviteList(body: .json(.init(name: name))).created.body.json.data, "createGroup.data"))
         }
     }
 
     public func renameGroup(id: String, name: String) async throws -> UserGroup {
         try await call {
-            try await UserGroup(required(client.renameGroup(path: .init(groupId: id), body: .json(.init(name: name))).ok.body.json.data, "renameGroup.data"))
+            try await UserGroup(required(client.renameInviteList(path: .init(inviteListId: id), body: .json(.init(name: name))).ok.body.json.data, "renameGroup.data"))
         }
     }
 
     /// Polls that invited the Group keep their Invitees.
     public func deleteGroup(id: String) async throws {
-        _ = try await call { try await client.deleteGroup(path: .init(groupId: id)).ok }
+        _ = try await call { try await client.deleteInviteList(path: .init(inviteListId: id)).ok }
     }
 
     public func groupMembers(groupId: String) async throws -> [GroupMember] {
-        try await call { (try await client.getMembers(path: .init(groupId: groupId)).ok.body.json.data ?? []).map(GroupMember.init) }
+        try await call { (try await client.getMembers(path: .init(inviteListId: groupId)).ok.body.json.data ?? []).map(GroupMember.init) }
     }
 
-    /// Members already in the Group are ignored; at most 100 (`group.members.max`).
+    /// Members already in the Group are ignored; at most 100 (`invite_list.members.max`).
     public func addGroupMembers(groupId: String, userIds: [String], emails: [String]) async throws -> [GroupMember] {
         try await call {
-            (try await client.addMembers(path: .init(groupId: groupId), body: .json(.init(
+            (try await client.addMembers(path: .init(inviteListId: groupId), body: .json(.init(
                 emails: emails, userIds: userIds
             ))).ok.body.json.data ?? []).map(GroupMember.init)
         }
@@ -376,9 +376,9 @@ public final class VomattService: Sendable {
     public func removeGroupMember(groupId: String, _ person: Person) async throws -> [GroupMember] {
         try await call {
             let list = if let email = person.email {
-                try await client.removeEmailMember(path: .init(groupId: groupId), query: .init(email: email)).ok.body.json.data
+                try await client.removeEmailMember(path: .init(inviteListId: groupId), query: .init(email: email)).ok.body.json.data
             } else {
-                try await client.removeMember(path: .init(groupId: groupId, userId: person.userId ?? "")).ok.body.json.data
+                try await client.removeMember(path: .init(inviteListId: groupId, userId: person.userId ?? "")).ok.body.json.data
             }
             return (list ?? []).map(GroupMember.init)
         }

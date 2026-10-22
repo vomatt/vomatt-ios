@@ -146,6 +146,22 @@ struct ServiceTests {
         #expect(options.map { $0["displayOrder"] as? Int } == [0, 1])
     }
 
+    @Test func inviteListsUseTheInviteListPathsAndField() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/invite-lists"
+                ? (200, envelope(#"[{"id":"l1","name":"Book club","memberCount":2,"createdAt":"2026-10-09T15:20:31+08:00"}]"#), [:])
+                : (200, envelope("[]"), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let lists = try await service.groups()
+        #expect(lists.map(\.id) == ["l1"])
+        _ = try await service.addInvitees(pollId: "p1", InviteesInput(groupIds: ["l1"]))
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json["inviteListIds"] as? [String] == ["l1"])
+        #expect(json["groupIds"] == nil)
+    }
+
     private func firstPoll(_ extra: [String: Any] = [:]) throws -> String {
         let item = try #require(try JSONSerialization.jsonObject(with: Data(try fixture("listVotes").utf8)) as? [String: Any])
         var first = ((item["data"] as! [String: Any])["items"] as! [[String: Any]])[0]
