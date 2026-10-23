@@ -227,7 +227,22 @@ struct ServiceTests {
         #expect(transport.requests.count == 1)
     }
 
-    @Test func aSecondExportInADayIsRateLimited() async throws {
+    @Test func feedbackIsPostedAndRateLimited() async throws {
+        let transport = StubTransport { _, _ in (201, envelope(#"{"id":"f1","success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sendFeedback("Please add dark mode.")
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json["content"] as? String == "Please add dark mode.")
+        #expect(transport.requests.last?.path.hasSuffix("/api/feedback") == true)
+
+        let limited = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let capped = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: limited)
+        let error = await #expect(throws: APIError.self) { try await capped.sendFeedback("again") }
+        #expect(error?.isRateLimited == true)
+    }
+
+    @Test func aSecondExportInADayIsRateLimited()async throws {
         let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let error = await #expect(throws: APIError.self) { try await service.exportMyData() }

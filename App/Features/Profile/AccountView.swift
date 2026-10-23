@@ -184,6 +184,8 @@ private struct AccountSettings: View {
                 Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
             }
 
+            FeedbackSection()
+
             ExportDataSection()
 
             DeleteAccountSection(username: profile.username)
@@ -284,6 +286,71 @@ struct AppSettingsSection: View {
     private var version: String {
         let info = Bundle.main.infoDictionary
         return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
+    }
+}
+
+/// Opens the feedback sheet.
+private struct FeedbackSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var isPresented = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("ios.feedbackTitle")).font(.vm(15, .medium))
+                Text(app.t("ios.feedbackBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline))
+        }
+        .card()
+        .sheet(isPresented: $isPresented) { FeedbackSheet() }
+    }
+}
+
+/// A free-text message to the team (max 2000 characters).
+private struct FeedbackSheet: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var error: String?
+
+    private static let maxLength = 2000
+    private var content: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    VMTextEditor(placeholder: app.t("ios.feedbackPlaceholder"), text: $text, minHeight: 160)
+                    if let error { Text(error).font(.vm(14)).foregroundStyle(Tokens.destructive) }
+                }
+                .padding(Metrics.gutter)
+            }
+            .canvas()
+            .navigationTitle(app.t("ios.feedbackTitle"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    LoadingButton(style: .vm(.link), action: send) { Text(app.t("ios.feedbackSend")).fontWeight(.semibold) }
+                        .disabled(content.isEmpty || content.count > Self.maxLength)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func send() async {
+        error = nil
+        do {
+            try await app.service.sendFeedback(content)
+            app.showToast(app.t("ios.feedbackSent"))
+            dismiss()
+        } catch {
+            let limited = (error as? APIError)?.isRateLimited == true
+            self.error = app.t.message(for: error, fallback: limited ? "ios.feedbackLimited" : "ios.feedbackFailed")
+        }
     }
 }
 

@@ -471,6 +471,11 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Sends product feedback (max 2000 characters). The API allows a few per UTC day; over it is a 429.
+    public func sendFeedback(_ content: String) async throws {
+        _ = try await call { try await client.createFeedback(body: .json(.init(content: content))).created }
+    }
+
     /// Permanently deletes the signed-in user's account; the backend revokes every session.
     public func deleteMyAccount() async throws {
         let id = try await myProfile().id
