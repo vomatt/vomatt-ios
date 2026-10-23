@@ -242,7 +242,7 @@ struct ServiceTests {
         #expect(error?.isRateLimited == true)
     }
 
-    @Test func aSecondExportInADayIsRateLimited()async throws {
+    @Test func aSecondExportInADayIsRateLimited() async throws {
         let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let error = await #expect(throws: APIError.self) { try await service.exportMyData() }

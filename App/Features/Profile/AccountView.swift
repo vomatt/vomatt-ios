@@ -334,7 +334,7 @@ private struct FeedbackSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     LoadingButton(style: .vm(.link), action: send) { Text(app.t("ios.feedbackSend")).fontWeight(.semibold) }
-                        .disabled(content.isEmpty || content.count > Self.maxLength)
+                        .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
                 }
             }
         }
