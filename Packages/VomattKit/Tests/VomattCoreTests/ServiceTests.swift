@@ -216,6 +216,24 @@ struct ServiceTests {
         #expect(transport.requests.map(\.method) == [.get, .delete, .delete])
     }
 
+    @Test func exportReturnsTheDocumentAsJSON() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"exportedAt":"2026-10-23T10:00:00+08:00","preferences":{"visibility.location":"true"},"polls":[],"comments":[],"ballots":[]}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let data = try await service.exportMyData()
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect((json["preferences"] as? [String: String])?["visibility.location"] == "true")
+        #expect(transport.requests.count == 1)
+    }
+
+    @Test func aSecondExportInADayIsRateLimited() async throws {
+        let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.exportMyData() }
+        #expect(error?.isRateLimited == true)
+    }
+
     @Test func profileCarriesTheBallotDefault() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }

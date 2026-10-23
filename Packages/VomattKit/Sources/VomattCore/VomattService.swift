@@ -459,6 +459,18 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
     }
 
+    /// Everything stored about the caller as one pretty-printed JSON document (data portability).
+    /// The API allows one export per UTC day; a second call is a 429.
+    public func exportMyData() async throws -> Data {
+        try await call {
+            let export = try await required(client.exportMyData().ok.body.json.data, "data")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            return try encoder.encode(export)
+        }
+    }
+
     /// Permanently deletes the signed-in user's account; the backend revokes every session.
     public func deleteMyAccount() async throws {
         let id = try await myProfile().id
