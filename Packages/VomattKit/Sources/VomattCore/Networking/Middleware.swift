@@ -34,7 +34,7 @@ struct AuthMiddleware: ClientMiddleware {
 
     /// Operations that carry their own credentials, or none.
     static let unauthenticated: Set<String> = [
-        "refresh", "logout", "sendOtp", "verifyOtp", "checkEmail",
+        "refresh", "logout", "sendOtp", "verifyOtp",
         "phoneSendOtp", "phoneVerifyOtp", "appleLogin", "googleLogin", "lineLogin",
     ]
 

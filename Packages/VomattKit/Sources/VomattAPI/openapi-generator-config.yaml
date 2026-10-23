@@ -8,7 +8,6 @@ namingStrategy: idiomatic
 filter:
   operations:
     - appleLogin
-    - checkEmail
     - googleLogin
     - lineLogin
     - logout

@@ -115,6 +115,6 @@
 		"birthdayHint": "Once set, a birthday can be changed but not removed.",
 		"field.firstName": "First name",
 		"field.lastName": "Last name",
-		"field.birthday": "Birthday"
+		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"
 	}
 }

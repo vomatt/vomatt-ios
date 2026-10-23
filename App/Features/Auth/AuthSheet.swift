@@ -10,7 +10,6 @@ struct AuthSheet: View {
     enum Step { case email, code, profile }
     @State private var step = Step.email
     @State private var email = ""
-    @State private var isNewUser = false
 
     var body: some View {
         NavigationStack {
@@ -18,12 +17,9 @@ struct AuthSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     switch step {
                     case .email:
-                        EmailStep(email: $email) { isNew in
-                            isNewUser = isNew
-                            withAnimation { step = .code }
-                        }
+                        EmailStep(email: $email) { withAnimation { step = .code } }
                     case .code:
-                        CodeStep(email: email, onEditEmail: { withAnimation { step = .email } }) {
+                        CodeStep(email: email, onEditEmail: { withAnimation { step = .email } }) { isNewUser in
                             if isNewUser { withAnimation { step = .profile } } else { finish() }
                         }
                     case .profile:
@@ -76,7 +72,7 @@ private struct AuthErrorText: View {
 private struct EmailStep: View {
     @Environment(AppModel.self) private var app
     @Binding var email: String
-    let onSent: (_ isNewUser: Bool) -> Void
+    let onSent: () -> Void
     @State private var fieldError: String?
     @State private var error: AuthErrorKey?
 
@@ -106,9 +102,9 @@ private struct EmailStep: View {
         }
         fieldError = nil
         do {
-            let result = try await app.service.requestOtp(email: email)
+            try await app.service.requestOtp(email: email)
             email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            onSent(result.isNewUser)
+            onSent()
         } catch {
             self.error = AuthErrorKey(error)
         }
@@ -123,7 +119,7 @@ private struct CodeStep: View {
     @Environment(AppModel.self) private var app
     let email: String
     let onEditEmail: () -> Void
-    let onVerified: () -> Void
+    let onVerified: (_ isNewUser: Bool) -> Void
 
     @State private var code = ""
     @State private var error: AuthErrorKey?
@@ -245,10 +241,10 @@ private struct CodeStep: View {
         error = nil
         let submitted = code
         do {
-            try await app.service.verifyOtp(email: email, code: submitted)
+            let isNewUser = try await app.service.verifyOtp(email: email, code: submitted)
             // The field keeps focus while verifying; drop the number pad before the next step appears
             isFocused = false
-            onVerified()
+            onVerified(isNewUser)
         } catch {
             let key = AuthErrorKey(error)
             self.error = key
@@ -266,7 +262,7 @@ private struct CodeStep: View {
         error = nil
         resent = false
         do {
-            _ = try await app.service.requestOtp(email: email)
+            try await app.service.requestOtp(email: email)
             resent = true
             isCodeDead = false
             code = ""

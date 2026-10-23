@@ -126,9 +126,9 @@ private struct AccountSettings: View {
     }
 
     /// Fields whose labels are iOS-only strings.
-    private let extraFields: Set = ["firstName", "lastName", "birthday"]
+    private let extraFields: Set = ["firstName", "lastName"]
     /// Profile fields other people can see, in the order shown.
-    private let fields = ["displayName", "firstName", "lastName", "birthday", "bio", "location", "points", "membershipLevel"]
+    private let fields = ["displayName", "firstName", "lastName", "bio", "location", "points", "membershipLevel"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
