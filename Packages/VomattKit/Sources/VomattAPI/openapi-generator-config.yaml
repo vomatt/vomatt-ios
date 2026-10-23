@@ -21,7 +21,7 @@ filter:
     - Vote
     - Vote Comment
     - Notification
-    - Group
+    - Invite List
     - User
     - Tag
     - Lookup
