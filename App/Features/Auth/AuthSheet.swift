@@ -141,7 +141,7 @@ private struct CodeStep: View {
                 .font(.system(size: 22))
                 .foregroundStyle(Tokens.foreground)
                 .frame(width: 48, height: 48)
-                .background(Tokens.volt, in: Circle())
+                .background(Tokens.highlight, in: Circle())
                 .overlay(Circle().strokeBorder(Tokens.foreground.opacity(0.2)))
                 .padding(.bottom, 20)
                 .accessibilityHidden(true)

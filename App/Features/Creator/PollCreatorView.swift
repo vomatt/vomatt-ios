@@ -441,7 +441,7 @@ struct RadioCards<Value: Hashable>: View {
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .frame(minHeight: 56)
-                    .background(isOn ? Tokens.voltTint : Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
+                    .background(isOn ? Tokens.highlightTint : Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
                     .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(isOn ? Tokens.foreground : Tokens.border))
                 }
                 .buttonStyle(.plain)

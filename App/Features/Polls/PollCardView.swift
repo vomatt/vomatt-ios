@@ -78,8 +78,8 @@ struct PollCardView: View {
 
             footer
         }
-        .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+        .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
             ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))

@@ -19,7 +19,9 @@
 		"create": "建立",
 		"unblock": "解除封鎖",
 		"invitedBy": "{name} 邀請了你",
-		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。"
+		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
+		"sealedTitle": "已封存，謝謝你。",
+		"sealedTurnout": "{count} 人已投票，包括你"
 	},
 	"apiError": {
 		"common.bad_request": "請求格式錯誤",

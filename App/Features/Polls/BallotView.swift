@@ -11,6 +11,8 @@ struct BallotView: View {
     let onPollEnded: () async -> Void
 
     @State private var confirmingWithdraw = false
+    /// The Seal shows in full right after a cast, then folds to a row.
+    @State private var justSealed = false
     @State private var shake = 0
     @Namespace private var selection
 
@@ -43,12 +45,13 @@ struct BallotView: View {
             }
 
             if hasBallot, let endTime = poll.endTime {
-                sealedNotice(endTime).transition(.move(edge: .top).combined(with: .opacity))
+                seal(endTime).transition(.move(edge: .top).combined(with: .opacity))
             }
 
             actions
         }
         .animation(.easeOut(duration: 0.25), value: hasBallot)
+        .animation(.easeOut(duration: 0.25), value: justSealed)
         .sensoryFeedback(.impact(weight: .light), trigger: ballot.myOptionId) { _, new in new != nil }
     }
 
@@ -78,7 +81,7 @@ struct BallotView: View {
                     RoundedRectangle(cornerRadius: Radius.xl).fill(Tokens.card)
                     RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border)
                     if isSelected {
-                        RoundedRectangle(cornerRadius: Radius.xl).fill(Tokens.voltTint)
+                        RoundedRectangle(cornerRadius: Radius.xl).fill(Tokens.highlightTint)
                             .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.primary, lineWidth: 1.5))
                             .matchedGeometryEffect(id: "selection", in: selection)
                             .phaseAnimator([1, 0.45], trigger: ballot.isPending) { view, opacity in
@@ -97,21 +100,47 @@ struct BallotView: View {
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
-    private func sealedNotice(_ endTime: Date) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            BallotBoxIcon().frame(width: 20, height: 20).foregroundStyle(Tokens.foreground).padding(.top, 1)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(app.t("poll.sealed", ["date": app.dates.pollDate(endTime)]))
-                if let visibilityHint { Text(visibilityHint) }
+    /// The Seal: vomatt's promise in Tide, the voter's check in Volt. In full once per cast, then a row.
+    private func seal(_ endTime: Date) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.xl)
+        let sealedUntil = Text(app.t("poll.sealed", ["date": app.dates.pollDate(endTime)]))
+        return Group {
+            if justSealed {
+                VStack(spacing: 8) {
+                    SealMark(size: 72)
+                    Text(app.t("ios.sealedTitle"))
+                        .font(.vm(18, .medium, relativeTo: .title3))
+                        .foregroundStyle(Tokens.foreground)
+                    sealedUntil
+                    if let visibilityHint { Text(visibilityHint) }
+                    if let turnout = ballot.turnout {
+                        Text(app.t("ios.sealedTurnout", ["count": app.t.number(turnout)]))
+                            .font(.vmMono(13))
+                            .foregroundStyle(Tokens.foreground)
+                    }
+                }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    SealMark(size: 36)
+                    VStack(alignment: .leading, spacing: 4) {
+                        sealedUntil
+                        if let visibilityHint { Text(visibilityHint) }
+                    }
+                    .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .font(.vmMeta)
-        .foregroundStyle(Tokens.mutedForeground)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(Tokens.tideForeground)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Tokens.border))
+        .background(Tokens.tideTint, in: shape)
+        .overlay(shape.strokeBorder(Tokens.tideLine))
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var actions: some View {
@@ -174,7 +203,11 @@ struct BallotView: View {
         app.requireAuth {
             Task {
                 let outcome = await ballot.cast(selected, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
-                if outcome == .saved { app.showToast(app.t("poll.voteCast")) }
+                if outcome == .saved {
+                    // The Seal replaces the "Vote cast." toast
+                    justSealed = true
+                    AccessibilityNotification.Announcement(app.t("ios.sealedTitle")).post()
+                }
                 if outcome == .failed { shake += 1 }
             }
         }
@@ -190,6 +223,7 @@ struct BallotView: View {
 
     private func withdraw() {
         confirmingWithdraw = false
+        justSealed = false
         Task {
             if await ballot.retract(app: app, onPollEnded: onPollEnded) == .failed { shake += 1 }
         }
@@ -220,7 +254,7 @@ struct BallotMark: View {
                 .strokeBorder(checked ? Tokens.primary : Tokens.input, lineWidth: 1.5)
             CheckShape()
                 .trim(from: 0, to: checked ? 1 : 0)
-                .stroke(Tokens.volt, style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                .stroke(Tokens.highlight, style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
                 .frame(width: 12, height: 12)
         }
         .frame(width: 18, height: 18)
@@ -259,7 +293,7 @@ struct VotedStamp: View {
         .padding(.leading, 8)
         .padding(.trailing, 10)
         .padding(.vertical, 3)
-        .background(Tokens.volt, in: Capsule())
+        .background(Tokens.highlight, in: Capsule())
         .overlay(Capsule().strokeBorder(Color.black.opacity(0.2)))
         .fixedSize()
         .onAppear { withAnimation(.easeOut(duration: 0.25).delay(0.1)) { drawn = true } }

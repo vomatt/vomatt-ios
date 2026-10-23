@@ -75,10 +75,29 @@ struct UnreadDot: View {
     let label: String
     var body: some View {
         Circle()
-            .fill(Tokens.volt)
+            .fill(Tokens.highlight)
             .overlay(Circle().strokeBorder(Tokens.foreground.opacity(0.4), lineWidth: 1))
             .frame(width: 10, height: 10)
             .accessibilityLabel(label)
+    }
+}
+
+/// The Seal: a Tide ring around a Volt check. The ring is vomatt's promise, the check is your vote.
+struct SealMark: View {
+    var size: CGFloat = 36
+
+    var body: some View {
+        ZStack {
+            Circle().strokeBorder(Tokens.tide, lineWidth: 2)
+            Circle().strokeBorder(Tokens.tide, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                .padding(size * 0.1)
+            Circle().fill(Tokens.highlight).frame(width: size * 0.42, height: size * 0.42)
+            Image(systemName: "checkmark")
+                .font(.system(size: size * 0.2, weight: .heavy))
+                .foregroundStyle(Tokens.highlightForeground)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
 

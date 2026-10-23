@@ -19,7 +19,9 @@
 		"create": "Create",
 		"unblock": "Unblock",
 		"invitedBy": "{name} invited you",
-		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with."
+		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",
+		"sealedTitle": "Sealed. Thank you.",
+		"sealedTurnout": "{count} voted, you included"
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
