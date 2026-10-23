@@ -64,7 +64,7 @@ struct ResultsView: View {
                         .font(.vm(11, .semibold))
                         .foregroundStyle(Color.black.opacity(0.85))
                         .padding(.horizontal, 8).padding(.vertical, 1)
-                        .background(Tokens.volt, in: Capsule())
+                        .background(Tokens.highlight, in: Capsule())
                         .overlay(Capsule().strokeBorder(Color.black.opacity(0.2)))
                         .fixedSize()
                 }

@@ -6,10 +6,12 @@ import SwiftUI
 enum Radius {
     /// `rounded-md`
     static let md: CGFloat = 6
-    /// `rounded-lg`: buttons and inputs
-    static let lg: CGFloat = 8
-    /// `rounded-xl`: cards, ballot rows, panels
+    /// `rounded-lg`: buttons
+    static let lg: CGFloat = 10
+    /// `rounded-xl`: ballot rows, inputs, panels
     static let xl: CGFloat = 12
+    /// `rounded-2xl`: cards
+    static let card: CGFloat = 16
 }
 
 enum Metrics {
@@ -57,26 +59,26 @@ extension AnyTransition {
 }
 
 extension View {
-    /// The `display-heading` utility: weight 400, leading 1.25, -0.03em tracking.
+    /// The `display-heading` utility: weight 500, leading 1.25, -0.03em tracking.
     func displayHeading(_ size: CGFloat) -> some View {
-        font(.vm(size, relativeTo: .largeTitle))
+        font(.vm(size, .medium, relativeTo: .largeTitle))
             .tracking(-0.03 * size)
             .lineSpacing(size * 0.25)
             .foregroundStyle(Tokens.foreground)
     }
 
-    /// The poll title: `text-[22px] leading-tight tracking-[-0.02em]`.
+    /// The poll title: `text-[22px] font-medium leading-tight tracking-[-0.02em]`.
     func pollTitle(_ size: CGFloat = 22) -> some View {
-        font(.vm(size, relativeTo: .title2))
+        font(.vm(size, .medium, relativeTo: .title2))
             .tracking(-0.02 * size)
             .foregroundStyle(Tokens.foreground)
     }
 
-    /// `bg-card border border-border rounded-xl`
+    /// `bg-card border border-border rounded-2xl`
     func card(padding: CGFloat? = 16, border: Color = Tokens.border) -> some View {
         self.padding(padding ?? 0)
-            .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
-            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(border, lineWidth: 1))
+            .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(border, lineWidth: 1))
     }
 
     /// `px-contain mx-auto max-w-2xl`: a centered column that fills phones.

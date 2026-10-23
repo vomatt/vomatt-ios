@@ -8,7 +8,7 @@ struct FieldChrome: ViewModifier {
     var minHeight: CGFloat = 48
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.lg)
+        let shape = RoundedRectangle(cornerRadius: Radius.xl)
         content
             .font(.vm(16))
             .foregroundStyle(Tokens.foreground)
