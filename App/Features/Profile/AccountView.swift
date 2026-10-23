@@ -306,17 +306,26 @@ private struct ExportDataSection: View {
             }
         }
         .card()
+        .onDisappear(perform: discard)
     }
 
     private func export() async {
         do {
             let data = try await app.service.exportMyData()
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-export.json")
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
             file = url
         } catch {
-            app.showToast(app.t.message(for: error, fallback: "ios.exportFailed"), isError: true)
+            let limited = (error as? APIError)?.isRateLimited == true
+            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "ios.exportFailed"), isError: true)
         }
+    }
+
+    /// The export holds everything about the account, so it doesn't outlive the screen.
+    private func discard() {
+        guard let file else { return }
+        try? FileManager.default.removeItem(at: file)
+        self.file = nil
     }
 }
 

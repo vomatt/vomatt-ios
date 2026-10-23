@@ -21,6 +21,7 @@
 		"exportBody": "Download your profile, polls, comments and ballots as one JSON file. Available once a day.",
 		"exportCta": "Export",
 		"exportFailed": "Couldn't export your data. Try again.",
+		"exportLimited": "You've already exported today. Try again tomorrow (UTC).",
 		"unblock": "Unblock",
 		"invitedBy": "{name} invited you",
 		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",

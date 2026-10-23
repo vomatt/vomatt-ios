@@ -227,6 +227,13 @@ struct ServiceTests {
         #expect(transport.requests.count == 1)
     }
 
+    @Test func aSecondExportInADayIsRateLimited() async throws {
+        let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.exportMyData() }
+        #expect(error?.isRateLimited == true)
+    }
+
     @Test func profileCarriesTheBallotDefault() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }

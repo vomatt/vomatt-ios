@@ -21,6 +21,7 @@
 		"exportBody": "將你的個人檔案、投票、留言與選票下載為一個 JSON 檔。每天可匯出一次。",
 		"exportCta": "匯出",
 		"exportFailed": "無法匯出你的資料，請再試一次。",
+		"exportLimited": "你今天已經匯出過了，請明天（UTC）再試。",
 		"unblock": "解除封鎖",
 		"invitedBy": "{name} 邀請了你",
 		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
