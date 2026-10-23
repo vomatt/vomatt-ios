@@ -145,7 +145,8 @@ public struct Voter: Identifiable, Hashable, Sendable {
     public let userId: String
     public var username: String
     public var avatarUrl: String?
-    public var optionId: String
+    /// nil for everyone while the Poll holds an Anonymous Ballot other than the viewer's own.
+    public var optionId: String?
     public var votedAt: Date?
 }
 

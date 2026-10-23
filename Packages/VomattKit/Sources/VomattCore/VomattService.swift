@@ -79,25 +79,22 @@ public final class VomattService: Sendable {
 
     // MARK: Auth
 
-    /// Emails a one-time code. The same code signs in an existing account or creates
-    /// a new one; `isNewUser` only changes the wording. Checks first, so a failed
-    /// check never leaves a sent code and a running resend cooldown.
-    public func requestOtp(email: String) async throws -> (isNewUser: Bool, Void) {
+    /// Emails a one-time code. The same code signs in an existing account or creates a new one.
+    public func requestOtp(email: String) async throws {
         let email = Email.normalize(email)
-        return try await call {
-            let exists = try await client.checkEmail(body: .json(.init(email: email))).ok.body.json.data?.exists
-            _ = try await client.sendOtp(body: .json(.init(email: email))).ok
-            return (exists == false, ())
-        }
+        try await call { _ = try await client.sendOtp(body: .json(.init(email: email))).ok }
     }
 
-    /// Verifies the code and starts the session.
-    public func verifyOtp(email: String, code: String) async throws {
-        let tokens = try await call {
+    /// Verifies the code and starts the session. True when this sign-in created the account.
+    @discardableResult
+    public func verifyOtp(email: String, code: String) async throws -> Bool {
+        let (tokens, isNewUser) = try await call {
             let output = try await client.verifyOtp(body: .json(.init(code: code, email: Email.normalize(email))))
-            return try AuthTokens(required(output.ok.body.json.data, "verifyOtp.data"))
+            let data = try required(output.ok.body.json.data, "verifyOtp.data")
+            return (try AuthTokens(data), data.isNewUser == true)
         }
         await session.signIn(tokens)
+        return isNewUser
     }
 
     /// Revokes the refresh token on the backend, then ends the session here even when the backend can't be reached.

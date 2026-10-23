@@ -115,6 +115,6 @@
 		"birthdayHint": "設定後可以修改，但無法移除。",
 		"field.firstName": "名字",
 		"field.lastName": "姓氏",
-		"field.birthday": "生日"
+		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
 	}
 }

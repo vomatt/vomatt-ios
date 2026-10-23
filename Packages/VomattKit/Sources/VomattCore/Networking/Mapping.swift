@@ -147,7 +147,7 @@ extension Voter {
             userId: try required(dto.userId, "VoterResponse.userId"),
             username: dto.username ?? "",
             avatarUrl: dto.avatarUrl,
-            optionId: try required(dto.optionId, "VoterResponse.optionId"),
+            optionId: dto.optionId,
             votedAt: dto.votedAt
         )
     }
@@ -194,8 +194,7 @@ extension UserProfile {
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
             location: dto.location,
             points: dto.points.map(Int.init),
-            membershipLevel: dto.membershipLevel,
-            birthday: dto.birthday
+            membershipLevel: dto.membershipLevel
         )
     }
 }

@@ -178,11 +178,18 @@ struct VotersSheet: View {
                 case .failed:
                     LoadFailed(message: app.t("poll.votersFailed")) { await load() }
                 case let .ready(voters, capped):
-                    let chose = voters.filter { $0.optionId == option.id }
+                    // Choices are withheld for everyone while an Anonymous Ballot is in the Poll
+                    let choicesHidden = voters.contains { $0.optionId == nil }
+                    let chose = choicesHidden ? voters : voters.filter { $0.optionId == option.id }
                     if chose.isEmpty {
                         message(app.t("poll.votersNone"))
                     } else {
                         List {
+                            if choicesHidden {
+                                Text(app.t("ios.votersChoicesHidden"))
+                                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                                    .listRowBackground(Color.clear)
+                            }
                             ForEach(chose) { voter in
                                 Button {
                                     dismiss()
