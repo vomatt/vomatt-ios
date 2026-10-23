@@ -1672,11 +1672,13 @@
           "idToken": {
             "description": "Identity token (JWT) issued by Apple",
             "example": "eyJraWQiOiJZdXl1eVoxIiwiYWxnIjoiUlMyNTYifQ...",
+            "minLength": 1,
             "type": "string"
           },
           "nonce": {
             "description": "The raw nonce this sign-in started with. The client sends its SHA-256 hex to Apple and the raw value here; the server checks the token's `nonce` claim against it, so a captured token cannot be replayed from another session",
             "example": "f3a9c2b4e1d8...",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -2161,6 +2163,7 @@
             "items": {
               "$ref": "#/components/schemas/VoteOptionRequest"
             },
+            "minItems": 1,
             "type": "array"
           },
           "startTime": {
@@ -2345,6 +2348,7 @@
           "idToken": {
             "description": "ID token (JWT) issued by Google",
             "example": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -2581,11 +2585,13 @@
           "code": {
             "description": "Authorization code returned by LINE after the user authorizes",
             "example": "abc123def456",
+            "minLength": 1,
             "type": "string"
           },
           "redirectUri": {
             "description": "Redirect URI used in the LINE authorization request; must match the one registered with LINE",
             "example": "https://app.example.com/auth/line/callback",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -2957,6 +2963,7 @@
           "phone": {
             "description": "Phone number: a Taiwan mobile number (09xxxxxxxx) or E.164 (+ country code and number). Spaces, '-', '(' and ')' are ignored; stored and matched as E.164",
             "example": "0912345678",
+            "minLength": 1,
             "type": "string"
           },
           "type": {
@@ -2981,11 +2988,13 @@
           "code": {
             "description": "OTP code received by SMS",
             "example": "123456",
+            "minLength": 1,
             "type": "string"
           },
           "phone": {
             "description": "Phone number: a Taiwan mobile number (09xxxxxxxx) or E.164 (+ country code and number). Spaces, '-', '(' and ')' are ignored; stored and matched as E.164",
             "example": "0912345678",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -3050,6 +3059,7 @@
           "refreshToken": {
             "description": "Refresh token from the latest login or refresh response; each refresh invalidates it and issues a new one",
             "example": "8c7e3f4a-1234-5678-90ab-cdef12345678",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -3715,6 +3725,7 @@
           "code": {
             "description": "OTP code received by email",
             "example": "123456",
+            "minLength": 1,
             "type": "string"
           },
           "email": {
@@ -3878,6 +3889,7 @@
               "example": "[\"0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813\"]",
               "type": "string"
             },
+            "minItems": 1,
             "type": "array"
           }
         },

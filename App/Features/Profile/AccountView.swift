@@ -184,6 +184,8 @@ private struct AccountSettings: View {
                 Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
             }
 
+            ExportDataSection()
+
             DeleteAccountSection(username: profile.username)
         }
     }
@@ -282,6 +284,39 @@ struct AppSettingsSection: View {
     private var version: String {
         let info = Bundle.main.infoDictionary
         return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
+    }
+}
+
+/// Writes the export to a temporary file, then offers it through the share sheet.
+private struct ExportDataSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var file: URL?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("ios.exportTitle")).font(.vm(15, .medium))
+                Text(app.t("ios.exportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let file {
+                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline))
+            } else {
+                LoadingButton(style: .vm(.outline), action: export) { Text(app.t("ios.exportCta")) }
+            }
+        }
+        .card()
+    }
+
+    private func export() async {
+        do {
+            let data = try await app.service.exportMyData()
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-export.json")
+            try data.write(to: url, options: .atomic)
+            file = url
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "ios.exportFailed"), isError: true)
+        }
     }
 }
 
