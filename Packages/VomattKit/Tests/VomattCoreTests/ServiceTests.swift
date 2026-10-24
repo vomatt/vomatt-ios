@@ -320,6 +320,27 @@ struct ServiceTests {
         let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
         #expect(calls.prefix(2) == ["POST /api/users/me/blocks/u1", "DELETE /api/users/me/blocks/u1"])
     }
+
+    @Test func followsAreWrittenListedAndFeedPaged() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if request.method != .get { return (200, envelope(#"{"success":true}"#), [:]) }
+            if path.hasPrefix("/api/votes/following") {
+                return (200, envelope(#"{"items":[],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"{"items":[{"id":"u1","username":"alice","displayName":"Alice","avatarUrl":"bot:boba"}],"nextCursor":null}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.followUser(id: "u1")
+        try await service.unfollowUser(id: "u1")
+        let users = try await service.allFollowedUsers()
+        let feed = try await service.followingPolls()
+        #expect(users.map(\.username) == ["alice"])
+        #expect(feed.items.isEmpty && feed.nextCursor == nil)
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls.prefix(2) == ["POST /api/users/me/follows/u1", "DELETE /api/users/me/follows/u1"])
+        #expect(calls.last?.hasPrefix("GET /api/votes/following") == true)
+    }
 }
 
 @Suite("Session")

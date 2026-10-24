@@ -6,10 +6,11 @@ struct HomeView: View {
     @Environment(AppModel.self) private var app
     @State private var tags: [Tag] = []
     @State private var activeTag: Tag?
+    @State private var showFollowing = false
 
     var body: some View {
-        FeedView(tag: activeTag, header: AnyView(topicTabs))
-            .id(activeTag?.id)
+        FeedView(tag: showFollowing ? nil : activeTag, following: showFollowing && app.isSignedIn, header: AnyView(topicTabs))
+            .id(showFollowing ? "following" : activeTag?.id)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Image("brand-logo").renderingMode(.template).resizable().scaledToFit()
@@ -25,6 +26,7 @@ struct HomeView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
                 topicTab(nil, label: app.t("homePage.allTopics"))
+                if app.isSignedIn { followingTab }
                 ForEach(tags) { tag in topicTab(tag, label: "#\(tag.name)") }
             }
             .padding(.horizontal, Metrics.gutter - 4)
@@ -34,9 +36,16 @@ struct HomeView: View {
         .accessibilityLabel(app.t("homePage.topics"))
     }
 
+    private var followingTab: some View {
+        tabButton(app.t("profile.following"), isActive: showFollowing) { showFollowing = true; activeTag = nil }
+    }
+
     private func topicTab(_ tag: Tag?, label: String) -> some View {
-        let isActive = tag?.id == activeTag?.id
-        return Button { activeTag = tag } label: {
+        tabButton(label, isActive: !showFollowing && tag?.id == activeTag?.id) { showFollowing = false; activeTag = tag }
+    }
+
+    private func tabButton(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             Text(label).font(.vm(14, .medium))
                 .foregroundStyle(isActive ? Tokens.foreground : Tokens.mutedForeground)
                 .padding(.horizontal, 12)
@@ -55,6 +64,8 @@ struct HomeView: View {
 struct FeedView: View {
     @Environment(AppModel.self) private var app
     let tag: Tag?
+    /// Open Public Polls by followed people instead of the whole feed.
+    var following = false
     var header: AnyView?
     @State private var list: CursorList<Poll>?
 
@@ -90,7 +101,7 @@ struct FeedView: View {
             case .loaded:
                 let polls = app.visible(list.items)
                 if polls.isEmpty {
-                    empty
+                    if following { followingEmpty } else { empty }
                 } else {
                     if !app.isSignedIn { LoginPromptCard().padding(.top, 4) }
                     ForEach(polls) { poll in
@@ -115,8 +126,13 @@ struct FeedView: View {
         .padding(.vertical, 64)
     }
 
+    private var followingEmpty: some View {
+        EmptyState { Text(app.t("ios.followingEmpty")) }.padding(.top, 4)
+    }
+
     private func makeList() -> CursorList<Poll> {
         let service = app.service
+        if following { return CursorList { cursor in try await service.followingPolls(cursor: cursor, limit: 10) } }
         let slug = tag?.slug
         return CursorList { cursor in try await service.polls(tag: slug, cursor: cursor, limit: 10) }
     }

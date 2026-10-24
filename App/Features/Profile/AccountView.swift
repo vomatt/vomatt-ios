@@ -167,6 +167,7 @@ private struct AccountSettings: View {
             .tint(Tokens.primary)
             .card()
 
+            if !app.following.isEmpty { followingSection }
             if !app.blocked.isEmpty { blockedSection }
 
             AppSettingsSection()
@@ -192,20 +193,41 @@ private struct AccountSettings: View {
         }
     }
 
+    private var followingSection: some View {
+        peopleSection(title: app.t("profile.following"), actionTitle: app.t("ios.unfollowShort"), people: app.following.map { user in
+            Person(id: user.id, username: user.username, avatarUrl: user.avatarUrl, link: true, action: { app.unfollow(user.id) })
+        })
+    }
+
     private var blockedSection: some View {
+        peopleSection(title: app.t("ios.blockedTitle"), actionTitle: app.t("ios.unblock"), people: app.blocked.map { username in
+            Person(id: username, username: username, avatarUrl: nil, link: false, action: { app.unblock(username) })
+        })
+    }
+
+    private struct Person: Identifiable {
+        let id: String
+        let username: String
+        let avatarUrl: String?
+        let link: Bool
+        let action: () -> Void
+    }
+
+    /// A card of people, each with one outline button (unfollow, unblock).
+    private func peopleSection(title: String, actionTitle: String, people: [Person]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(text: app.t("ios.blockedTitle"))
+            SectionTitle(text: title)
             VStack(spacing: 0) {
-                ForEach(app.blocked, id: \.self) { username in
+                ForEach(people) { person in
                     HStack {
-                        UserChip(username: username, avatarUrl: nil, avatarSize: 28, link: false).font(.vm(15))
+                        UserChip(username: person.username, avatarUrl: person.avatarUrl, avatarSize: 28, link: person.link).font(.vm(15))
                         Spacer()
-                        Button(app.t("ios.unblock")) { app.unblock(username) }.buttonStyle(.vm(.outline, size: .sm))
+                        Button(actionTitle, action: person.action).buttonStyle(.vm(.outline, size: .sm))
                     }
                     .padding(.horizontal, 16)
                     .frame(minHeight: 56)
                     .overlay(alignment: .bottom) {
-                        if username != app.blocked.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                        if person.id != people.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
                     }
                 }
             }

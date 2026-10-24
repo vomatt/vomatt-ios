@@ -71,6 +71,8 @@ final class AppModel {
     private(set) var blocked: [String] = []
     /// Ids of the blocked people the API knows, by lowercased username, to unblock them.
     @ObservationIgnored private var blockedIds: [String: String] = [:]
+    /// People the signed-in viewer follows, most recently followed first. Private to the viewer.
+    private(set) var following: [UserSummary] = []
     @ObservationIgnored private let languageBox: LanguageBox
 
     var language: Language {
@@ -156,6 +158,7 @@ final class AppModel {
                 for name in blockedIds.keys { blockList.unblock(name) }
                 blockedIds = [:]
                 blocked = blockList.usernames()
+                following = []
                 unreadCount = 0
                 sessionGeneration += 1
                 if expired { showToast(t("login.sessionExpired")) }
@@ -169,6 +172,7 @@ final class AppModel {
         if let profile = await profile { me = profile }
         if let unread = await unread { unreadCount = unread }
         await syncBlocked()
+        if let followed = try? await service.allFollowedUsers() { following = followed }
     }
 
     func refreshUnread() async {
@@ -252,6 +256,40 @@ final class AppModel {
     /// Lists drop Polls deleted elsewhere or by blocked people, and show the newest copy of the rest.
     func visible(_ polls: [Poll]) -> [Poll] {
         polls.filter { !deletedPollIds.contains($0.id) && !isBlocked($0.creatorUsername) }.map(latest)
+    }
+
+    // MARK: Following
+
+    func isFollowing(_ userId: String?) -> Bool {
+        guard let userId else { return false }
+        return following.contains { $0.id == userId }
+    }
+
+    /// Shows the change at once and tells the API; the change is undone when the call fails.
+    func follow(_ user: UserSummary) {
+        guard isSignedIn, !isFollowing(user.id) else { return }
+        following.insert(user, at: 0)
+        Task {
+            do {
+                try await service.followUser(id: user.id)
+            } catch {
+                following.removeAll { $0.id == user.id }
+                showToast(t.message(for: error, fallback: "ios.followFailed"), isError: true)
+            }
+        }
+    }
+
+    func unfollow(_ userId: String) {
+        guard let index = following.firstIndex(where: { $0.id == userId }) else { return }
+        let user = following.remove(at: index)
+        Task {
+            do {
+                try await service.unfollowUser(id: userId)
+            } catch {
+                if !isFollowing(userId) { following.insert(user, at: min(index, following.count)) }
+                showToast(t.message(for: error, fallback: "ios.unfollowFailed"), isError: true)
+            }
+        }
     }
 
     // MARK: Blocking
