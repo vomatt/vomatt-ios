@@ -459,6 +459,37 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
     }
 
+    /// Signed-in only. Idempotent; 404 for an unknown or suspended user, 400 for yourself. Private: they aren't told.
+    public func followUser(id: String) async throws {
+        _ = try await call { try await client.followUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only. Idempotent.
+    public func unfollowUser(id: String) async throws {
+        _ = try await call { try await client.unfollowUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only; most recently followed first.
+    public func followedUsers(cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listFollowedUsers(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Every followed user, following the cursor to the end.
+    public func allFollowedUsers() async throws -> [UserSummary] {
+        try await collectPages(maxPages: 20) { try await self.followedUsers(cursor: $0) }.page.items
+    }
+
+    /// Signed-in only. Open Public Polls by followed people, most recently opened first.
+    public func followingPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await call {
+            let data = try await client.getFollowingVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
+        }
+    }
+
     /// Everything stored about the caller as one pretty-printed JSON document (data portability).
     /// The API allows one export per UTC day; a second call is a 429.
     public func exportMyData() async throws -> Data {
@@ -469,6 +500,11 @@ public final class VomattService: Sendable {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             return try encoder.encode(export)
         }
+    }
+
+    /// Sends product feedback (max 2000 characters). The API allows a few per UTC day; over it is a 429.
+    public func sendFeedback(_ content: String) async throws {
+        _ = try await call { try await client.createFeedback(body: .json(.init(content: content))).created }
     }
 
     /// Permanently deletes the signed-in user's account; the backend revokes every session.

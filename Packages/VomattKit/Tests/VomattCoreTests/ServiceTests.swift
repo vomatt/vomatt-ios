@@ -227,6 +227,21 @@ struct ServiceTests {
         #expect(transport.requests.count == 1)
     }
 
+    @Test func feedbackIsPostedAndRateLimited() async throws {
+        let transport = StubTransport { _, _ in (201, envelope(#"{"id":"f1","success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sendFeedback("Please add dark mode.")
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json["content"] as? String == "Please add dark mode.")
+        #expect(transport.requests.last?.path.hasSuffix("/api/feedback") == true)
+
+        let limited = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let capped = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: limited)
+        let error = await #expect(throws: APIError.self) { try await capped.sendFeedback("again") }
+        #expect(error?.isRateLimited == true)
+    }
+
     @Test func aSecondExportInADayIsRateLimited() async throws {
         let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
@@ -304,6 +319,27 @@ struct ServiceTests {
         #expect(users.first?.avatarUrl == "bot:boba")
         let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
         #expect(calls.prefix(2) == ["POST /api/users/me/blocks/u1", "DELETE /api/users/me/blocks/u1"])
+    }
+
+    @Test func followsAreWrittenListedAndFeedPaged() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if request.method != .get { return (200, envelope(#"{"success":true}"#), [:]) }
+            if path.hasPrefix("/api/votes/following") {
+                return (200, envelope(#"{"items":[],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"{"items":[{"id":"u1","username":"alice","displayName":"Alice","avatarUrl":"bot:boba"}],"nextCursor":null}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.followUser(id: "u1")
+        try await service.unfollowUser(id: "u1")
+        let users = try await service.allFollowedUsers()
+        let feed = try await service.followingPolls()
+        #expect(users.map(\.username) == ["alice"])
+        #expect(feed.items.isEmpty && feed.nextCursor == nil)
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls.prefix(2) == ["POST /api/users/me/follows/u1", "DELETE /api/users/me/follows/u1"])
+        #expect(calls.last?.hasPrefix("GET /api/votes/following") == true)
     }
 }
 

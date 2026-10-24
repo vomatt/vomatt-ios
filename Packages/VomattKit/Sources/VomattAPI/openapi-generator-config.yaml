@@ -24,3 +24,4 @@ filter:
     - User
     - Tag
     - Lookup
+    - Feedback
