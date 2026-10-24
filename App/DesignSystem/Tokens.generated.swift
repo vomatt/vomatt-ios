@@ -5,6 +5,8 @@ import SwiftUI
 enum Tokens {
     static let accent = Color("accent")
     static let accentForeground = Color("accent-foreground")
+    static let alert = Color("alert")
+    static let alertForeground = Color("alert-foreground")
     static let avatarGreen = Color("avatar-green")
     static let avatarLavender = Color("avatar-lavender")
     static let avatarPeach = Color("avatar-peach")

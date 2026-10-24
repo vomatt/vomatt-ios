@@ -70,14 +70,33 @@ struct StatusChip: View {
     }
 }
 
-/// The Volt dot that marks something unread.
+/// The Alert dot that marks something unread (the web's `UnreadDot`).
 struct UnreadDot: View {
     let label: String
     var body: some View {
         Circle()
-            .fill(Tokens.highlight)
-            .overlay(Circle().strokeBorder(Tokens.foreground.opacity(0.4), lineWidth: 1))
-            .frame(width: 10, height: 10)
+            .fill(Tokens.alert)
+            .frame(width: 8, height: 8)
+            .accessibilityLabel(label)
+    }
+}
+
+/// The unread count: white digits on Alert red (the sidebar's count on the web). `ring` separates it
+/// from an icon it overlaps, in the color of what is behind it.
+struct UnreadBadge: View {
+    let count: String
+    let label: String
+    var ring: Color? = nil
+    var body: some View {
+        Text(count)
+            .font(.vmMono(11, medium: true, relativeTo: .caption2))
+            .foregroundStyle(Tokens.alertForeground)
+            .lineLimit(1)
+            .padding(.horizontal, 5)
+            .frame(minWidth: 18)
+            .frame(height: 18)
+            .background(Tokens.alert, in: Capsule())
+            .overlay(Capsule().strokeBorder(ring ?? .clear, lineWidth: 2).padding(-2))
             .accessibilityLabel(label)
     }
 }

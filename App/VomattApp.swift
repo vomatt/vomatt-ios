@@ -188,7 +188,7 @@ struct VMTabBar: View {
                     if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
                 }
                 .overlay(alignment: .topTrailing) {
-                    if let badge { UnreadDot(label: badge).offset(x: -6, y: 8) }
+                    if let badge { UnreadBadge(count: badge, label: badge, ring: Tokens.card).offset(x: 2, y: 2) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
