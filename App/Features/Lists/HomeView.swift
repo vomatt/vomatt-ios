@@ -8,9 +8,12 @@ struct HomeView: View {
     @State private var activeTag: Tag?
     @State private var showFollowing = false
 
+    /// Signing out leaves the Following tab, which is only offered while signed in.
+    private var followingActive: Bool { showFollowing && app.isSignedIn }
+
     var body: some View {
-        FeedView(tag: showFollowing ? nil : activeTag, following: showFollowing && app.isSignedIn, header: AnyView(topicTabs))
-            .id(showFollowing ? "following" : activeTag?.id)
+        FeedView(tag: followingActive ? nil : activeTag, following: followingActive, header: AnyView(topicTabs))
+            .id(followingActive ? "following" : activeTag?.id)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Image("brand-logo").renderingMode(.template).resizable().scaledToFit()
@@ -37,11 +40,11 @@ struct HomeView: View {
     }
 
     private var followingTab: some View {
-        tabButton(app.t("profile.following"), isActive: showFollowing) { showFollowing = true; activeTag = nil }
+        tabButton(app.t("profile.following"), isActive: followingActive) { showFollowing = true; activeTag = nil }
     }
 
     private func topicTab(_ tag: Tag?, label: String) -> some View {
-        tabButton(label, isActive: !showFollowing && tag?.id == activeTag?.id) { showFollowing = false; activeTag = tag }
+        tabButton(label, isActive: !followingActive && tag?.id == activeTag?.id) { showFollowing = false; activeTag = tag }
     }
 
     private func tabButton(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {

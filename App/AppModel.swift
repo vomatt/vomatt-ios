@@ -73,6 +73,8 @@ final class AppModel {
     @ObservationIgnored private var blockedIds: [String: String] = [:]
     /// People the signed-in viewer follows, most recently followed first. Private to the viewer.
     private(set) var following: [UserSummary] = []
+    private var followChanges = 0
+    private var followQueue: Task<Void, Never>?
     @ObservationIgnored private let languageBox: LanguageBox
 
     var language: Language {
@@ -172,7 +174,9 @@ final class AppModel {
         if let profile = await profile { me = profile }
         if let unread = await unread { unreadCount = unread }
         await syncBlocked()
-        if let followed = try? await service.allFollowedUsers() { following = followed }
+        let changes = followChanges
+        // A follow or unfollow made while the fetch was in flight is newer than its snapshot
+        if let followed = try? await service.allFollowedUsers(), changes == followChanges { following = followed }
     }
 
     func refreshUnread() async {
@@ -269,7 +273,8 @@ final class AppModel {
     func follow(_ user: UserSummary) {
         guard isSignedIn, !isFollowing(user.id) else { return }
         following.insert(user, at: 0)
-        Task {
+        followChanges += 1
+        enqueueFollow { [self] in
             do {
                 try await service.followUser(id: user.id)
             } catch {
@@ -279,10 +284,20 @@ final class AppModel {
         }
     }
 
+    /// Follow calls run one after another, so a quick toggle reaches the API in the order it was made.
+    private func enqueueFollow(_ call: @escaping () async -> Void) {
+        let previous = followQueue
+        followQueue = Task {
+            await previous?.value
+            await call()
+        }
+    }
+
     func unfollow(_ userId: String) {
         guard let index = following.firstIndex(where: { $0.id == userId }) else { return }
         let user = following.remove(at: index)
-        Task {
+        followChanges += 1
+        enqueueFollow { [self] in
             do {
                 try await service.unfollowUser(id: userId)
             } catch {
