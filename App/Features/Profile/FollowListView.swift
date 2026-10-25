@@ -19,11 +19,12 @@ struct FollowListView: View {
                     case .failed:
                         LoadFailed(message: app.t("profile.cardFailed")) { await list.reload() }
                     case .loaded:
-                        if list.items.isEmpty {
+                        let items = list.items.filter { !app.isBlocked($0.username) }
+                        if items.isEmpty {
                             EmptyState { Text(app.t(followers ? "ios.followersEmpty" : "ios.followingListEmpty")) }
                         } else {
                             VStack(spacing: 0) {
-                                ForEach(list.items) { user in
+                                ForEach(items) { user in
                                     HStack {
                                         UserChip(username: user.username, avatarUrl: user.avatarUrl, avatarSize: 28).font(.vm(15))
                                         Spacer()
@@ -31,7 +32,7 @@ struct FollowListView: View {
                                     .padding(.horizontal, 16)
                                     .frame(minHeight: 56)
                                     .overlay(alignment: .bottom) {
-                                        if user.id != list.items.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
+                                        if user.id != items.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
                                     }
                                 }
                             }

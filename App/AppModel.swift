@@ -321,12 +321,14 @@ final class AppModel {
         showToast(t("ios.blockedToast", ["name": username]))
         guard isSignedIn, let id else { return }
         // The API unfollows whoever is blocked
-        if isFollowing(id) { following.removeAll { $0.id == id }; followChanges += 1 }
+        let unfollowed = following.first { $0.id == id }
+        if unfollowed != nil { following.removeAll { $0.id == id }; followChanges += 1 }
         let key = username.lowercased()
         // Recorded before the call so a quick unblock reaches the API too
         let wasBlocked = blockedIds[key] != nil
         blockedIds[key] = id
-        Task {
+        // Queued behind follow calls, so a follow made just before cannot reach the API after the block
+        enqueueFollow { [self] in
             do {
                 try await service.blockUser(id: id)
             } catch {
@@ -334,6 +336,7 @@ final class AppModel {
                     blockedIds[key] = nil
                     blocked = blockList.unblock(username)
                 }
+                if let unfollowed, !isFollowing(id) { following.insert(unfollowed, at: 0); followChanges += 1 }
                 showToast(t.message(for: error, fallback: "ios.blockFailed"), isError: true)
             }
         }
