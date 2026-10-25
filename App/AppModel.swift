@@ -39,6 +39,7 @@ enum Route: Hashable {
     case poll(String)
     case profile(String)
     case topic(Tag)
+    case people(username: String, followers: Bool)
     case notifications
 }
 
@@ -319,6 +320,8 @@ final class AppModel {
         blocked = blockList.block(username)
         showToast(t("ios.blockedToast", ["name": username]))
         guard isSignedIn, let id else { return }
+        // The API unfollows whoever is blocked
+        if isFollowing(id) { following.removeAll { $0.id == id }; followChanges += 1 }
         let key = username.lowercased()
         // Recorded before the call so a quick unblock reaches the API too
         let wasBlocked = blockedIds[key] != nil

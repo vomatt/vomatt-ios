@@ -477,6 +477,26 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Signed-in only; who follows `username`, most recently followed first. 404 for an unknown or suspended user.
+    public func followers(username: String, cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listFollowers(
+                path: .init(username: username), query: .init(cursor: cursor, limit: clampedPageSize(limit))
+            ).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Signed-in only; whom `username` follows, most recently followed first. 404 for an unknown or suspended user.
+    public func following(username: String, cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listFollowing(
+                path: .init(username: username), query: .init(cursor: cursor, limit: clampedPageSize(limit))
+            ).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
     /// Every followed user, following the cursor to the end.
     public func allFollowedUsers() async throws -> [UserSummary] {
         try await collectPages(maxPages: 20) { try await self.followedUsers(cursor: $0) }.page.items

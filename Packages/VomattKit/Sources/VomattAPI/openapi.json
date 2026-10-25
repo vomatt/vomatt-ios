@@ -3813,6 +3813,23 @@
             "nullable": true,
             "type": "string"
           },
+          "id": {
+            "description": "User id",
+            "example": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+            "type": "string"
+          },
+          "isBlocked": {
+            "description": "Whether the caller has blocked this user; null when signed out, false on the caller's own profile",
+            "example": false,
+            "nullable": true,
+            "type": "boolean"
+          },
+          "isFollowing": {
+            "description": "Whether the caller follows this user; null when signed out, false on the caller's own profile",
+            "example": false,
+            "nullable": true,
+            "type": "boolean"
+          },
           "joinedAt": {
             "description": "When the account was created",
             "example": "2026-08-01T10:00:00+08:00",
@@ -11499,6 +11516,9 @@
                     "bio": "Poll enthusiast",
                     "displayName": "Alice C.",
                     "firstName": "Alice",
+                    "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                    "isBlocked": false,
+                    "isFollowing": false,
                     "joinedAt": "2026-08-01T10:00:00+08:00",
                     "lastName": null,
                     "location": null,
@@ -11799,7 +11819,7 @@
         ]
       },
       "post": {
-        "description": "**Auth**: required\n**Precondition**: `userId` is another existing, active account\n**Behavior**: one-way block. From then on the caller no longer sees, in `GET /api/votes` (Feed / Explore / Search / Top), Polls the blocked user created, nor, in `GET /api/votes/{voteId}/comments` and its replies, Comment threads the blocked user started or Replies they wrote. Nothing else changes: the Poll detail, voter list, profile and My Polls still show them, and the blocked user is not told and sees the caller's content as before. Idempotent: blocking an already blocked user succeeds.\n**Side effects**: the block is written to the audit log\n**Errors**:\n- 400 `user.block.self`: `userId` is the caller's own id\n- 400 `common.bad_request`: `userId` is not a valid id\n- 404 `user.not_found`: no account with this id, or it is suspended",
+        "description": "**Auth**: required\n**Precondition**: `userId` is another existing, active account\n**Behavior**: one-way block. From then on the caller no longer sees, in `GET /api/votes` (Feed / Explore / Search / Top), Polls the blocked user created, nor, in `GET /api/votes/{voteId}/comments` and its replies, Comment threads the blocked user started or Replies they wrote. Nothing else changes: the Poll detail, voter list, profile and My Polls still show them, and the blocked user is not told and sees the caller's content as before. Idempotent: blocking an already blocked user succeeds.\n**Side effects**: the caller's follow of the user, if any, is removed (and cannot be added back while blocked); the block is written to the audit log\n**Errors**:\n- 400 `user.block.self`: `userId` is the caller's own id\n- 400 `common.bad_request`: `userId` is not a valid id\n- 404 `user.not_found`: no account with this id, or it is suspended",
         "operationId": "blockUser",
         "parameters": [
           {
@@ -12255,7 +12275,7 @@
         ]
       },
       "post": {
-        "description": "**Auth**: required\n**Precondition**: `userId` is another existing, active account\n**Behavior**: one-way follow. From then on `GET /api/votes/following` lists PUBLIC Polls the followed user creates. Following is private: the followed user is not told, and no follower list or count is exposed. Idempotent: following an already followed user succeeds.\n**Side effects**: the follow is written to the audit log\n**Errors**:\n- 400 `user.follow.self`: `userId` is the caller's own id\n- 400 `common.bad_request`: `userId` is not a valid id\n- 404 `user.not_found`: no account with this id, or it is suspended",
+        "description": "**Auth**: required\n**Precondition**: `userId` is another existing, active account the caller has not blocked\n**Behavior**: one-way follow. From then on `GET /api/votes/following` lists PUBLIC Polls the followed user creates. The followed user is not told; the follow shows in `GET /api/users/{username}/followers` and `/following`. Idempotent: following an already followed user succeeds.\n**Side effects**: the follow is written to the audit log\n**Errors**:\n- 400 `user.follow.self`: `userId` is the caller's own id\n- 400 `user.follow.blocked`: the caller has blocked this user; unblock first\n- 400 `common.bad_request`: `userId` is not a valid id\n- 404 `user.not_found`: no account with this id, or it is suspended",
         "operationId": "followUser",
         "parameters": [
           {
@@ -12697,7 +12717,7 @@
     },
     "/api/users/{username}": {
       "get": {
-        "description": "**Auth**: public (the response is the same whether or not the caller is signed in)\n**Precondition**: none\n**Behavior**: returns the public view of a user. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `firstName`, `lastName`, `location`, `points` and `membershipLevel` are hidden by default; email and birthday are never returned. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
+        "description": "**Auth**: public; optional login fills `isFollowing` and `isBlocked`. An invalid or expired token is treated as signed out\n**Precondition**: none\n**Behavior**: returns the public view of a user. `isFollowing` / `isBlocked` say whether the caller follows / has blocked the user: `null` when signed out, `false` on the caller's own profile. Profile fields do not depend on the caller. `username`, `avatarUrl`, `joinedAt`, `totalPolls` and `totalVotes` (Public, non-Deleted Polls only) are always present (`avatarUrl` is `null` when never set). Every optional field is `null` unless the owner made it visible: `displayName` and `bio` are visible by default, `firstName`, `lastName`, `location`, `points` and `membershipLevel` are hidden by default; email and birthday are never returned. `totalPolls` counts only Polls that have opened (Open and Ended), matching `GET /api/users/{username}/votes`.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended",
         "operationId": "getUserProfile",
         "parameters": [
           {
@@ -12721,6 +12741,9 @@
                     "bio": "Poll enthusiast",
                     "displayName": "Alice",
                     "firstName": "Alice",
+                    "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                    "isBlocked": false,
+                    "isFollowing": true,
                     "joinedAt": "2026-08-01T10:00:00+08:00",
                     "lastName": null,
                     "location": null,
@@ -12777,6 +12800,270 @@
           }
         },
         "summary": "Get user public profile",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/{username}/followers": {
+      "get": {
+        "description": "**Auth**: required\n**Precondition**: the user exists and is not suspended\n**Behavior**: users who follow this user, most recently followed first, cursor-paged (`limit` 1-50, default 20; out-of-range values are clamped). `nextCursor` is `null` on the last page. Suspended followers are left out. Blocks do not filter this list (they hide only Polls and Comments). Each item carries only public profile fields, like user search.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended\n- 400 `common.cursor_invalid`: `cursor` is malformed or was issued by another list",
+        "operationId": "listFollowers",
+        "parameters": [
+          {
+            "description": "Username of the followed user",
+            "example": "alice",
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "`nextCursor` from the previous page; omit for the first page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1-50 (default 20); out-of-range values are clamped",
+            "example": 20,
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "items": [
+                      {
+                        "avatarUrl": "bot:boba",
+                        "displayName": "Bob",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "username": "bob"
+                      }
+                    ],
+                    "nextCursor": null
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseCursorResponseUserDto"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "User not found",
+                  "errorCode": "user.not_found",
+                  "message": "User not found",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No active user with this username (errorCode `user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List a user's followers",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/{username}/following": {
+      "get": {
+        "description": "**Auth**: required\n**Precondition**: the user exists and is not suspended\n**Behavior**: users this user follows, most recently followed first, cursor-paged (`limit` 1-50, default 20; out-of-range values are clamped). `nextCursor` is `null` on the last page. Suspended users are left out. Blocks do not filter this list (they hide only Polls and Comments). Each item carries only public profile fields, like user search.\n**Side effects**: none\n**Errors**:\n- 404 `user.not_found`: no user has this username, or the user is suspended\n- 400 `common.cursor_invalid`: `cursor` is malformed or was issued by another list",
+        "operationId": "listFollowing",
+        "parameters": [
+          {
+            "description": "Username of the follower",
+            "example": "alice",
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "`nextCursor` from the previous page; omit for the first page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1-50 (default 20); out-of-range values are clamped",
+            "example": 20,
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "items": [
+                      {
+                        "avatarUrl": "bot:boba",
+                        "displayName": "Bob",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                        "username": "bob"
+                      }
+                    ],
+                    "nextCursor": null
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseCursorResponseUserDto"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "User not found",
+                  "errorCode": "user.not_found",
+                  "message": "User not found",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No active user with this username (errorCode `user.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List users a user follows",
         "tags": [
           "User"
         ]

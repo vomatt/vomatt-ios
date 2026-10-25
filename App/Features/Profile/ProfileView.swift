@@ -60,7 +60,14 @@ struct ProfileView: View {
                 case .failed:
                     LoadFailed(message: app.t("profile.cardFailed")) { await load() }
                 case let .ready(profile):
-                    ProfileHeader(profile: profile)
+                    ProfileHeader(profile: profile, onAvatarTap: nil) { ProfileRelationButton(profile: profile) }
+                    if app.isSignedIn {
+                        HStack(spacing: 8) {
+                            Button(app.t("profile.followers")) { app.push(.people(username: profile.username, followers: true)) }
+                            Button(app.t("profile.following")) { app.push(.people(username: profile.username, followers: false)) }
+                        }
+                        .buttonStyle(.vm(.outline, size: .sm))
+                    }
                     StatsGrid(stats: [
                         (app.t("account.votesCast"), app.t.number(profile.totalVotes)),
                         (app.t("account.pollsCreated"), app.t.number(profile.totalPolls)),

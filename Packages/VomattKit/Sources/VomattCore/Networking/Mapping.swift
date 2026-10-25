@@ -185,6 +185,7 @@ extension Comment {
 extension UserProfile {
     init(_ dto: Schemas.UserProfileResponse) throws {
         self.init(
+            id: dto.id,
             username: try required(dto.username, "UserProfileResponse.username"),
             displayName: dto.displayName,
             bio: dto.bio,
@@ -194,7 +195,9 @@ extension UserProfile {
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
             location: dto.location,
             points: dto.points.map(Int.init),
-            membershipLevel: dto.membershipLevel
+            membershipLevel: dto.membershipLevel,
+            isFollowing: dto.isFollowing,
+            isBlocked: dto.isBlocked
         )
     }
 }
