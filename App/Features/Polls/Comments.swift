@@ -9,6 +9,8 @@ final class CommentsModel {
     struct ReplyTarget: Equatable {
         let comment: Comment
         var rootId: String { comment.parentId ?? comment.id }
+        /// A Reply to a Reply addresses its author; the API files both under the top-level Comment.
+        var prefix: String { comment.parentId != nil ? Comment.replyPrefix(to: comment.author ?? "") : "" }
     }
 
     enum Status { case loading, ready, error }
@@ -37,6 +39,7 @@ final class CommentsModel {
 
     func reload(_ service: VomattService) async {
         status = .loading
+        replyTarget = nil
         do {
             let page = try await service.comments(pollId: pollId)
             comments = page.items
@@ -102,15 +105,13 @@ final class CommentsModel {
         }
     }
 
-    /// A Reply to a Reply addresses its author; the API files both under the top-level Comment.
     func reply(_ body: String, to target: ReplyTarget, author: String, avatarUrl: String?, _ service: VomattService) async throws {
         let rootId = target.rootId
         // Show the thread the Reply lands in
         if replies[rootId] == nil, comments.contains(where: { $0.id == rootId && $0.replyCount > 0 }) {
             await loadReplies(rootId, service)
         }
-        let text = target.comment.parentId != nil ? Comment.replyPrefix(to: target.comment.author ?? "") + body : body
-        try await add(text, author: author, avatarUrl: avatarUrl, rootId: rootId, service)
+        try await add(target.prefix + body, author: author, avatarUrl: avatarUrl, rootId: rootId, service)
     }
 
     func edit(_ commentId: String, text: String, _ service: VomattService) async throws {
@@ -121,6 +122,13 @@ final class CommentsModel {
     /// A top-level Comment with Replies becomes a placeholder; anything else leaves the list.
     func remove(_ comment: Comment, _ service: VomattService) async throws {
         try await service.deleteComment(pollId: pollId, commentId: comment.id)
+        // The dock can't answer a Comment that is gone, or one in a thread that is
+        defer {
+            if let target = replyTarget, target.comment.id == comment.id || target.rootId == comment.id
+                || !comments.contains(where: { $0.id == target.rootId }) {
+                replyTarget = nil
+            }
+        }
         total = shiftCount(total, by: -1)
         guard let rootId = comment.parentId else {
             if comment.replyCount > 0 {
@@ -172,12 +180,11 @@ final class CommentsModel {
     /// Applies `change` to the Comment or Reply with this id, wherever it is.
     private func replace(_ id: String, _ change: (Comment) -> Comment) {
         comments = comments.map { $0.id == id ? change($0) : $0 }
+        if let target = replyTarget, target.comment.id == id { replyTarget = ReplyTarget(comment: change(target.comment)) }
         // One read, one write: an in-place `replies[key]?.items = …` overlaps its own read
-        replies = replies.mapValues { list in
-            var list = list
-            list.items = list.items.map { $0.id == id ? change($0) : $0 }
-            return list
-        }
+        guard let key = replies.first(where: { $0.value.items.contains { $0.id == id } })?.key, var list = replies[key] else { return }
+        list.items = list.items.map { $0.id == id ? change($0) : $0 }
+        replies[key] = list
     }
 }
 
@@ -447,7 +454,6 @@ private struct CommentRow: View {
                     .font(.vm(15))
                     .foregroundStyle(Tokens.foreground)
                     .lineSpacing(4)
-                    .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -565,27 +571,30 @@ private struct DeleteCommentSheet: View {
     let model: CommentsModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(app.t("comments.deleteConfirm")).displayHeading(20)
-                Text(message).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+        // Scrolls (and opens to full height) once larger text outgrows 340pt
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(app.t("comments.deleteConfirm")).displayHeading(20)
+                    Text(message).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                }
+                Text(comment.bodyText ?? "")
+                    .font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border, lineWidth: 1))
+                VStack(spacing: 8) {
+                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: delete) { Text(app.t("common.delete")) }
+                    Button(app.t("common.cancel")) { dismiss() }.buttonStyle(.vm(.ghost, size: .lg, fullWidth: true))
+                }
             }
-            Text(comment.bodyText ?? "")
-                .font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
-                .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border, lineWidth: 1))
-            VStack(spacing: 8) {
-                LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: delete) { Text(app.t("common.delete")) }
-                Button(app.t("common.cancel")) { dismiss() }.buttonStyle(.vm(.ghost, size: .lg, fullWidth: true))
-            }
+            .padding(20)
         }
-        .padding(20)
-        .frame(maxHeight: .infinity, alignment: .top)
+        .scrollBounceBehavior(.basedOnSize)
         .background(Tokens.card)
-        .presentationDetents([.height(340)])
+        .presentationDetents([.height(340), .large])
         .presentationDragIndicator(.visible)
     }
 
@@ -668,12 +677,13 @@ private struct CommentComposer: View {
 /// The Reply composer, docked above the keyboard: who it answers, their line, and the text.
 /// The screen puts it in its bottom safe area so the thread scrolls underneath.
 struct ReplyDock: View {
+    @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let model: CommentsModel
 
     var body: some View {
         VStack(spacing: 0) {
-            if let target = model.replyTarget {
+            if let target = model.replyTarget, !app.isBlocked(target.comment.author) {
                 ReplyDockBody(target: target, model: model)
                     .id(target.comment.id)
                     .transition(.vmEnterExit(reduceMotion: reduceMotion))
@@ -691,7 +701,8 @@ private struct ReplyDockBody: View {
     @State private var text = ""
     @State private var isPosting = false
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var tooLong: Bool { text.count > commentMax }
+    /// The "@name " prefix counts toward the limit too.
+    private var tooLong: Bool { target.prefix.count + text.count > commentMax }
 
     var body: some View {
         let author = target.comment.author ?? ""
@@ -727,18 +738,23 @@ private struct ReplyDockBody: View {
 
     private func submit() {
         guard !trimmed.isEmpty, !tooLong, !isPosting else { return }
-        let value = trimmed
-        isPosting = true
-        Task {
-            do {
-                try await model.reply(value, to: target, author: app.me?.username ?? app.t("comments.you"),
-                                      avatarUrl: app.me?.avatarUrl, app.service)
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                model.replyTarget = nil
-            } catch {
-                app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
+        app.requireAuth {
+            let value = trimmed
+            isPosting = true
+            Task {
+                do {
+                    try await model.reply(value, to: target, author: app.me?.username ?? app.t("comments.you"),
+                                          avatarUrl: app.me?.avatarUrl, app.service)
+                    // Close only the dock this Reply came from, not one opened while it posted
+                    if model.replyTarget?.comment.id == target.comment.id {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        model.replyTarget = nil
+                    }
+                } catch {
+                    app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
+                }
+                isPosting = false
             }
-            isPosting = false
         }
     }
 }
