@@ -135,10 +135,10 @@ private struct CodeStep: View {
         VStack(alignment: .leading, spacing: 0) {
             Image(systemName: "envelope.badge")
                 .font(.system(size: 22))
-                .foregroundStyle(Tokens.foreground)
+                .foregroundStyle(Tokens.tideForeground)
                 .frame(width: 48, height: 48)
-                .background(Tokens.highlight, in: Circle())
-                .overlay(Circle().strokeBorder(Tokens.foreground.opacity(0.2)))
+                .background(Tokens.tideTint, in: Circle())
+                .overlay(Circle().strokeBorder(Tokens.tideLine))
                 .padding(.bottom, 20)
                 .accessibilityHidden(true)
             Text(app.t("verificationCode.title")).displayHeading(32).padding(.bottom, 12)

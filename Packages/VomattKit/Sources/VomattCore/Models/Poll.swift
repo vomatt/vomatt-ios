@@ -254,3 +254,22 @@ public struct Comment: Identifiable, Hashable, Sendable {
 
     public var isPending: Bool { id.hasPrefix("pending-") }
 }
+
+public extension Comment {
+    /// Replying to a Reply opens the text with "@name " (the web's reply prefix). Split off, the name
+    /// becomes the addressee and the body reads without it. Top-level Comments keep their text as written.
+    var addressee: String? { mentionSplit?.name }
+    var bodyText: String? { mentionSplit?.body ?? text }
+
+    /// What a Reply to `author`'s Reply starts with.
+    static func replyPrefix(to author: String) -> String { "@\(author) " }
+
+    private var mentionSplit: (name: String, body: String)? {
+        guard parentId != nil, let text, text.hasPrefix("@") else { return nil }
+        let afterAt = text.dropFirst()
+        guard let space = afterAt.firstIndex(where: \.isWhitespace), space > afterAt.startIndex else { return nil }
+        let body = afterAt[space...].drop(while: \.isWhitespace)
+        guard !body.isEmpty else { return nil }
+        return (String(afterAt[..<space]), String(body))
+    }
+}
