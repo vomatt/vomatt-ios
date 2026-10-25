@@ -10,6 +10,7 @@ struct PollDetailView: View {
     /// `notFound` carries the owner when the Poll is Invite-only and the viewer can't open it yet.
     enum Phase { case loading, ready(Poll), notFound(PollOwner?), failed }
     @State private var phase = Phase.loading
+    @State private var comments: CommentsModel?
 
     var body: some View {
         ScrollView {
@@ -20,8 +21,7 @@ struct PollDetailView: View {
                 case let .ready(poll):
                     PollCardView(poll: poll, isDetail: true) { dismiss() }
                     PollAboutView(poll: app.latest(poll))
-                    CommentThreadView(pollId: poll.id, initialTotal: poll.commentCount)
-                        .card(padding: nil)
+                    if let comments { CommentThreadView(model: comments).card(padding: nil) }
                 case let .notFound(owner):
                     notFound(owner)
                 case .failed:
@@ -32,6 +32,9 @@ struct PollDetailView: View {
             .padding(.vertical, 16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let comments { ReplyDock(model: comments) }
+        }
         .refreshable { await load() }
         .canvas()
         .navigationBarTitleDisplayMode(.inline)
@@ -61,6 +64,7 @@ struct PollDetailView: View {
                 phase = .notFound(try? await app.service.inviteOnlyOwner(pollId: pollId))
                 return
             }
+            if comments == nil { comments = CommentsModel(pollId: poll.id, initialTotal: poll.commentCount) }
             phase = .ready(poll)
             app.didUpdate(poll)
             await markReadIfNeeded(poll)
