@@ -341,6 +341,26 @@ struct ServiceTests {
         #expect(calls.prefix(2) == ["POST /api/users/me/follows/u1", "DELETE /api/users/me/follows/u1"])
         #expect(calls.last?.hasPrefix("GET /api/votes/following") == true)
     }
+
+    @Test func profileCarriesViewerRelationAndFollowListsPage() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if path.hasPrefix("/api/users/alice/follow") {
+                return (200, envelope(#"{"items":[{"id":"u2","username":"bob"}],"nextCursor":"c2"}"#), [:])
+            }
+            return (200, envelope(#"{"id":"u1","username":"alice","isFollowing":true,"isBlocked":false}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let profile = try #require(try await service.userProfile(username: "alice"))
+        let followers = try await service.followers(username: "alice")
+        let following = try await service.following(username: "alice")
+        #expect(profile.id == "u1" && profile.isFollowing == true && profile.isBlocked == false)
+        #expect(followers.items.map(\.username) == ["bob"] && followers.nextCursor == "c2")
+        #expect(following.items.count == 1)
+        let calls = transport.requests.map { $0.path ?? "" }
+        #expect(calls.contains { $0.hasPrefix("/api/users/alice/followers") })
+        #expect(calls.contains { $0.hasPrefix("/api/users/alice/following") })
+    }
 }
 
 @Suite("Session")

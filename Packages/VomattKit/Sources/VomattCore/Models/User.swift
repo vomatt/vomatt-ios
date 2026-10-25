@@ -2,6 +2,7 @@ import Foundation
 
 /// GET /users/{username}. Fields the owner hides come back nil.
 public struct UserProfile: Hashable, Sendable {
+    public var id: String?
     public var username: String
     public var displayName: String?
     public var bio: String?
@@ -12,12 +13,18 @@ public struct UserProfile: Hashable, Sendable {
     public var location: String?
     public var points: Int?
     public var membershipLevel: String?
+    /// Whether the viewer follows / has blocked this user; nil when signed out.
+    public var isFollowing: Bool?
+    public var isBlocked: Bool?
 
     public init(
-        username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
+        id: String? = nil, username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
         joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, location: String? = nil,
-        points: Int? = nil, membershipLevel: String? = nil
+        points: Int? = nil, membershipLevel: String? = nil, isFollowing: Bool? = nil, isBlocked: Bool? = nil
     ) {
+        self.id = id
+        self.isFollowing = isFollowing
+        self.isBlocked = isBlocked
         self.username = username
         self.displayName = displayName
         self.bio = bio
@@ -82,6 +89,7 @@ public struct MyProfile: Hashable, Sendable {
     /// The profile as visitors see it, honoring the owner's visibility switches.
     public var asPublicProfile: UserProfile {
         UserProfile(
+            id: id,
             username: username,
             displayName: displayName,
             bio: bio,
