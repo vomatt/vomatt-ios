@@ -146,6 +146,22 @@ struct ServiceTests {
         #expect(options.map { $0["displayOrder"] as? Int } == [0, 1])
     }
 
+    @Test func inviteListsUseTheInviteListPathsAndField() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/invite-lists"
+                ? (200, envelope(#"[{"id":"l1","name":"Book club","memberCount":2,"createdAt":"2026-10-09T15:20:31+08:00"}]"#), [:])
+                : (200, envelope("[]"), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let lists = try await service.groups()
+        #expect(lists.map(\.id) == ["l1"])
+        _ = try await service.addInvitees(pollId: "p1", InviteesInput(groupIds: ["l1"]))
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json["inviteListIds"] as? [String] == ["l1"])
+        #expect(json["groupIds"] == nil)
+    }
+
     private func firstPoll(_ extra: [String: Any] = [:]) throws -> String {
         let item = try #require(try JSONSerialization.jsonObject(with: Data(try fixture("listVotes").utf8)) as? [String: Any])
         var first = ((item["data"] as! [String: Any])["items"] as! [[String: Any]])[0]
@@ -200,6 +216,39 @@ struct ServiceTests {
         #expect(transport.requests.map(\.method) == [.get, .delete, .delete])
     }
 
+    @Test func exportReturnsTheDocumentAsJSON() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"exportedAt":"2026-10-23T10:00:00+08:00","preferences":{"visibility.location":"true"},"polls":[],"comments":[],"ballots":[]}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let data = try await service.exportMyData()
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect((json["preferences"] as? [String: String])?["visibility.location"] == "true")
+        #expect(transport.requests.count == 1)
+    }
+
+    @Test func feedbackIsPostedAndRateLimited() async throws {
+        let transport = StubTransport { _, _ in (201, envelope(#"{"id":"f1","success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sendFeedback("Please add dark mode.")
+        let body = try #require(transport.requests.last?.body)
+        let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+        #expect(json["content"] as? String == "Please add dark mode.")
+        #expect(transport.requests.last?.path.hasSuffix("/api/feedback") == true)
+
+        let limited = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let capped = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: limited)
+        let error = await #expect(throws: APIError.self) { try await capped.sendFeedback("again") }
+        #expect(error?.isRateLimited == true)
+    }
+
+    @Test func aSecondExportInADayIsRateLimited() async throws {
+        let transport = StubTransport { _, _ in (429, failure("common.rate_limited", "Slow down"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.exportMyData() }
+        #expect(error?.isRateLimited == true)
+    }
+
     @Test func profileCarriesTheBallotDefault() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }
@@ -216,22 +265,41 @@ struct ServiceTests {
 
     @Test func profileCarriesNamesAndBirthday() async throws {
         let transport = StubTransport { request, _ in
-            if request.method == .patch { return (200, envelope(#"{"username":"alice","birthday":"1995-04-12"}"#), [:]) }
-            return (200, envelope(#"{"id":"u1","username":"alice","firstName":"Alice","lastName":"Chen","birthday":"1995-04-12","visibilitySettings":{"birthday":true}}"#), [:])
+            if request.method == .patch { return (200, envelope(#"{"username":"alice"}"#), [:]) }
+            return (200, envelope(#"{"id":"u1","username":"alice","firstName":"Alice","lastName":"Chen","birthday":"1995-04-12","visibilitySettings":{"location":true}}"#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let me = try await service.myProfile()
         #expect(me.firstName == "Alice" && me.lastName == "Chen" && me.birthday == "1995-04-12")
-        #expect(me.asPublicProfile.birthday == "1995-04-12")
-        #expect(MyProfile(id: "u1", username: "alice", birthday: "1995-04-12").asPublicProfile.birthday == nil)
 
-        let saved = try await service.updateProfile(firstName: "Alice", lastName: "", birthday: "1995-04-12")
-        #expect(saved.birthday == "1995-04-12")
+        _ = try await service.updateProfile(firstName: "Alice", lastName: "", birthday: "1995-04-12")
         let body = try #require(transport.requests.last?.body)
         let json = try #require(try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
         #expect(json.keys.sorted() == ["birthday", "firstName", "lastName"])
         #expect(json["birthday"] as? String == "1995-04-12")
         #expect(json["lastName"] as? String == "")
+    }
+
+    @Test func signInSaysWhetherTheAccountIsNew() async throws {
+        let store = InMemoryTokenStore()
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if path.hasSuffix("/send-otp") { return (200, envelope(#"{"success":true}"#), [:]) }
+            return (200, envelope(#"{"token":"a","refreshToken":"r","isNewUser":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
+        try await service.requestOtp(email: "A@b.co")
+        #expect(try await service.verifyOtp(email: "a@b.co", code: "123456") == true)
+        #expect(transport.requests.map { $0.path ?? "" }.allSatisfy { !$0.contains("check-email") })
+    }
+
+    @Test func votersKeepNoChoiceWhenAnonymousBallotsExist() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"items":[{"userId":"u1","username":"alice","optionId":null}],"nextCursor":null}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let voters = try await service.voters(pollId: "p").items
+        #expect(voters.map(\.username) == ["alice"] && voters.first?.optionId == nil)
     }
 
     @Test func blocksAreWrittenAndListedAcrossPages() async throws {
@@ -251,6 +319,27 @@ struct ServiceTests {
         #expect(users.first?.avatarUrl == "bot:boba")
         let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
         #expect(calls.prefix(2) == ["POST /api/users/me/blocks/u1", "DELETE /api/users/me/blocks/u1"])
+    }
+
+    @Test func followsAreWrittenListedAndFeedPaged() async throws {
+        let transport = StubTransport { request, _ in
+            let path = request.path ?? ""
+            if request.method != .get { return (200, envelope(#"{"success":true}"#), [:]) }
+            if path.hasPrefix("/api/votes/following") {
+                return (200, envelope(#"{"items":[],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"{"items":[{"id":"u1","username":"alice","displayName":"Alice","avatarUrl":"bot:boba"}],"nextCursor":null}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.followUser(id: "u1")
+        try await service.unfollowUser(id: "u1")
+        let users = try await service.allFollowedUsers()
+        let feed = try await service.followingPolls()
+        #expect(users.map(\.username) == ["alice"])
+        #expect(feed.items.isEmpty && feed.nextCursor == nil)
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls.prefix(2) == ["POST /api/users/me/follows/u1", "DELETE /api/users/me/follows/u1"])
+        #expect(calls.last?.hasPrefix("GET /api/votes/following") == true)
     }
 }
 

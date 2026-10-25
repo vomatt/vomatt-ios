@@ -79,25 +79,22 @@ public final class VomattService: Sendable {
 
     // MARK: Auth
 
-    /// Emails a one-time code. The same code signs in an existing account or creates
-    /// a new one; `isNewUser` only changes the wording. Checks first, so a failed
-    /// check never leaves a sent code and a running resend cooldown.
-    public func requestOtp(email: String) async throws -> (isNewUser: Bool, Void) {
+    /// Emails a one-time code. The same code signs in an existing account or creates a new one.
+    public func requestOtp(email: String) async throws {
         let email = Email.normalize(email)
-        return try await call {
-            let exists = try await client.checkEmail(body: .json(.init(email: email))).ok.body.json.data?.exists
-            _ = try await client.sendOtp(body: .json(.init(email: email))).ok
-            return (exists == false, ())
-        }
+        try await call { _ = try await client.sendOtp(body: .json(.init(email: email))).ok }
     }
 
-    /// Verifies the code and starts the session.
-    public func verifyOtp(email: String, code: String) async throws {
-        let tokens = try await call {
+    /// Verifies the code and starts the session. True when this sign-in created the account.
+    @discardableResult
+    public func verifyOtp(email: String, code: String) async throws -> Bool {
+        let (tokens, isNewUser) = try await call {
             let output = try await client.verifyOtp(body: .json(.init(code: code, email: Email.normalize(email))))
-            return try AuthTokens(required(output.ok.body.json.data, "verifyOtp.data"))
+            let data = try required(output.ok.body.json.data, "verifyOtp.data")
+            return (try AuthTokens(data), data.isNewUser == true)
         }
         await session.signIn(tokens)
+        return isNewUser
     }
 
     /// Revokes the refresh token on the backend, then ends the session here even when the backend can't be reached.
@@ -263,7 +260,7 @@ public final class VomattService: Sendable {
     public func addInvitees(pollId: String, _ invitees: InviteesInput) async throws -> [Invitee] {
         try await call {
             (try await client.addInvitees(path: .init(voteId: pollId), body: .json(.init(
-                emails: invitees.emails, groupIds: invitees.groupIds, userIds: invitees.userIds
+                emails: invitees.emails, inviteListIds: invitees.groupIds, userIds: invitees.userIds
             ))).ok.body.json.data ?? []).map(Invitee.init)
         }
     }
@@ -339,35 +336,35 @@ public final class VomattService: Sendable {
 
     /// The signed-in user's Groups, by name.
     public func groups() async throws -> [UserGroup] {
-        try await call { try (try await client.getGroups().ok.body.json.data ?? []).map(UserGroup.init) }
+        try await call { try (try await client.getInviteLists().ok.body.json.data ?? []).map(UserGroup.init) }
     }
 
-    /// At most 50 Groups per owner (`group.max_reached`).
+    /// At most 50 Groups per owner (`invite_list.max_reached`).
     public func createGroup(name: String) async throws -> UserGroup {
         try await call {
-            try await UserGroup(required(client.createGroup(body: .json(.init(name: name))).created.body.json.data, "createGroup.data"))
+            try await UserGroup(required(client.createInviteList(body: .json(.init(name: name))).created.body.json.data, "createGroup.data"))
         }
     }
 
     public func renameGroup(id: String, name: String) async throws -> UserGroup {
         try await call {
-            try await UserGroup(required(client.renameGroup(path: .init(groupId: id), body: .json(.init(name: name))).ok.body.json.data, "renameGroup.data"))
+            try await UserGroup(required(client.renameInviteList(path: .init(inviteListId: id), body: .json(.init(name: name))).ok.body.json.data, "renameGroup.data"))
         }
     }
 
     /// Polls that invited the Group keep their Invitees.
     public func deleteGroup(id: String) async throws {
-        _ = try await call { try await client.deleteGroup(path: .init(groupId: id)).ok }
+        _ = try await call { try await client.deleteInviteList(path: .init(inviteListId: id)).ok }
     }
 
     public func groupMembers(groupId: String) async throws -> [GroupMember] {
-        try await call { (try await client.getMembers(path: .init(groupId: groupId)).ok.body.json.data ?? []).map(GroupMember.init) }
+        try await call { (try await client.getMembers(path: .init(inviteListId: groupId)).ok.body.json.data ?? []).map(GroupMember.init) }
     }
 
-    /// Members already in the Group are ignored; at most 100 (`group.members.max`).
+    /// Members already in the Group are ignored; at most 100 (`invite_list.members.max`).
     public func addGroupMembers(groupId: String, userIds: [String], emails: [String]) async throws -> [GroupMember] {
         try await call {
-            (try await client.addMembers(path: .init(groupId: groupId), body: .json(.init(
+            (try await client.addMembers(path: .init(inviteListId: groupId), body: .json(.init(
                 emails: emails, userIds: userIds
             ))).ok.body.json.data ?? []).map(GroupMember.init)
         }
@@ -376,9 +373,9 @@ public final class VomattService: Sendable {
     public func removeGroupMember(groupId: String, _ person: Person) async throws -> [GroupMember] {
         try await call {
             let list = if let email = person.email {
-                try await client.removeEmailMember(path: .init(groupId: groupId), query: .init(email: email)).ok.body.json.data
+                try await client.removeEmailMember(path: .init(inviteListId: groupId), query: .init(email: email)).ok.body.json.data
             } else {
-                try await client.removeMember(path: .init(groupId: groupId, userId: person.userId ?? "")).ok.body.json.data
+                try await client.removeMember(path: .init(inviteListId: groupId, userId: person.userId ?? "")).ok.body.json.data
             }
             return (list ?? []).map(GroupMember.init)
         }
@@ -460,6 +457,54 @@ public final class VomattService: Sendable {
     /// Every blocked user, following the cursor to the end.
     public func allBlockedUsers() async throws -> [UserSummary] {
         try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
+    }
+
+    /// Signed-in only. Idempotent; 404 for an unknown or suspended user, 400 for yourself. Private: they aren't told.
+    public func followUser(id: String) async throws {
+        _ = try await call { try await client.followUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only. Idempotent.
+    public func unfollowUser(id: String) async throws {
+        _ = try await call { try await client.unfollowUser(path: .init(userId: id)).ok }
+    }
+
+    /// Signed-in only; most recently followed first.
+    public func followedUsers(cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listFollowedUsers(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Every followed user, following the cursor to the end.
+    public func allFollowedUsers() async throws -> [UserSummary] {
+        try await collectPages(maxPages: 20) { try await self.followedUsers(cursor: $0) }.page.items
+    }
+
+    /// Signed-in only. Open Public Polls by followed people, most recently opened first.
+    public func followingPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await call {
+            let data = try await client.getFollowingVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
+        }
+    }
+
+    /// Everything stored about the caller as one pretty-printed JSON document (data portability).
+    /// The API allows one export per UTC day; a second call is a 429.
+    public func exportMyData() async throws -> Data {
+        try await call {
+            let export = try await required(client.exportMyData().ok.body.json.data, "data")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            return try encoder.encode(export)
+        }
+    }
+
+    /// Sends product feedback (max 2000 characters). The API allows a few per UTC day; over it is a 429.
+    public func sendFeedback(_ content: String) async throws {
+        _ = try await call { try await client.createFeedback(body: .json(.init(content: content))).created }
     }
 
     /// Permanently deletes the signed-in user's account; the backend revokes every session.

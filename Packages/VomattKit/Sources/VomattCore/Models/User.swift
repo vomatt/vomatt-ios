@@ -12,13 +12,11 @@ public struct UserProfile: Hashable, Sendable {
     public var location: String?
     public var points: Int?
     public var membershipLevel: String?
-    /// `yyyy-MM-dd`; nil unless the owner shows it.
-    public var birthday: String?
 
     public init(
         username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
         joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, location: String? = nil,
-        points: Int? = nil, membershipLevel: String? = nil, birthday: String? = nil
+        points: Int? = nil, membershipLevel: String? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -30,7 +28,6 @@ public struct UserProfile: Hashable, Sendable {
         self.location = location
         self.points = points
         self.membershipLevel = membershipLevel
-        self.birthday = birthday
     }
 }
 
@@ -94,8 +91,7 @@ public struct MyProfile: Hashable, Sendable {
             totalVotes: totalVotes,
             location: visibilitySettings["location"] == true ? location : nil,
             points: visibilitySettings["points"] == true ? points : nil,
-            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil,
-            birthday: visibilitySettings["birthday"] == true ? birthday : nil
+            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil
         )
     }
 }

@@ -84,6 +84,7 @@ struct PollCardView: View {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
             ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
             if app.userId != poll.creatorId {
+                FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
                 BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
             }
         }
@@ -277,6 +278,26 @@ struct ReportButton: View {
             URLQueryItem(name: "body", value: url?.absoluteString ?? ""),
         ]
         return components.url
+    }
+}
+
+/// Follows or unfollows a poll's creator (signed in only); their open public polls show in the Following feed.
+struct FollowButton: View {
+    @Environment(AppModel.self) private var app
+    let user: UserSummary
+
+    var body: some View {
+        if app.isSignedIn {
+            if app.isFollowing(user.id) {
+                Button { app.unfollow(user.id) } label: {
+                    Label(app.t("ios.unfollow", ["name": user.username]), systemImage: "person.badge.minus")
+                }
+            } else {
+                Button { app.follow(user) } label: {
+                    Label(app.t("ios.follow", ["name": user.username]), systemImage: "person.badge.plus")
+                }
+            }
+        }
     }
 }
 

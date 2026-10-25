@@ -112,7 +112,7 @@ extension PollInput {
             description: description,
             endTime: endTime,
             // Other Audiences send no lists: the API rejects them, and switching away removes the Invitees
-            groupIds: inviteOnly ? invitees?.groupIds : nil,
+            inviteListIds: inviteOnly ? invitees?.groupIds : nil,
             inviteeEmails: inviteOnly ? invitees?.emails : nil,
             inviteeIds: inviteOnly ? invitees?.userIds : nil,
             options: options.enumerated().map { index, text in
@@ -147,7 +147,7 @@ extension Voter {
             userId: try required(dto.userId, "VoterResponse.userId"),
             username: dto.username ?? "",
             avatarUrl: dto.avatarUrl,
-            optionId: try required(dto.optionId, "VoterResponse.optionId"),
+            optionId: dto.optionId,
             votedAt: dto.votedAt
         )
     }
@@ -194,8 +194,7 @@ extension UserProfile {
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
             location: dto.location,
             points: dto.points.map(Int.init),
-            membershipLevel: dto.membershipLevel,
-            birthday: dto.birthday
+            membershipLevel: dto.membershipLevel
         )
     }
 }
@@ -242,9 +241,9 @@ extension PollOwner {
 }
 
 extension UserGroup {
-    init(_ dto: Schemas.GroupResponse) throws {
+    init(_ dto: Schemas.InviteListResponse) throws {
         self.init(
-            id: try required(dto.id, "GroupResponse.id"),
+            id: try required(dto.id, "InviteListResponse.id"),
             name: dto.name ?? "",
             memberCount: dto.memberCount.map(Int.init) ?? 0
         )
@@ -252,7 +251,7 @@ extension UserGroup {
 }
 
 extension GroupMember {
-    init(_ dto: Schemas.GroupMemberResponse) {
+    init(_ dto: Schemas.InviteListMemberResponse) {
         self.init(
             person: Person(userId: dto.userId, username: dto.username, avatarUrl: dto.avatarUrl, email: dto.email),
             addedAt: dto.addedAt

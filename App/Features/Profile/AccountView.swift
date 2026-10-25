@@ -126,9 +126,9 @@ private struct AccountSettings: View {
     }
 
     /// Fields whose labels are iOS-only strings.
-    private let extraFields: Set = ["firstName", "lastName", "birthday"]
+    private let extraFields: Set = ["firstName", "lastName"]
     /// Profile fields other people can see, in the order shown.
-    private let fields = ["displayName", "firstName", "lastName", "birthday", "bio", "location", "points", "membershipLevel"]
+    private let fields = ["displayName", "firstName", "lastName", "bio", "location", "points", "membershipLevel"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
@@ -167,6 +167,7 @@ private struct AccountSettings: View {
             .tint(Tokens.primary)
             .card()
 
+            if !app.following.isEmpty { followingSection }
             if !app.blocked.isEmpty { blockedSection }
 
             AppSettingsSection()
@@ -184,24 +185,49 @@ private struct AccountSettings: View {
                 Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
             }
 
+            FeedbackSection()
+
+            ExportDataSection()
+
             DeleteAccountSection(username: profile.username)
         }
     }
 
+    private var followingSection: some View {
+        peopleSection(title: app.t("profile.following"), actionTitle: app.t("ios.unfollowShort"), people: app.following.map { user in
+            Person(id: user.id, username: user.username, avatarUrl: user.avatarUrl, link: true, action: { app.unfollow(user.id) })
+        })
+    }
+
     private var blockedSection: some View {
+        peopleSection(title: app.t("ios.blockedTitle"), actionTitle: app.t("ios.unblock"), people: app.blocked.map { username in
+            Person(id: username, username: username, avatarUrl: nil, link: false, action: { app.unblock(username) })
+        })
+    }
+
+    private struct Person: Identifiable {
+        let id: String
+        let username: String
+        let avatarUrl: String?
+        let link: Bool
+        let action: () -> Void
+    }
+
+    /// A card of people, each with one outline button (unfollow, unblock).
+    private func peopleSection(title: String, actionTitle: String, people: [Person]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(text: app.t("ios.blockedTitle"))
+            SectionTitle(text: title)
             VStack(spacing: 0) {
-                ForEach(app.blocked, id: \.self) { username in
+                ForEach(people) { person in
                     HStack {
-                        UserChip(username: username, avatarUrl: nil, avatarSize: 28, link: false).font(.vm(15))
+                        UserChip(username: person.username, avatarUrl: person.avatarUrl, avatarSize: 28, link: person.link).font(.vm(15))
                         Spacer()
-                        Button(app.t("ios.unblock")) { app.unblock(username) }.buttonStyle(.vm(.outline, size: .sm))
+                        Button(actionTitle, action: person.action).buttonStyle(.vm(.outline, size: .sm))
                     }
                     .padding(.horizontal, 16)
                     .frame(minHeight: 56)
                     .overlay(alignment: .bottom) {
-                        if username != app.blocked.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                        if person.id != people.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
                     }
                 }
             }
@@ -282,6 +308,113 @@ struct AppSettingsSection: View {
     private var version: String {
         let info = Bundle.main.infoDictionary
         return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
+    }
+}
+
+/// Opens the feedback sheet.
+private struct FeedbackSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var isPresented = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("ios.feedbackTitle")).font(.vm(15, .medium))
+                Text(app.t("ios.feedbackBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline))
+        }
+        .card()
+        .sheet(isPresented: $isPresented) { FeedbackSheet() }
+    }
+}
+
+/// A free-text message to the team (max 2000 characters).
+private struct FeedbackSheet: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var error: String?
+
+    private static let maxLength = 2000
+    private var content: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    VMTextEditor(placeholder: app.t("ios.feedbackPlaceholder"), text: $text, minHeight: 160)
+                    if let error { Text(error).font(.vm(14)).foregroundStyle(Tokens.destructive) }
+                }
+                .padding(Metrics.gutter)
+            }
+            .canvas()
+            .navigationTitle(app.t("ios.feedbackTitle"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    LoadingButton(style: .vm(.link), action: send) { Text(app.t("ios.feedbackSend")).fontWeight(.semibold) }
+                        .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func send() async {
+        error = nil
+        do {
+            try await app.service.sendFeedback(content)
+            app.showToast(app.t("ios.feedbackSent"))
+            dismiss()
+        } catch {
+            let limited = (error as? APIError)?.isRateLimited == true
+            self.error = app.t.message(for: error, fallback: limited ? "ios.feedbackLimited" : "ios.feedbackFailed")
+        }
+    }
+}
+
+/// Writes the export to a temporary file, then offers it through the share sheet.
+private struct ExportDataSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var file: URL?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("ios.exportTitle")).font(.vm(15, .medium))
+                Text(app.t("ios.exportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let file {
+                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline))
+            } else {
+                LoadingButton(style: .vm(.outline), action: export) { Text(app.t("ios.exportCta")) }
+            }
+        }
+        .card()
+        .onDisappear(perform: discard)
+    }
+
+    private func export() async {
+        do {
+            let data = try await app.service.exportMyData()
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-export.json")
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            file = url
+        } catch {
+            let limited = (error as? APIError)?.isRateLimited == true
+            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "ios.exportFailed"), isError: true)
+        }
+    }
+
+    /// The export holds everything about the account, so it doesn't outlive the screen.
+    private func discard() {
+        guard let file else { return }
+        try? FileManager.default.removeItem(at: file)
+        self.file = nil
     }
 }
 

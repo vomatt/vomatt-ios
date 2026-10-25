@@ -8,7 +8,6 @@ namingStrategy: idiomatic
 filter:
   operations:
     - appleLogin
-    - checkEmail
     - googleLogin
     - lineLogin
     - logout
@@ -21,7 +20,8 @@ filter:
     - Vote
     - Vote Comment
     - Notification
-    - Group
+    - Invite List
     - User
     - Tag
     - Lookup
+    - Feedback
