@@ -61,12 +61,10 @@ struct ProfileView: View {
                     LoadFailed(message: app.t("profile.cardFailed")) { await load() }
                 case let .ready(profile):
                     ProfileHeader(profile: profile, onAvatarTap: nil) { ProfileRelationButton(profile: profile) }
-                    if app.isSignedIn {
-                        HStack(spacing: 8) {
-                            Button(app.t("profile.followers")) { app.push(.people(username: profile.username, followers: true)) }
-                            Button(app.t("profile.following")) { app.push(.people(username: profile.username, followers: false)) }
-                        }
-                        .buttonStyle(.vm(.outline, size: .sm))
+                    VStack(alignment: .leading, spacing: 12) {
+                        FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
+                        if profile.followsYou == true { Chip(text: app.t("ios.followsYou")) }
+                        MutualFollowers(profile: profile)
                     }
                     StatsGrid(stats: [
                         (app.t("account.votesCast"), app.t.number(profile.totalVotes)),
@@ -118,6 +116,55 @@ struct ProfileView: View {
             if case .ready = phase { return }
             phase = .failed
         }
+    }
+}
+
+/// "12 followers" and "3 following", each a button to its list. The lists need an account, so guests get plain counts.
+struct FollowCounts: View {
+    @Environment(AppModel.self) private var app
+    let username: String
+    let followers: Int
+    let following: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            count(app.t("ios.followersCount", ["count": app.t.number(followers)]), .followers)
+            count(app.t("ios.followingCount", ["count": app.t.number(following)]), .following)
+        }
+    }
+
+    @ViewBuilder private func count(_ label: String, _ kind: FollowListKind) -> some View {
+        if app.isSignedIn {
+            Button(label) { app.push(.people(username: username, kind: kind)) }.buttonStyle(.vm(.outline, size: .sm))
+        } else {
+            Text(label).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).padding(.trailing, 8)
+        }
+    }
+}
+
+/// "Followed by @jtan and 2 more you follow": the followers of this user whom the viewer follows.
+/// Hidden for guests, on your own profile and when there are none.
+struct MutualFollowers: View {
+    @Environment(AppModel.self) private var app
+    let profile: UserProfile
+
+    var body: some View {
+        let names = profile.mutualFollowersPreview.filter { !app.isBlocked($0.username) }.map(\.username)
+        if app.isSignedIn, let total = profile.mutualFollowersCount, total > 0, let first = names.first {
+            Button { app.push(.people(username: profile.username, kind: .mutual)) } label: {
+                Text(summary(first: first, second: names.count > 1 ? names[1] : nil, total: total))
+                    .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                    .multilineTextAlignment(.leading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(app.t("ios.mutualTitle"))
+        }
+    }
+
+    private func summary(first: String, second: String?, total: Int) -> String {
+        guard let second, total > 1 else { return app.t("ios.mutualOne", ["a": first]) }
+        if total == 2 { return app.t("ios.mutualTwo", ["a": first, "b": second]) }
+        return app.t("ios.mutualMore", ["a": first, "b": second, "count": total - 2])
     }
 }
 

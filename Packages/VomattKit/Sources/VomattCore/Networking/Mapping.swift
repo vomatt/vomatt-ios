@@ -177,7 +177,9 @@ extension Comment {
             likedByCurrentUser: dto.likedByCurrentUser ?? false,
             parentId: dto.parentId,
             replyCount: dto.replyCount.map(Int.init) ?? 0,
-            deleted: dto.deleted ?? false
+            deleted: dto.deleted ?? false,
+            replies: try (dto.replies ?? []).map(Comment.init),
+            repliesNextCursor: dto.repliesNextCursor
         )
     }
 }
@@ -197,7 +199,12 @@ extension UserProfile {
             points: dto.points.map(Int.init),
             membershipLevel: dto.membershipLevel,
             isFollowing: dto.isFollowing,
-            isBlocked: dto.isBlocked
+            isBlocked: dto.isBlocked,
+            followersCount: dto.followersCount.map(Int.init) ?? 0,
+            followingCount: dto.followingCount.map(Int.init) ?? 0,
+            followsYou: dto.followsYou,
+            mutualFollowersCount: dto.mutualFollowersCount.map(Int.init),
+            mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init)
         )
     }
 }
@@ -220,6 +227,8 @@ extension MyProfile {
             joinedAt: dto.joinedAt,
             totalPolls: dto.totalPolls.map(Int.init) ?? 0,
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
+            followersCount: dto.followersCount.map(Int.init) ?? 0,
+            followingCount: dto.followingCount.map(Int.init) ?? 0,
             visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:],
             anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false
         )
@@ -234,6 +243,90 @@ extension UserSummary {
             displayName: dto.displayName,
             avatarUrl: dto.avatarUrl
         )
+    }
+}
+
+extension UserSummary {
+    init(_ dto: Schemas.FollowUserDto) throws {
+        self.init(
+            id: try required(dto.id, "FollowUserDto.id"),
+            username: try required(dto.username, "FollowUserDto.username"),
+            displayName: dto.displayName,
+            avatarUrl: dto.avatarUrl,
+            isFollowing: dto.isFollowing,
+            followsYou: dto.followsYou
+        )
+    }
+}
+
+extension FeedNotification {
+    init(_ dto: Schemas.NotificationResponse) throws {
+        self.init(
+            id: try required(dto.id, "NotificationResponse.id"),
+            kind: FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")),
+            createdAt: try required(dto.createdAt, "NotificationResponse.createdAt"),
+            read: dto.read ?? false,
+            actor: try dto.actor.map(UserSummary.init),
+            poll: try dto.poll.map(PollInfo.init),
+            comment: try dto.comment.map(CommentInfo.init)
+        )
+    }
+}
+
+extension FeedNotification.Kind {
+    init(_ value: Schemas.NotificationResponse.KindPayload) {
+        switch value {
+        case .result: self = .result
+        case .cancelled: self = .cancelled
+        case .invitation: self = .invitation
+        case .followed: self = .followed
+        case .comment: self = .comment
+        case .closingSoon: self = .closingSoon
+        }
+    }
+}
+
+extension FeedNotification.PollInfo {
+    init(_ dto: Schemas.PollSummary) throws {
+        self.init(
+            id: try required(dto.id, "PollSummary.id"),
+            title: dto.title ?? "",
+            startTime: dto.startTime,
+            endTime: dto.endTime,
+            isEnded: dto.status == .ended,
+            turnout: dto.turnout.map(Int.init) ?? 0,
+            myOptionId: dto.myOptionId,
+            winningOptionIds: dto.winningOptionIds,
+            winningOptionLabels: dto.winningOptionLabels,
+            tie: dto.tie
+        )
+    }
+}
+
+extension FeedNotification.CommentInfo {
+    init(_ dto: Schemas.CommentSummary) throws {
+        self.init(id: try required(dto.id, "CommentSummary.id"), parentId: dto.parentId, excerpt: dto.excerpt ?? "")
+    }
+}
+
+extension NotificationPreferences {
+    init(_ dto: Schemas.NotificationPreferencesResponse) {
+        self.init(
+            resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
+            comments: dto.comments ?? true, closingSoon: dto.closingSoon ?? false
+        )
+    }
+}
+
+extension ReportReason {
+    var request: Schemas.ReportCommentRequest.ReasonPayload {
+        switch self {
+        case .spam: .spam
+        case .harassment: .harassment
+        case .hate: .hate
+        case .misinformation: .misinformation
+        case .other: .other
+        }
     }
 }
 

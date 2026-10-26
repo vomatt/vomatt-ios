@@ -232,12 +232,19 @@ public struct Comment: Identifiable, Hashable, Sendable {
     public var parentId: String?
     public var replyCount: Int
     public var deleted: Bool
+    /// The first Replies of a top-level Comment as the list returns them (oldest first, at most 2).
+    public var replies: [Comment]
+    /// Passed as `cursor` to load the rest of the Replies; nil when `replies` holds them all.
+    public var repliesNextCursor: String?
 
     public init(
         id: String, userId: String? = nil, author: String?, authorAvatarUrl: String? = nil,
         text: String?, createdAt: Date, likeCount: Int = 0, edited: Bool = false,
-        likedByCurrentUser: Bool = false, parentId: String? = nil, replyCount: Int = 0, deleted: Bool = false
+        likedByCurrentUser: Bool = false, parentId: String? = nil, replyCount: Int = 0, deleted: Bool = false,
+        replies: [Comment] = [], repliesNextCursor: String? = nil
     ) {
+        self.replies = replies
+        self.repliesNextCursor = repliesNextCursor
         self.id = id
         self.userId = userId
         self.author = author
