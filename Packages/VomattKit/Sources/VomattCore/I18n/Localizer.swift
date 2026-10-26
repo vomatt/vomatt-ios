@@ -7,8 +7,6 @@ public enum Language: String, CaseIterable, Codable, Sendable {
     /// What the API's `Accept-Language` and formatters expect.
     public var localeIdentifier: String { self == .zh ? "zh-TW" : "en" }
 
-    public var displayName: String { self == .zh ? "繁體中文" : "English" }
-
     /// The device's preferred language when it's one of ours, else English.
     public static func preferred(_ preferredLanguages: [String] = Locale.preferredLanguages) -> Language {
         for identifier in preferredLanguages {
