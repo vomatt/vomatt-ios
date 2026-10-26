@@ -78,8 +78,7 @@ struct MyPollsView: View {
             } else {
                 LazyVStack(spacing: 8) {
                     ForEach(polls) { poll in
-                        PollRow(poll: poll) {
-                            if poll.unread == true { UnreadDot(label: app.t("notifications.unread")) }
+                        PollRow(poll: poll, unread: poll.unread == true) {
                             Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)]))
                         } aside: {
                             StatusChip(poll: poll)
@@ -162,8 +161,8 @@ struct NotificationsView: View {
                 if !invitations.isEmpty {
                     SectionTitle(text: app.t("notifications.invitations"))
                     ForEach(app.visible(invitations)) { poll in
-                        PollRow(poll: poll, highlighted: poll.unread == true, onOpen: { markOpened(poll) }) {
-                            if poll.unread == true { UnreadDot(label: app.t("notifications.unread")) }
+                        let unread = poll.unread == true
+                        PollRow(poll: poll, highlighted: unread, unread: unread, onOpen: { markOpened(poll) }) {
                             UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl,
                                      label: app.t("notifications.invitedBy", ["name": poll.creatorUsername]), avatarSize: 16, link: false)
                         } aside: {
@@ -201,8 +200,8 @@ struct NotificationsView: View {
                     if !invitations.isEmpty { SectionTitle(text: app.t("notifications.results")).padding(.top, 8) }
                     LazyVStack(spacing: 8) {
                         ForEach(polls) { poll in
-                            PollRow(poll: poll, highlighted: poll.unread == true, onOpen: { markOpened(poll) }) {
-                                if poll.unread == true { UnreadDot(label: app.t("notifications.unread")) }
+                            let unread = poll.unread == true
+                            PollRow(poll: poll, highlighted: unread, unread: unread, onOpen: { markOpened(poll) }) {
                                 Text(app.t(poll.isCancelled ? "notifications.cancelled" : "notifications.ended"))
                             }
                         }

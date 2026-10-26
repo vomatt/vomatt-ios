@@ -319,6 +319,10 @@ struct PollRow<Meta: View, Aside: View>: View {
     @Environment(AppModel.self) private var app
     let poll: Poll
     var highlighted = false
+    /// Bolds the title and puts the unread dot right after it
+    var unread = false
+    /// Half the title's cap height, so the dot sits mid-line at every text size
+    @ScaledMetric(relativeTo: .headline) private var dotLift: CGFloat = 6
     var onOpen: (() -> Void)?
     @ViewBuilder let meta: () -> Meta
     @ViewBuilder let aside: () -> Aside
@@ -331,12 +335,21 @@ struct PollRow<Meta: View, Aside: View>: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     aside()
-                    Text(poll.title)
-                        .font(.vm(17, relativeTo: .headline))
-                        .tracking(-0.17)
-                        .foregroundStyle(Tokens.foreground)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                    // The dot trails the title, as it trails a tab's label, so titles keep one left edge read or not.
+                    // A view beside the text, not inside it, so truncating a long title never cuts the dot off.
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(poll.title)
+                            .font(.vm(17, unread ? .semibold : .regular, relativeTo: .headline))
+                            .tracking(-0.17)
+                            .foregroundStyle(Tokens.foreground)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        if unread {
+                            // Centered on the first line's capitals, not sat on its baseline
+                            UnreadDot(label: app.t("notifications.unread"))
+                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + dotLift }
+                        }
+                    }
                     HStack(spacing: 6) { meta() }
                         .font(.vmMeta)
                         .monospacedDigit()
@@ -356,7 +369,7 @@ struct PollRow<Meta: View, Aside: View>: View {
 }
 
 extension PollRow where Aside == EmptyView {
-    init(poll: Poll, highlighted: Bool = false, onOpen: (() -> Void)? = nil, @ViewBuilder meta: @escaping () -> Meta) {
-        self.init(poll: poll, highlighted: highlighted, onOpen: onOpen, meta: meta, aside: { EmptyView() })
+    init(poll: Poll, highlighted: Bool = false, unread: Bool = false, onOpen: (() -> Void)? = nil, @ViewBuilder meta: @escaping () -> Meta) {
+        self.init(poll: poll, highlighted: highlighted, unread: unread, onOpen: onOpen, meta: meta, aside: { EmptyView() })
     }
 }
