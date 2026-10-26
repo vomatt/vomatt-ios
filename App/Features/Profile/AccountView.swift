@@ -112,7 +112,7 @@ struct AccountView: View {
     }
 }
 
-/// Visibility switches, language, sign out, delete account.
+/// Visibility switches, sign out, delete account.
 private struct AccountSettings: View {
     @Environment(AppModel.self) private var app
     let profile: MyProfile
@@ -259,27 +259,17 @@ private struct AccountSettings: View {
     }
 }
 
-/// Language, legal links and the version; shown signed in or out.
+/// Legal links and the version; shown signed in or out.
 struct AppSettingsSection: View {
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        @Bindable var app = app
+        let mail = app.config.supportEmail.isEmpty ? nil : URL(string: "mailto:\(app.config.supportEmail)")
         VStack(spacing: 0) {
-            Picker(selection: $app.language) {
-                ForEach(Language.allCases, id: \.self) { Text($0.displayName).tag($0) }
-            } label: {
-                Text(app.t("ios.language")).font(.vm(14)).foregroundStyle(Tokens.foreground)
-            }
-            .tint(Tokens.mutedForeground)
-            .padding(.horizontal, 16)
-            .frame(minHeight: 52)
-            .overlay(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
-
             link(app.t("ios.terms"), url: app.config.siteURL.appending(path: "terms-of-service"))
-            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy-policy"))
-            if !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
+            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy-policy"), last: mail == nil)
+            if let mail {
                 link(app.t("ios.contact"), url: mail, last: true)
             }
         }

@@ -42,12 +42,12 @@
 - [ ] `make archive` (uploads to App Store Connect with `Configs/ExportOptions.plist`)
 - [ ] TestFlight smoke test on a device: sign up, sign out, sign in, vote, change vote, withdraw,
       comment, reply, like, create a poll (public and invite-only), edit while scheduled, delete,
-      edit profile, change avatar, toggle visibility, switch language, delete a throwaway account
+      edit profile, change avatar, toggle visibility, delete a throwaway account
 
 ## Already in place
 
 - Account deletion in the app (Settings → Delete account), guideline 5.1.1(v)
-- Privacy manifest with the UserDefaults reason (drafts, language)
+- Privacy manifest with the UserDefaults reason (drafts)
 - Tokens in the Keychain, this device only; no third-party SDKs, no tracking
 - App icon (light, dark, tinted), launch screen in the canvas color
 - Dynamic Type through `Font.custom(_:size:relativeTo:)`, VoiceOver labels, Reduce Motion for the

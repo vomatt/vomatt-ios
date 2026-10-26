@@ -49,17 +49,6 @@ struct Toast: Equatable, Identifiable {
     var isError = false
 }
 
-/// The language the API should localize into, readable from the networking layer's threads.
-nonisolated final class LanguageBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: Language
-    init(_ value: Language) { self.value = value }
-    var current: Language {
-        get { lock.withLock { value } }
-        set { lock.withLock { value = newValue } }
-    }
-}
-
 /// App-wide state: the session, the signed-in user, language, navigation and toasts.
 @Observable
 final class AppModel {
@@ -76,16 +65,8 @@ final class AppModel {
     private(set) var following: [UserSummary] = []
     private var followChanges = 0
     private var followQueue: Task<Void, Never>?
-    @ObservationIgnored private let languageBox: LanguageBox
-
-    var language: Language {
-        didSet {
-            languageBox.current = language
-            t = Localizer.load(language, bundle: .main)
-            UserDefaults.standard.set(language.rawValue, forKey: Self.languageKey)
-        }
-    }
-    private(set) var t: Localizer
+    let language: Language
+    let t: Localizer
     var dates: DateFormatting { DateFormatting(language: language) }
 
     private(set) var userId: String?
@@ -126,18 +107,17 @@ final class AppModel {
             for name in BlockList().usernames() { BlockList().unblock(name) }
         }
         #endif
-        let stored = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(Language.init(rawValue:))
-        let language = stored ?? Language.preferred()
-        let box = LanguageBox(language)
+        // The device language decides; `-preferred-language` (UI tests) overrides it for one launch.
+        let argument = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)[Self.languageKey] as? String
+        let language = argument.flatMap(Language.init(rawValue:)) ?? Language.preferred()
         self.config = config
-        self.languageBox = box
         self.language = language
         self.t = Localizer.load(language, bundle: .main)
         self.blocked = blockList.usernames()
         self.service = VomattService(
             baseURL: config.apiURL,
             tokenStore: tokenStore,
-            language: { box.current },
+            language: { language },
             logRequests: config.logRequests
         )
     }
