@@ -120,6 +120,7 @@ private struct NotificationPreferencesSection: View {
 
     @State private var preferences: NotificationPreferences?
     @State private var failed = false
+    @State private var inFlight = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -183,23 +184,30 @@ private struct NotificationPreferencesSection: View {
     /// Shows the new value at once; the API's answer, or the old value after a failure, replaces it.
     private func set(_ item: Switch, _ newValue: Bool) async {
         guard let previous = preferences else { return }
-        var optimistic = previous
-        switch item {
-        case .resultsIn: optimistic.resultsIn = newValue
-        case .invitations: optimistic.invitations = newValue
-        case .comments: optimistic.comments = newValue
-        case .closingSoon: optimistic.closingSoon = newValue
-        }
-        preferences = optimistic
+        let before = value(item, previous)
+        setValue(item, newValue)
+        inFlight += 1
+        defer { inFlight -= 1 }
         do {
-            preferences = try await app.service.updateNotificationPreferences(
+            let saved = try await app.service.updateNotificationPreferences(
                 resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
                 comments: item == .comments ? newValue : nil, closingSoon: item == .closingSoon ? newValue : nil
             )
+            // Another toggle still in flight: its answer carries the final state.
+            if inFlight == 1 { preferences = saved }
             await app.refreshUnread()
         } catch {
-            preferences = previous
+            setValue(item, before)
             app.showToast(app.t.message(for: error, fallback: "ios.notifPrefFailed"), isError: true)
+        }
+    }
+
+    private func setValue(_ item: Switch, _ newValue: Bool) {
+        switch item {
+        case .resultsIn: preferences?.resultsIn = newValue
+        case .invitations: preferences?.invitations = newValue
+        case .comments: preferences?.comments = newValue
+        case .closingSoon: preferences?.closingSoon = newValue
         }
     }
 }

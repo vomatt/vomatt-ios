@@ -149,8 +149,10 @@ struct MutualFollowers: View {
     let profile: UserProfile
 
     var body: some View {
-        let names = profile.mutualFollowersPreview.filter { !app.isBlocked($0.username) }.map(\.username)
-        if app.isSignedIn, let total = profile.mutualFollowersCount, total > 0, let first = names.first {
+        let visible = profile.mutualFollowersPreview.filter { !app.isBlocked($0.username) }
+        let names = visible.map(\.username)
+        let hidden = profile.mutualFollowersPreview.count - visible.count
+        if app.isSignedIn, let count = profile.mutualFollowersCount, case let total = count - hidden, total > 0, let first = names.first {
             Button { app.push(.people(username: profile.username, kind: .mutual)) } label: {
                 Text(summary(first: first, second: names.count > 1 ? names[1] : nil, total: total))
                     .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)

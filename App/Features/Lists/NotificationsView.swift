@@ -24,7 +24,7 @@ struct NotificationsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if list?.items.contains(where: { !$0.read }) == true {
+                if app.unreadCount > 0 || list?.items.contains(where: { !$0.read }) == true {
                     Button(app.t("ios.markAllRead")) { Task { await markAllRead() } }
                 }
             }
