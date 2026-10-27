@@ -384,3 +384,42 @@ extension Schemas.PasskeyAuthenticationCredential {
         )
     }
 }
+
+extension Schemas.PasskeyRegistrationCredential {
+    /// The browser's `PublicKeyCredential.toJSON()` for a new passkey: binary fields base64url, same names.
+    init(_ registration: PasskeyRegistration) {
+        let id = registration.credentialID.base64URLEncodedString()
+        self.init(
+            authenticatorAttachment: "platform",
+            clientExtensionResults: .init(),
+            id: id,
+            rawId: id,
+            response: .init(
+                attestationObject: registration.attestationObject.base64URLEncodedString(),
+                clientDataJSON: registration.clientDataJSON.base64URLEncodedString()
+            ),
+            _type: "public-key"
+        )
+    }
+}
+
+extension PasskeyRegistrationOptions {
+    init(_ dto: Schemas.PasskeyRegistrationOptionsResponse) throws {
+        self.init(
+            challenge: try required(dto.challenge.flatMap(Data.init(base64URLEncoded:)), "PasskeyRegistrationOptionsResponse.challenge"),
+            userName: try required(dto.user?.name, "PasskeyRegistrationOptionsResponse.user.name"),
+            userID: try required(dto.user?.id.flatMap(Data.init(base64URLEncoded:)), "PasskeyRegistrationOptionsResponse.user.id")
+        )
+    }
+}
+
+extension Passkey {
+    init(_ dto: Schemas.PasskeyResponse) throws {
+        self.init(
+            id: try required(dto.id, "PasskeyResponse.id"),
+            name: dto.name,
+            createdAt: try required(dto.createdAt, "PasskeyResponse.createdAt"),
+            lastUsedAt: dto.lastUsedAt
+        )
+    }
+}

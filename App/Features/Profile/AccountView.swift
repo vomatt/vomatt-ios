@@ -267,6 +267,8 @@ private struct AccountSettings: View {
             .tint(Tokens.primary)
             .card()
 
+            PasskeysSection(service: app.service)
+
             NotificationPreferencesSection()
 
             if !app.following.isEmpty { followingSection }
@@ -357,6 +359,36 @@ private struct AccountSettings: View {
         } catch {
             app.updateMe { $0.visibilitySettings = previous }
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+        }
+    }
+}
+
+/// Passkeys on the account (the web's `PasskeysPanel`): add one on this device.
+private struct PasskeysSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var model: PasskeysModel
+
+    init(service: VomattService) {
+        _model = State(initialValue: PasskeysModel(service: service))
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("passkey.title")).font(.vm(15, .medium))
+                Text(app.t("passkey.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            LoadingButton(style: .vm(.outline), action: add) { Text(app.t("passkey.add")) }
+        }
+        .card()
+    }
+
+    private func add() async {
+        if await model.add(authenticate: PasskeyAuthenticator.register) {
+            app.showToast(app.t("passkey.added"))
+        } else if let failure = model.failure {
+            app.showToast(failure.error.map { app.t.message(for: $0, fallback: failure.key) } ?? app.t(failure.key), isError: true)
         }
     }
 }

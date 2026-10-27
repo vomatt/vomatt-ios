@@ -195,5 +195,25 @@
 	},
 	"authError": {
 		"passkeyInvalid": "Passkey verification failed. Please try again"
+	},
+	"passkey": {
+		"title": "Passkeys",
+		"body": "Sign in with Face ID, Touch ID or your device PIN instead of a code.",
+		"add": "Add passkey",
+		"added": "Passkey added",
+		"alreadyAdded": "This device already has a passkey for your account.",
+		"addFailed": "Couldn't add the passkey. Please try again.",
+		"unnamed": "Passkey",
+		"created": "Added {date}",
+		"lastUsed": "last used {date}",
+		"neverUsed": "never used",
+		"empty": "No passkeys yet.",
+		"loadFailed": "Couldn’t load your passkeys.",
+		"delete": "Remove",
+		"deleteLabel": "Remove {name}",
+		"deleteConfirmTitle": "Remove this passkey?",
+		"deleteConfirmBody": "{name} will no longer sign you in. It stays on the device until you remove it there.",
+		"deleted": "Passkey removed",
+		"deleteFailed": "Couldn’t remove the passkey. Please try again."
 	}
 }

@@ -584,6 +584,25 @@ public final class VomattService: Sendable {
         await session.signOut()
     }
 
+    // MARK: Passkeys
+
+    /// Creation options for a new passkey on the signed-in account; each call issues a challenge
+    /// that lasts 5 minutes and is spent by one `registerPasskey`.
+    public func passkeyRegistrationOptions() async throws -> PasskeyRegistrationOptions {
+        try await call {
+            try await PasskeyRegistrationOptions(required(client.registrationOptions().ok.body.json.data, "registrationOptions.data"))
+        }
+    }
+
+    /// Stores the new passkey. A failure spends the challenge: retry with new options.
+    @discardableResult
+    public func registerPasskey(_ registration: PasskeyRegistration, name: String? = nil) async throws -> Passkey {
+        try await call {
+            try await Passkey(required(client.verifyRegistration(body: .json(.init(credential: .init(registration), name: name)))
+                .ok.body.json.data, "verifyRegistration.data"))
+        }
+    }
+
     // MARK: Notifications
 
     /// Unread feed items of the kinds switched on.

@@ -23,6 +23,21 @@ final class PasskeyAuthenticator: NSObject, ASAuthorizationControllerDelegate, A
         )
     }
 
+    /// Makes a passkey on this device for the account in `options` (from `/register/options`).
+    static func register(_ options: PasskeyRegistrationOptions) async throws -> PasskeyRegistration {
+        let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: passkeyRelyingParty)
+        let request = provider.createCredentialRegistrationRequest(
+            challenge: options.challenge, name: options.userName, userID: options.userID
+        )
+        let authorization = try await PasskeyAuthenticator().perform(request)
+        guard let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration,
+              let attestationObject = credential.rawAttestationObject
+        else { throw ASAuthorizationError(.failed) }
+        return PasskeyRegistration(
+            credentialID: credential.credentialID, clientDataJSON: credential.rawClientDataJSON, attestationObject: attestationObject
+        )
+    }
+
     private func perform(_ request: ASAuthorizationRequest, options: ASAuthorizationController.RequestOptions = []) async throws -> ASAuthorization {
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
