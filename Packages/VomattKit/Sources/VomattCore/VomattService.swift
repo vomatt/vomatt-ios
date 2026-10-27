@@ -97,6 +97,24 @@ public final class VomattService: Sendable {
         return isNewUser
     }
 
+    /// A fresh one-time challenge for signing in with any passkey on the device (lasts 5 minutes).
+    public func passkeySignInChallenge() async throws -> Data {
+        try await call {
+            let data = try await client.passkeyLoginOptions().ok.body.json.data
+            return try required(Data(base64URLEncoded: required(data?.challenge, "passkeyLoginOptions.challenge")), "passkeyLoginOptions.challenge")
+        }
+    }
+
+    /// Verifies the signed challenge and starts the session, like `verifyOtp`. A passkey only
+    /// exists on an account that is already set up, so there is no new-user step.
+    public func signIn(with assertion: PasskeyAssertion) async throws {
+        let tokens = try await call {
+            let output = try await client.passkeyLoginVerify(body: .json(.init(credential: .init(assertion))))
+            return try AuthTokens(required(output.ok.body.json.data, "passkeyLoginVerify.data"))
+        }
+        await session.signIn(tokens)
+    }
+
     /// Revokes the refresh token on the backend, then ends the session here even when the backend can't be reached.
     public func signOut() async {
         if let refreshToken = await session.refreshToken {

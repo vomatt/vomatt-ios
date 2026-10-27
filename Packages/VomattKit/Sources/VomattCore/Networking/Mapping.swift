@@ -364,3 +364,23 @@ extension AuthTokens {
         )
     }
 }
+
+extension Schemas.PasskeyAuthenticationCredential {
+    /// The browser's `PublicKeyCredential.toJSON()` for a sign-in: binary fields base64url, same names.
+    init(_ assertion: PasskeyAssertion) {
+        let id = assertion.credentialID.base64URLEncodedString()
+        self.init(
+            authenticatorAttachment: "platform",
+            clientExtensionResults: .init(),
+            id: id,
+            rawId: id,
+            response: .init(
+                authenticatorData: assertion.authenticatorData.base64URLEncodedString(),
+                clientDataJSON: assertion.clientDataJSON.base64URLEncodedString(),
+                signature: assertion.signature.base64URLEncodedString(),
+                userHandle: assertion.userID?.base64URLEncodedString()
+            ),
+            _type: "public-key"
+        )
+    }
+}

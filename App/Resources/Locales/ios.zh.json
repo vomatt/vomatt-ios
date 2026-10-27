@@ -189,5 +189,11 @@
 		"field.firstName": "名字",
 		"field.lastName": "姓氏",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
+	},
+	"auth": {
+		"continueWithPasskey": "使用通行密鑰繼續"
+	},
+	"authError": {
+		"passkeyInvalid": "通行密鑰驗證失敗，請重新操作一次"
 	}
 }

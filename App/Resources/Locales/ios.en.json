@@ -189,5 +189,11 @@
 		"field.firstName": "First name",
 		"field.lastName": "Last name",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"
+	},
+	"auth": {
+		"continueWithPasskey": "Continue with a passkey"
+	},
+	"authError": {
+		"passkeyInvalid": "Passkey verification failed. Please try again"
 	}
 }

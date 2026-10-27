@@ -17,7 +17,7 @@ struct AuthSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     switch step {
                     case .email:
-                        EmailStep(email: $email) { withAnimation { step = .code } }
+                        EmailStep(email: $email, onSent: { withAnimation { step = .code } }, onPasskeySignedIn: finish)
                     case .code:
                         CodeStep(email: email, onEditEmail: { withAnimation { step = .email } }) { isNewUser in
                             if isNewUser { withAnimation { step = .profile } } else { finish() }
@@ -73,6 +73,8 @@ private struct EmailStep: View {
     @Environment(AppModel.self) private var app
     @Binding var email: String
     let onSent: () -> Void
+    /// A passkey account is already set up, so there is no profile step.
+    let onPasskeySignedIn: () -> Void
     @State private var fieldError: String?
     @State private var error: AuthErrorKey?
 
@@ -89,6 +91,10 @@ private struct EmailStep: View {
             LoadingButton(style: .vm(.default, fullWidth: true), action: submit) {
                 Text(app.t("auth.continueWithEmail"))
             }
+            LoadingButton(style: .vm(.outline, fullWidth: true), action: signInWithPasskey) {
+                Text(app.t("auth.continueWithPasskey"))
+            }
+            .padding(.top, 8)
             AuthErrorText(error: error).padding(.top, 12)
         }
         .animation(.easeOut(duration: 0.2), value: error)
@@ -107,6 +113,18 @@ private struct EmailStep: View {
             onSent()
         } catch {
             self.error = AuthErrorKey(error)
+        }
+    }
+
+    private func signInWithPasskey() async {
+        error = nil
+        do {
+            let challenge = try await app.service.passkeySignInChallenge()
+            let assertion = try await PasskeyAuthenticator.signIn(challenge: challenge)
+            try await app.service.signIn(with: assertion)
+            onPasskeySignedIn()
+        } catch {
+            self.error = AuthErrorKey(passkeyError: error)
         }
     }
 }

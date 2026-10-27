@@ -48,7 +48,7 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
 /// Keys under `authError.*` in the locale files.
 public enum AuthErrorKey: String, Sendable {
     case invalidCode, codeExpired, tooManyAttempts, resendCooldown, emailSendFailed
-    case accountSuspended, rateLimited, invalidEmail, serverError
+    case accountSuspended, rateLimited, invalidEmail, serverError, passkeyInvalid
 
     private static let codes: [String: AuthErrorKey] = [
         "auth.invalid_otp": .invalidCode,
@@ -58,6 +58,7 @@ public enum AuthErrorKey: String, Sendable {
         "auth.otp.resend_cooldown": .resendCooldown,
         "auth.email.send_failed": .emailSendFailed,
         "auth.account_banned": .accountSuspended,
+        "auth.passkey.invalid": .passkeyInvalid,
     ]
 
     /// Maps a backend `errorCode` and HTTP status to a message the UI can show.
@@ -69,6 +70,12 @@ public enum AuthErrorKey: String, Sendable {
         case 400: self = .invalidEmail
         default: self = .serverError
         }
+    }
+
+    /// A failed passkey sign-in; nil when the person cancelled, which isn't an error to show.
+    public init?(passkeyError error: Error) {
+        if isPasskeyCancellation(error) { return nil }
+        self.init(error)
     }
 
     public var translationKey: String { "authError.\(rawValue)" }
