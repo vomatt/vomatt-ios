@@ -29,6 +29,11 @@ final class PasskeyAuthenticator: NSObject, ASAuthorizationControllerDelegate, A
         let request = provider.createCredentialRegistrationRequest(
             challenge: options.challenge, name: options.userName, userID: options.userID
         )
+        if #available(iOS 17.4, *) {
+            request.excludedCredentials = options.excludedCredentialIDs.map {
+                ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: $0)
+            }
+        }
         let authorization = try await PasskeyAuthenticator().perform(request)
         guard let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration,
               let attestationObject = credential.rawAttestationObject

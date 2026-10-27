@@ -37,8 +37,8 @@ public final class PasskeysModel {
             return true
         } catch {
             if isPasskeyCancellation(error) { return false }
-            // A conflict is a passkey this account already has
-            failure = (error as? APIError)?.isBusy == true
+            // The device or the API already has this account's passkey
+            failure = isExcludedPasskey(error) || (error as? APIError)?.isBusy == true
                 ? PasskeyFailure(key: "passkey.alreadyAdded", error: nil)
                 : PasskeyFailure(key: "passkey.addFailed", error: error)
             return false

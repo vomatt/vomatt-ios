@@ -81,7 +81,7 @@ struct PasskeyTests {
 
     // MARK: Adding a passkey
 
-    private static let options = #"{"challenge":"-_8","rp":{"id":"vomatt.com","name":"Vomatt"},"user":{"id":"_w","name":"user@example.com","displayName":"Ming"},"pubKeyCredParams":[{"type":"public-key","alg":-7}],"excludeCredentials":[],"authenticatorSelection":{"residentKey":"required","userVerification":"preferred"},"attestation":"none","hints":[],"timeout":300000}"#
+    private static let options = #"{"challenge":"-_8","rp":{"id":"vomatt.com","name":"Vomatt"},"user":{"id":"_w","name":"user@example.com","displayName":"Ming"},"pubKeyCredParams":[{"type":"public-key","alg":-7}],"excludeCredentials":[{"id":"-_8","type":"public-key","transports":["internal"]},{"id":"AQ","type":"public-key"}],"authenticatorSelection":{"residentKey":"required","userVerification":"preferred"},"attestation":"none","hints":[],"timeout":300000}"#
     private static let stored = #"{"id":"p1","name":null,"createdAt":"2026-10-27T08:30:00Z","lastUsedAt":null,"transports":[]}"#
 
     private func service(verify: @escaping @Sendable () -> (Int, String)) -> (VomattService, StubTransport) {
@@ -106,7 +106,11 @@ struct PasskeyTests {
 
         #expect(added)
         // The sheet gets the account from the options: user.name and the decoded user.id
-        #expect(asked == PasskeyRegistrationOptions(challenge: awkward, userName: "user@example.com", userID: Data([0xFF])))
+        #expect(asked == PasskeyRegistrationOptions(
+            challenge: awkward, userName: "user@example.com", userID: Data([0xFF]),
+            // The account's existing passkeys, so the device won't make a second one
+            excludedCredentialIDs: [awkward, Data([0x01])]
+        ))
         let request = try #require(transport.requests.first { $0.path == "/api/auth/passkey/register/verify" })
         #expect(request.authorization == "Bearer a")
         let body = try json(request.body)
@@ -143,6 +147,15 @@ struct PasskeyTests {
         let model = PasskeysModel(service: service)
 
         await model.add { _ in registration }
+        #expect(model.failure?.key == "passkey.alreadyAdded")
+    }
+
+    @MainActor @Test func aPasskeyTheDeviceHasIsCalledOut() async throws {
+        guard #available(macOS 15, *) else { return }
+        let (service, _) = service { (200, envelope(Self.stored)) }
+        let model = PasskeysModel(service: service)
+
+        await model.add { _ in throw ASAuthorizationError(.matchedExcludedCredential) }
         #expect(model.failure?.key == "passkey.alreadyAdded")
     }
 

@@ -30,11 +30,14 @@ public struct PasskeyRegistrationOptions: Equatable, Sendable {
     public var userName: String
     /// The account's user handle; a sign-in with the passkey returns it.
     public var userID: Data
+    /// The account's existing passkeys, which the authenticator refuses to make again.
+    public var excludedCredentialIDs: [Data]
 
-    public init(challenge: Data, userName: String, userID: Data) {
+    public init(challenge: Data, userName: String, userID: Data, excludedCredentialIDs: [Data] = []) {
         self.challenge = challenge
         self.userName = userName
         self.userID = userID
+        self.excludedCredentialIDs = excludedCredentialIDs
     }
 }
 
@@ -73,4 +76,11 @@ public struct Passkey: Identifiable, Equatable, Sendable {
 /// nothing to report, like the web's `NotAllowedError`.
 public func isPasskeyCancellation(_ error: Error) -> Bool {
     (error as? ASAuthorizationError)?.code == .canceled
+}
+
+/// The device already holds one of the account's passkeys (`excludedCredentialIDs`), like the
+/// web's `InvalidStateError`.
+func isExcludedPasskey(_ error: Error) -> Bool {
+    guard #available(iOS 18, macOS 15, *) else { return false }
+    return (error as? ASAuthorizationError)?.code == .matchedExcludedCredential
 }

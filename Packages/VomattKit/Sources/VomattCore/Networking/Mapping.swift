@@ -408,7 +408,8 @@ extension PasskeyRegistrationOptions {
         self.init(
             challenge: try required(dto.challenge.flatMap(Data.init(base64URLEncoded:)), "PasskeyRegistrationOptionsResponse.challenge"),
             userName: try required(dto.user?.name, "PasskeyRegistrationOptionsResponse.user.name"),
-            userID: try required(dto.user?.id.flatMap(Data.init(base64URLEncoded:)), "PasskeyRegistrationOptionsResponse.user.id")
+            userID: try required(dto.user?.id.flatMap(Data.init(base64URLEncoded:)), "PasskeyRegistrationOptionsResponse.user.id"),
+            excludedCredentialIDs: (dto.excludeCredentials ?? []).compactMap { $0.id.flatMap(Data.init(base64URLEncoded:)) }
         )
     }
 }
