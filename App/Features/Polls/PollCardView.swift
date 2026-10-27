@@ -147,6 +147,7 @@ struct PollCardView: View {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
             }
             .frame(minHeight: Metrics.minTarget)
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
         .font(.vmMeta)
         .foregroundStyle(Tokens.mutedForeground)

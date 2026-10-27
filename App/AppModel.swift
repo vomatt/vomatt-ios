@@ -229,6 +229,13 @@ final class AppModel {
     /// Shares a Poll's canonical web link.
     func shareURL(for poll: Poll) -> URL { config.pollURL(poll.id) }
 
+    /// Tells the API a signed-in user opened the share sheet for a Poll (signed-out shares aren't counted).
+    /// `ShareLink` reports no completion, so this counts the tap, not the delivery.
+    func recordShare(of poll: Poll) {
+        guard isSignedIn else { return }
+        Task { try? await service.sharePoll(id: poll.id) }
+    }
+
     // MARK: Poll cache
 
     /// The newest copy of each Poll a screen changed (a Ballot, an edit), so every

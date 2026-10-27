@@ -323,6 +323,15 @@ public final class VomattService: Sendable {
         _ = try await call { try await client.deleteComment(path: .init(voteId: pollId, commentId: commentId)).ok }
     }
 
+    /// Signed-in only (signed-out shares aren't counted: 401). Idempotent per user and Poll; returns the Poll's `shareCount`.
+    @discardableResult
+    public func sharePoll(id: String) async throws -> Int {
+        try await call {
+            let data = try await client.share(path: .init(voteId: id), body: .json(.init(channel: .native))).ok.body.json.data
+            return try Int(required(data?.shareCount, "share.shareCount"))
+        }
+    }
+
     /// Signed-in only; not your own Comment (`comment.report.self`). Idempotent: a repeat keeps the first report.
     public func reportComment(pollId: String, commentId: String, reason: ReportReason, note: String? = nil) async throws {
         let note = note?.trimmingCharacters(in: .whitespacesAndNewlines)

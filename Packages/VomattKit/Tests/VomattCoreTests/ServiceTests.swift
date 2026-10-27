@@ -402,6 +402,15 @@ struct ServiceTests {
         #expect(comment.replies.map(\.id) == ["r1"] && comment.repliesNextCursor == "rc" && comment.replyCount == 3)
     }
 
+    @Test func sharingAPollSendsTheNativeChannelAndReturnsTheCount() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"shareCount":18}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let count = try await service.sharePoll(id: "p1")
+        let sent = try #require(transport.requests.first)
+        #expect(count == 18 && sent.method == .post && sent.path == "/api/votes/p1/share")
+        #expect(try JSONSerialization.jsonObject(with: Data((sent.body ?? "").utf8)) as? [String: String] == ["channel": "NATIVE"])
+    }
+
     @Test func reportingACommentSendsTheReasonAndTrimmedNote() async throws {
         let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
