@@ -82,6 +82,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var deletable: Bool?
     public var participantCount: Int?
     public var commentCount: Int?
+    /// Distinct signed-in users who shared the Poll.
+    public var shareCount: Int?
     /// The viewer's Ballot; nil without one (or signed out).
     public var myOptionId: String?
     /// Whether the viewer's Ballot is left out of the voter list; nil without a Ballot.
@@ -97,7 +99,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         creatorId: String, creatorUsername: String, creatorAvatarUrl: String? = nil,
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
-        participantCount: Int? = nil, commentCount: Int? = nil, myOptionId: String? = nil,
+        participantCount: Int? = nil, commentCount: Int? = nil, shareCount: Int? = nil, myOptionId: String? = nil,
         myBallotAnonymous: Bool? = nil, unread: Bool? = nil, options: [PollOption], tags: [Tag] = []
     ) {
         self.id = id
@@ -118,6 +120,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         self.deletable = deletable
         self.participantCount = participantCount
         self.commentCount = commentCount
+        self.shareCount = shareCount
         self.myOptionId = myOptionId
         self.myBallotAnonymous = myBallotAnonymous
         self.unread = unread

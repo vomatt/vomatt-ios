@@ -35,6 +35,7 @@ extension Poll {
             deletable: dto.deletable,
             participantCount: dto.participantCount.map(Int.init),
             commentCount: dto.commentCount.map(Int.init),
+            shareCount: dto.shareCount.map(Int.init),
             myOptionId: dto.myOptionId,
             myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,

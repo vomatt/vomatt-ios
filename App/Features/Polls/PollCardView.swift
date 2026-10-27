@@ -82,6 +82,7 @@ struct PollCardView: View {
         .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
+                .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
             ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
             if app.userId != poll.creatorId {
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
@@ -147,6 +148,7 @@ struct PollCardView: View {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
             }
             .frame(minHeight: Metrics.minTarget)
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
         .font(.vmMeta)
         .foregroundStyle(Tokens.mutedForeground)

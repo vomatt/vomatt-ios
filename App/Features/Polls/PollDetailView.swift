@@ -151,6 +151,7 @@ struct PollAboutView: View {
                 Label(app.t(poll.audience == .inviteOnly ? "poll.share" : "pollDetail.shareCta"), systemImage: "square.and.arrow.up")
             }
             .buttonStyle(.vm(.outline, size: .sm, fullWidth: true))
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
         .card(padding: 20)
     }
