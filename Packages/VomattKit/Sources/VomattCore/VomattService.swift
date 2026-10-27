@@ -603,6 +603,16 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// The signed-in user's passkeys, oldest first.
+    public func passkeys() async throws -> [Passkey] {
+        try await call { try (try await client.listMyPasskeys().ok.body.json.data ?? []).map(Passkey.init) }
+    }
+
+    /// It stops signing in to the account; the passkey stays on the device until removed there.
+    public func deletePasskey(id: String) async throws {
+        _ = try await call { try await client.deleteMyPasskey(path: .init(passkeyId: id)).ok }
+    }
+
     // MARK: Notifications
 
     /// Unread feed items of the kinds switched on.

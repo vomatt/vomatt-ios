@@ -107,8 +107,7 @@ struct PasskeyTests {
         #expect(added)
         // The sheet gets the account from the options: user.name and the decoded user.id
         #expect(asked == PasskeyRegistrationOptions(challenge: awkward, userName: "user@example.com", userID: Data([0xFF])))
-        let request = try #require(transport.requests.last)
-        #expect(request.path == "/api/auth/passkey/register/verify")
+        let request = try #require(transport.requests.first { $0.path == "/api/auth/passkey/register/verify" })
         #expect(request.authorization == "Bearer a")
         let body = try json(request.body)
         #expect(Set(body.keys) == ["credential"])
@@ -145,5 +144,102 @@ struct PasskeyTests {
 
         await model.add { _ in registration }
         #expect(model.failure?.key == "passkey.alreadyAdded")
+    }
+
+    // MARK: The list
+
+    private static let two = #"[{"id":"p1","name":"iPhone","createdAt":"2026-10-27T08:30:00Z","lastUsedAt":"2026-10-28T09:15:00Z","transports":["internal"]},{"id":"p2","name":null,"createdAt":"2026-10-27T10:00:00Z","lastUsedAt":null,"transports":[]}]"#
+
+    /// Answers the list with `list`, and a delete with `deleteStatus`.
+    private func listService(list: String = two, deleteStatus: Int = 200) -> (VomattService, StubTransport) {
+        let transport = StubTransport { request, _ in
+            if request.method == .delete {
+                return deleteStatus == 200
+                    ? (200, envelope(#"{"success":true,"id":null,"message":null,"status":null}"#), [:])
+                    : (deleteStatus, failure("common.not_found"), [:])
+            }
+            return (200, envelope(list), [:])
+        }
+        let store = InMemoryTokenStore(AuthTokens(accessToken: "a", refreshToken: "r"))
+        return (VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport), transport)
+    }
+
+    @MainActor @Test func loadsTheList() async throws {
+        let (service, transport) = listService()
+        let model = PasskeysModel(service: service)
+        #expect(model.passkeys == nil)
+
+        await model.load()
+
+        let passkeys = try #require(model.passkeys)
+        #expect(passkeys.map(\.id) == ["p1", "p2"])
+        #expect(passkeys[0].name == "iPhone")
+        #expect(passkeys[0].lastUsedAt == ISO8601DateFormatter().date(from: "2026-10-28T09:15:00Z"))
+        #expect(passkeys[1].name == nil)
+        #expect(passkeys[1].lastUsedAt == nil)
+        #expect(!model.loadFailed)
+        #expect(transport.requests.first?.path == "/api/users/me/passkeys")
+    }
+
+    @MainActor @Test func anEmptyListIsLoadedNotPending() async {
+        let (service, _) = listService(list: "[]")
+        let model = PasskeysModel(service: service)
+
+        await model.load()
+        #expect(model.passkeys == [])
+    }
+
+    @MainActor @Test func aFailedLoadIsReported() async {
+        let transport = StubTransport { _, _ in (500, failure("common.internal_error"), [:]) }
+        let model = PasskeysModel(service: VomattService(
+            baseURL: base, tokenStore: InMemoryTokenStore(AuthTokens(accessToken: "a", refreshToken: "r")), language: { .en }, transport: transport
+        ))
+
+        await model.load()
+        #expect(model.loadFailed)
+        #expect(model.passkeys == nil)
+    }
+
+    @MainActor @Test func deletingRemovesThePasskey() async throws {
+        let (service, transport) = listService()
+        let model = PasskeysModel(service: service)
+        await model.load()
+
+        #expect(await model.delete(try #require(model.passkeys?.first)))
+
+        #expect(model.passkeys?.map(\.id) == ["p2"])
+        #expect(model.failure == nil)
+        let request = try #require(transport.requests.last)
+        #expect(request.method == .delete)
+        #expect(request.path == "/api/users/me/passkeys/p1")
+    }
+
+    @MainActor @Test func aFailedDeleteKeepsThePasskeyAndShowsAnError() async throws {
+        let (service, _) = listService(deleteStatus: 404)
+        let model = PasskeysModel(service: service)
+        await model.load()
+
+        #expect(await model.delete(try #require(model.passkeys?.first)) == false)
+
+        #expect(model.passkeys?.map(\.id) == ["p1", "p2"])
+        #expect(model.failure?.key == "passkey.deleteFailed")
+    }
+
+    @MainActor @Test func addingReloadsTheList() async throws {
+        let transport = StubTransport { request, _ in
+            switch request.path {
+            case "/api/auth/passkey/register/options": (200, envelope(Self.options), [:])
+            case "/api/auth/passkey/register/verify": (200, envelope(Self.stored), [:])
+            default: (200, envelope(Self.two), [:])
+            }
+        }
+        let model = PasskeysModel(service: VomattService(
+            baseURL: base, tokenStore: InMemoryTokenStore(AuthTokens(accessToken: "a", refreshToken: "r")), language: { .en }, transport: transport
+        ))
+
+        #expect(await model.add { _ in registration })
+
+        #expect(model.passkeys?.map(\.id) == ["p1", "p2"])
+        #expect(transport.requests.last?.path == "/api/users/me/passkeys")
     }
 }

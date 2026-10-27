@@ -215,5 +215,8 @@
 		"deleteConfirmBody": "移除後就不能再用 {name} 登入。裝置上的通行密鑰要到裝置設定中另外刪除。",
 		"deleted": "已移除通行密鑰",
 		"deleteFailed": "無法移除通行密鑰，請再試一次。"
+	},
+	"common": {
+		"tryAgain": "再試一次"
 	}
 }

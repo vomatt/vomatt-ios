@@ -215,5 +215,8 @@
 		"deleteConfirmBody": "{name} will no longer sign you in. It stays on the device until you remove it there.",
 		"deleted": "Passkey removed",
 		"deleteFailed": "Couldn’t remove the passkey. Please try again."
+	},
+	"common": {
+		"tryAgain": "Try again"
 	}
 }
