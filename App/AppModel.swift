@@ -34,12 +34,19 @@ enum AppTab: Hashable, CaseIterable {
     case home, explore, myPolls, account
 }
 
+/// Which people a `FollowListView` lists.
+enum FollowListKind: Hashable {
+    case followers, following
+    /// The followers of the user whom the viewer follows too.
+    case mutual
+}
+
 /// Screens pushed inside a tab.
 enum Route: Hashable {
     case poll(String)
     case profile(String)
     case topic(Tag)
-    case people(username: String, followers: Bool)
+    case people(username: String, kind: FollowListKind)
     case notifications
 }
 

@@ -361,6 +361,105 @@ struct ServiceTests {
         #expect(calls.contains { $0.hasPrefix("/api/users/alice/followers") })
         #expect(calls.contains { $0.hasPrefix("/api/users/alice/following") })
     }
+
+    @Test func profileCarriesCountsAndMutualFollowers() async throws {
+        let transport = StubTransport { request, _ in
+            if (request.path ?? "").hasPrefix("/api/users/alice/mutual-followers") {
+                return (200, envelope(#"{"items":[{"id":"u2","username":"bob","isFollowing":true,"followsYou":false}],"nextCursor":null}"#), [:])
+            }
+            return (200, envelope(#"""
+            {"id":"u1","username":"alice","followersCount":12,"followingCount":3,"followsYou":true,
+             "mutualFollowersCount":4,"mutualFollowersPreview":[{"id":"u2","username":"bob"}]}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let profile = try #require(try await service.userProfile(username: "alice"))
+        #expect(profile.followersCount == 12 && profile.followingCount == 3 && profile.followsYou == true)
+        #expect(profile.mutualFollowersCount == 4 && profile.mutualFollowersPreview.map(\.username) == ["bob"])
+        let mutual = try await service.mutualFollowers(username: "alice")
+        #expect(mutual.items.first?.isFollowing == true && mutual.items.first?.followsYou == false)
+    }
+
+    @Test func followListsCarryTheViewerRelation() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"items":[{"id":"u2","username":"bob","isFollowing":false,"followsYou":true}],"nextCursor":null}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let follower = try #require(try await service.followers(username: "alice").items.first)
+        #expect(follower.isFollowing == false && follower.followsYou == true)
+    }
+
+    @Test func commentsCarryTheirFirstReplies() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[{"id":"c1","author":"june","text":"Hi","createdAt":"2026-10-26T09:30:00+08:00","replyCount":3,
+              "replies":[{"id":"r1","parentId":"c1","author":"tom","text":"Yo","createdAt":"2026-10-26T09:31:00+08:00"}],
+              "repliesNextCursor":"rc"}],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let comment = try #require(try await service.comments(pollId: "p1").items.first)
+        #expect(comment.replies.map(\.id) == ["r1"] && comment.repliesNextCursor == "rc" && comment.replyCount == 3)
+    }
+
+    @Test func reportingACommentSendsTheReasonAndTrimmedNote() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.reportComment(pollId: "p1", commentId: "c1", reason: .harassment, note: "  rude  ")
+        try await service.reportComment(pollId: "p1", commentId: "c1", reason: .spam, note: "  ")
+        let sent = transport.requests
+        #expect(sent[0].method == .post && sent[0].path == "/api/votes/p1/comments/c1/report")
+        let first = try JSONSerialization.jsonObject(with: Data((sent[0].body ?? "").utf8)) as? [String: String]
+        let second = try JSONSerialization.jsonObject(with: Data((sent[1].body ?? "").utf8)) as? [String: String]
+        #expect(first == ["reason": "HARASSMENT", "note": "rude"])
+        #expect(second == ["reason": "SPAM"])
+    }
+
+    @Test func theFeedDecodesEachKindAndPages() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[
+              {"id":"comment_1","kind":"COMMENT","createdAt":"2026-10-26T09:30:00+08:00","read":false,
+               "actor":{"id":"u2","username":"bob","isFollowing":false,"followsYou":true},
+               "poll":{"id":"p1","title":"Ramen?","status":"OPEN","turnout":3,"myOptionId":null,"winningOptionIds":null,"tie":null},
+               "comment":{"id":"r1","parentId":"c1","excerpt":"Tonkotsu"}},
+              {"id":"result_p2","kind":"RESULT","createdAt":"2026-10-25T09:30:00+08:00","read":true,"actor":null,"comment":null,
+               "poll":{"id":"p2","title":"Tea?","status":"ENDED","turnout":9,"myOptionId":"o1","winningOptionIds":["o1"],
+                       "winningOptionLabels":["Oolong"],"tie":false}},
+              {"id":"followed_u3","kind":"FOLLOWED","createdAt":"2026-10-24T09:30:00+08:00","read":false,
+               "actor":{"id":"u3","username":"cy","isFollowing":false,"followsYou":true},"poll":null,"comment":null}
+            ],"nextCursor":"n2"}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let page = try await service.notifications(cursor: "n1", limit: 20)
+        #expect(page.nextCursor == "n2")
+        #expect(page.items.map(\.kind) == [.comment, .result, .followed])
+        #expect(page.items[0].comment?.parentId == "c1" && page.items[0].actor?.followsYou == true && page.items[0].poll?.viewerWon == nil)
+        #expect(page.items[1].read && page.items[1].poll?.viewerWon == true && page.items[1].poll?.winningOptionLabels == ["Oolong"])
+        #expect(transport.requests[0].path.contains("cursor=n1"))
+    }
+
+    @Test func notificationsAreReadOneByOneOrAllAtOnce() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.markNotificationRead(id: "comment_1")
+        try await service.markAllNotificationsRead()
+        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
+        #expect(calls == ["POST /api/notifications/comment_1/read", "POST /api/notifications/read-all"])
+    }
+
+    @Test func notificationPreferencesChangeOnlyTheGivenSwitches() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"resultsIn":true,"invitations":true,"comments":false,"closingSoon":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let current = try await service.notificationPreferences()
+        let updated = try await service.updateNotificationPreferences(closingSoon: true)
+        #expect(current == updated && updated.closingSoon && !updated.comments)
+        #expect(transport.requests[1].method == .patch && transport.requests[1].path == "/api/users/me/notification-preferences")
+        #expect(transport.requests[1].body?.contains("closingSoon") == true && transport.requests[1].body?.contains("comments") == false)
+    }
 }
 
 @Suite("Session")

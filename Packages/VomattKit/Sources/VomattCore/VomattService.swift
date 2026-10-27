@@ -291,7 +291,8 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Replies to one top-level Comment, oldest first.
+    /// Replies to one top-level Comment, oldest first. Pass its `repliesNextCursor` to load the rest
+    /// without repeating the Replies the list already carries.
     public func replies(pollId: String, commentId: String, cursor: String? = nil) async throws -> CursorPage<Comment> {
         try await call {
             let data = try await client.getReplies(path: .init(voteId: pollId, commentId: commentId), query: .init(
@@ -320,6 +321,17 @@ public final class VomattService: Sendable {
 
     public func deleteComment(pollId: String, commentId: String) async throws {
         _ = try await call { try await client.deleteComment(path: .init(voteId: pollId, commentId: commentId)).ok }
+    }
+
+    /// Signed-in only; not your own Comment (`comment.report.self`). Idempotent: a repeat keeps the first report.
+    public func reportComment(pollId: String, commentId: String, reason: ReportReason, note: String? = nil) async throws {
+        let note = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = try await call {
+            try await client.reportComment(
+                path: .init(voteId: pollId, commentId: commentId),
+                body: .json(.init(note: note?.isEmpty == false ? note : nil, reason: reason.request))
+            ).ok
+        }
     }
 
     public func setLike(pollId: String, commentId: String, liked: Bool) async throws {
@@ -459,7 +471,7 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 20) { try await self.blockedUsers(cursor: $0) }.page.items
     }
 
-    /// Signed-in only. Idempotent; 404 for an unknown or suspended user, 400 for yourself. Private: they aren't told.
+    /// Signed-in only. Idempotent; 404 for an unknown or suspended user, 400 for yourself. They get a FOLLOWED notification.
     public func followUser(id: String) async throws {
         _ = try await call { try await client.followUser(path: .init(userId: id)).ok }
     }
@@ -491,6 +503,17 @@ public final class VomattService: Sendable {
     public func following(username: String, cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
         try await call {
             let data = try await client.listFollowing(
+                path: .init(username: username), query: .init(cursor: cursor, limit: clampedPageSize(limit))
+            ).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
+        }
+    }
+
+    /// Signed-in only; the followers of `username` whom the viewer follows, most recently followed first.
+    /// Empty on the viewer's own profile; 404 for an unknown or suspended user.
+    public func mutualFollowers(username: String, cursor: String? = nil, limit: Int = maxPageSize) async throws -> CursorPage<UserSummary> {
+        try await call {
+            let data = try await client.listMutualFollowers(
                 path: .init(username: username), query: .init(cursor: cursor, limit: clampedPageSize(limit))
             ).ok.body.json.data
             return try page(data.map { ($0.items, $0.nextCursor) }, UserSummary.init)
@@ -536,19 +559,49 @@ public final class VomattService: Sendable {
 
     // MARK: Notifications
 
-    /// Unread Invitations plus unread Ended Notifications.
+    /// Unread feed items of the kinds switched on.
     public func unreadCount() async throws -> Int {
         try await call { Int(try await client.unreadCount().ok.body.json.data?.count ?? 0) }
     }
 
-    /// Marks the Poll's current notification read. Idempotent; nothing to read is ignored.
+    /// The feed, newest first. Items can vanish or appear behind the cursor: de-duplicate by `id`.
+    public func notifications(cursor: String? = nil, limit: Int = 20) async throws -> CursorPage<FeedNotification> {
+        try await call {
+            let data = try await client.list(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, FeedNotification.init)
+        }
+    }
+
+    /// Marks one feed item read. Idempotent.
+    public func markNotificationRead(id: String) async throws {
+        _ = try await call { try await client.markRead(path: .init(id: id)).ok }
+    }
+
+    /// Reads everything up to now, switched-off kinds included. Later items arrive unread.
+    public func markAllNotificationsRead() async throws {
+        _ = try await call { try await client.markAllRead().ok }
+    }
+
+    /// Marks the Poll's current notification read through the deprecated Poll-id form of
+    /// `markNotificationRead`. Idempotent; nothing to read is ignored.
     public func markNotificationRead(pollId: String) async {
-        do {
-            _ = try await call { try await client.markRead(path: .init(voteId: pollId)).ok }
-        } catch let error as APIError where ["notification.not_found", "vote.not_found"].contains(error.errorCode) {
-            return
-        } catch {
-            return
+        _ = try? await call { try await client.markRead(path: .init(id: pollId)).ok }
+    }
+
+    public func notificationPreferences() async throws -> NotificationPreferences {
+        try await call {
+            try await NotificationPreferences(required(client.get().ok.body.json.data, "notificationPreferences.data"))
+        }
+    }
+
+    /// Omitted switches keep their value. Resolves to all four.
+    public func updateNotificationPreferences(
+        resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, closingSoon: Bool? = nil
+    ) async throws -> NotificationPreferences {
+        try await call {
+            try await NotificationPreferences(required(client.update1(body: .json(.init(
+                closingSoon: closingSoon, comments: comments, invitations: invitations, resultsIn: resultsIn
+            ))).ok.body.json.data, "updateNotificationPreferences.data"))
         }
     }
 
