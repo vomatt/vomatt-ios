@@ -1,14 +1,17 @@
 {
 	"common": {
+		"back": "返回",
+		"busy": "目前有其他變更正在進行，請稍後再試。",
 		"home": "首頁",
 		"createPoll": "建立投票",
 		"myPolls": "我的投票",
 		"explore": "探索",
 		"notifications": "通知",
 		"login": "登入",
-		"email": "信箱",
+		"email": "電子郵件",
 		"welcome": "歡迎",
 		"loading": "載入中",
+		"signingIn": "正在登入",
 		"error": "發生錯誤",
 		"cancel": "取消",
 		"close": "關閉",
@@ -23,13 +26,35 @@
 		"comments": "留言",
 		"active": "進行中",
 		"ended": "已結束",
-		"invalidEmailAddress": "信箱格式錯誤"
+		"invalidEmailAddress": "信箱格式錯誤",
+		"errorBody": "請再試一次。如果問題持續發生，請過幾分鐘再回來。",
+		"tryAgain": "再試一次",
+		"notFoundTitle": "找不到頁面",
+		"notFoundBody": "找不到你要的內容。",
+		"goHome": "回到首頁",
+		"skipToContent": "跳到主要內容"
 	},
 	"navigation": {
 		"home": "首頁",
 		"profile": "個人資料",
 		"settings": "設定",
-		"logout": "登出"
+		"logout": "登出",
+		"howCountsTitle": "vomatt 如何計票",
+		"howCountsBody": "每人一票。投票進行中選票保持密封，沒有人會跟著群眾投票。",
+		"more": "更多",
+		"appearance": "外觀",
+		"themeLight": "淺色",
+		"themeDark": "深色",
+		"themeAuto": "自動",
+		"reportProblem": "回報問題"
+	},
+	"feedback": {
+		"title": "回報問題",
+		"label": "描述問題",
+		"placeholder": "請盡量提供詳細資訊…",
+		"submit": "送出",
+		"sent": "謝謝，我們已收到你的回報。",
+		"failed": "無法送出回報，請再試一次。"
 	},
 	"user": {
 		"profile": {
@@ -42,26 +67,31 @@
 	"loginPrompt": {
 		"title": "登入或註冊 Vomatt",
 		"subtitle": "查看大家正在討論的內容並加入討論。",
+		"pollNote": "登入即可開啟這個投票。",
 		"ctaLabel": "登入"
 	},
 	"login": {
 		"title": "登入或註冊",
 		"brandHeadline": "每一個聲音都算數。",
 		"brandBody": "提出清楚的問題，讓每個人都有平等的發言權，投票結束時一起看結果。",
+		"brandRuleSealed": "投票結束前，選票保持密封。",
+		"brandRuleOneVote": "一人一票。",
+		"brandRuleResults": "結果會送回每一位投票的人。",
 		"subtitle": "輸入電子郵件，我們會寄送驗證碼給你。第一次使用？我們會自動為你建立帳號。",
 		"sessionExpired": "登入已過期，請重新登入。",
 		"dialogDescription": "使用電子郵件登入或註冊以繼續",
-		"sessionRevoked": "為了你的帳號安全，已登出所有裝置，請重新登入。"
+		"sessionRevoked": "為了你的帳號安全，已登出這個裝置，請重新登入。"
 	},
 	"verificationCode": {
 		"title": "請查看你的信箱",
-		"subtitle": "請輸入我們寄送的 6 位數驗證碼至",
-		"resendVerificationCode": "重新發送驗證碼",
+		"subtitle": "我們已將 6 位數驗證碼寄至",
+		"resendVerificationCode": "重新寄送驗證碼",
 		"codeSent": "新的驗證碼已寄出。",
 		"invalidVerificationCode": "驗證碼錯誤",
 		"useAnotherEmail": "使用其他電子郵件",
 		"resendIn": "{time} 後可重新寄送",
-		"inputLabel": "6 位數驗證碼"
+		"inputLabel": "6 位數驗證碼",
+		"resendReady": "現在可以重新寄送驗證碼。"
 	},
 	"myPolls": {
 		"title": "我的投票",
@@ -73,17 +103,28 @@
 		"actionDelete": "刪除",
 		"actionEnd": "結束投票",
 		"draftContinue": "繼續編輯",
-		"draftSavedAt": "儲存於 {date}",
-		"untitledDraft": "未命名投票"
+		"draftSavedAt": "{date}儲存",
+		"draftNoEnd": "尚未設定結束時間",
+		"untitledDraft": "未命名投票",
+		"youChose": "你選擇了",
+		"outcome": {
+			"won": "你的選擇勝出",
+			"tied": "並列第一",
+			"lost": "未獲多數"
+		},
+		"draftOptions": "{count} 個選項",
+		"draftMore": "「{title}」的更多動作"
 	},
 	"explore": {
 		"title": "探索",
 		"searchPlaceholder": "搜尋投票標題與說明…",
+		"searchLabel": "搜尋",
 		"filterActive": "進行中",
 		"filterEnded": "已結束",
 		"sortNewest": "最新",
 		"noResults": "找不到投票。",
-		"topics": "依主題瀏覽",
+		"noResultsHint": "試試其他字詞，或切換到已結束的投票。",
+		"noResultsHintEnded": "試試其他字詞，或切換到進行中的投票。",
 		"status": "狀態",
 		"sort": "排序",
 		"sortEnding": "即將結束",
@@ -93,24 +134,24 @@
 	},
 	"pollDetail": {
 		"backToFeed": "返回",
+		"about": "關於這個投票",
 		"share": "分享",
 		"notFound": "找不到投票。",
-		"askedBy": "發起人",
-		"opened": "開始於 {date}",
+		"notFoundBody": "它可能已被刪除，或連結有誤。",
+		"notFoundExplore": "探索投票",
+		"opened": "已開始",
+		"opens": "開始時間",
+		"results": "公布結果",
 		"timeline": "投票期間",
-		"revealsIn": "結果將於{distance}揭曉",
 		"resultsIn": "投票已結束，結果出爐。",
 		"noEnd": "未設定結束時間",
-		"participants": "人已投票",
 		"topics": "主題",
 		"sealedExplainer": "投票結束前結果保持密封，避免大家被即時票數影響。結束前你都可以更改或撤回你的票。",
-		"shareCta": "邀請其他人投票",
+		"ruleSealed": "選票保持密封，投票結束後才公開票數。",
+		"ruleOneVote": "每人一票。結束前都可以更改。",
 		"endedEarly": "已提前結束，原定於 {date} 截止。",
-		"invited": "{count} 人受邀",
-		"audience": {
-			"unlisted": "只有持有連結的人能找到，不會出現在動態或搜尋中。",
-			"invite-only": "只有受邀者能看到並投票。"
-		}
+		"moreFrom": "@{username} 的其他投票",
+		"ended": "已結束"
 	},
 	"profile": {
 		"notFoundTitle": "找不到這個個人頁",
@@ -121,27 +162,136 @@
 		"notFoundHome": "回首頁",
 		"polls": "投票",
 		"noPollsYet": "還沒有投票。",
-		"stats": "數據",
+		"noPollsYetOwn": "你的投票開放後會顯示在這裡。",
+		"pollsLoadFailed": "無法載入投票。",
 		"points": "{count} 點",
 		"cardFailed": "無法載入個人資料。",
 		"joined": "{date} 加入",
 		"membership": "{level} 會員",
 		"followers": "追蹤者",
 		"following": "追蹤中",
-		"editProfile": "編輯個人資料"
+		"noFollowers": "尚無追蹤者。",
+		"noFollowing": "尚未追蹤任何人。",
+		"listFailed": "無法載入此清單。",
+		"onlyYou": "只有你看得到",
+		"onlyYouSee": "只有你看得到：{items}。",
+		"onlyYouSettings": "到設定中變更",
+		"statVoted": "參與的公開投票",
+		"statCreated": "發起的公開投票",
+		"statTurnout": "總參與人次",
+		"editProfile": "編輯個人資料",
+		"bio": "自我介紹",
+		"displayName": "顯示名稱",
+		"saveChanges": "儲存變更",
+		"displayNamePlaceholder": "你的顯示名稱",
+		"bioPlaceholder": "向大家介紹一下自己",
+		"firstName": "名字",
+		"lastName": "姓氏",
+		"birthday": "生日",
+		"birthdayInvalid": "請選擇 1900 年至昨天之間的日期。",
+		"updated": "個人資料已更新",
+		"askedCount": "發起 {count} 則",
+		"followersCount": "{count} 位追蹤者",
+		"followingCount": "追蹤 {count} 人",
+		"wonBy": "{option} 勝出",
+		"tieBetween": "{options} 並列第一",
+		"endsAt": "{date} 結束",
+		"resultsAt": "{date} 揭曉結果",
+		"new": "新",
+		"recordAsked": "發起的投票",
+		"recordVoted": "參與的投票",
+		"recordReached": "觸及人數",
+		"recordPicksWon": "勝出的選擇",
+		"recordAskedCount": "發起 {count} 則投票",
+		"recordVotedCount": "參與 {count} 則",
+		"tabAsked": "發起",
+		"tabVoted": "參與",
+		"askedUnread": "你的投票有新結果",
+		"filterLabel": "顯示",
+		"filterAll": "全部",
+		"filterOpen": "進行中",
+		"filterSealed": "密封中",
+		"filterDecided": "已揭曉",
+		"sectionOpen": "進行中",
+		"sectionSealed": "已密封，等待結果",
+		"onlyYouSeeThese": "只有你看得到",
+		"noDrafts": "沒有草稿。可在建立投票時儲存草稿。",
+		"noVotesYet": "你參與的投票與你的選擇會顯示在這裡，只有你看得到。",
+		"showMore": "顯示更多",
+		"everyoneSees": "其他人看到的",
+		"openPublicPage": "查看公開頁面",
+		"askedNoteTitle": "所有人都看得到你發起的投票",
+		"askedNoteBody": "你發起的公開投票所有人都看得到。草稿、••• 選單與未讀標記只有你看得到。",
+		"votedNoteTitle": "你的選票只屬於你",
+		"votedNoteBody": "你的個人頁不會列出你參與的投票或你的選擇。鎖頭標示只有你看得到的內容。",
+		"previewNote": "這是其他人看到的你的個人頁。",
+		"previewBack": "回到你的個人頁",
+		"moreFor": "@{username} 的更多動作",
+		"followingNoteTitle": "追蹤代表什麼",
+		"followingNoteBody": "對方的投票會出現在你的「追蹤中」動態。對方不會看到你怎麼投，隨時一鍵取消。",
+		"mutualsOne": "追蹤者包括 @{name}",
+		"mutualsTwo": "追蹤者包括 @{name} 和 @{other}",
+		"mutualsMore": "追蹤者包括 @{name} 和另外 {count} 位你追蹤的人",
+		"mutualFollowers": "你認識的追蹤者",
+		"allFollowers": "全部 {count} 位追蹤者",
+		"editIntro": "每項資料都標示誰看得到，可在輸入處直接變更。",
+		"groupOnProfile": "個人頁上",
+		"groupAboutYou": "關於你",
+		"alwaysShown": "一律公開",
+		"realName": "真實姓名",
+		"onlyYouShort": "只有你",
+		"everyone": "所有人",
+		"visibilityPillEveryone": "{field}：所有人都看得到。變更",
+		"visibilityPillOnlyYou": "{field}：只有你看得到。變更",
+		"visibilityPillEveryonePlural": "{field}：所有人都看得到。變更",
+		"visibilityPillOnlyYouPlural": "{field}：只有你看得到。變更",
+		"notSet": "未設定",
+		"visibilitySavesHint": "可見範圍會在儲存時一併更新。",
+		"visibilitySaveFailed": "資料已儲存，但可見範圍未能更新，請再試一次。"
 	},
 	"notifications": {
 		"title": "通知",
 		"empty": "目前沒有通知。",
+		"emptyHint": "你發起或參與的投票結果會顯示在這裡。",
 		"unread": "未讀",
-		"intro": "投票邀請，以及你建立、參與或受邀且已結束的投票。",
+		"intro": "投票結果、邀請、追蹤你的人，以及你的投票下的留言。",
 		"markAllHint": "打開投票即標為已讀。",
 		"loadFailed": "無法載入通知。",
 		"ended": "結果出爐",
 		"cancelled": "已取消",
-		"invitations": "投票邀請",
-		"results": "結果",
-		"invitedBy": "{name} 邀請了你"
+		"markAllRead": "全部標為已讀",
+		"caughtUp": "沒有未讀通知。",
+		"day": {
+			"today": "今天",
+			"yesterday": "昨天",
+			"earlier": "更早"
+		},
+		"invitedYou": "{name} 邀請了你",
+		"inviteOnly": "僅限受邀",
+		"view": "查看",
+		"cancelledBy": "{title} 已被 {name} 取消",
+		"railTitle": "打開投票即標為已讀",
+		"railBody": "結果通知會保留到你打開為止，密封的承諾不會在列表中遺失。",
+		"markAllFailed": "無法將通知標為已讀，請再試一次。",
+		"followedYou": "{name} 追蹤了你",
+		"followedYouGroup": "{name} 和其他 {count} 人追蹤了你",
+		"followedYouGroup_one": "{name} 和其他 {count} 人追蹤了你",
+		"seeFollowers": "查看追蹤者",
+		"commented": "{name} 在 {title} 下發表了看法",
+		"excerpt": "「{text}」",
+		"endsIn": "{title} 將在 {duration}後截止",
+		"notVoted": "你還沒投票",
+		"votedSoFar": "目前 {count} 人已投票",
+		"settingsTitle": "通知設定",
+		"kindName": {
+			"resultsIn": "結果",
+			"invitations": "邀請",
+			"comments": "留言",
+			"closingSoon": "即將結束"
+		},
+		"summaryOn": "{kinds}已開啟",
+		"summaryOff": "{kinds}已關閉",
+		"summarySeparator": "、"
 	},
 	"pollCreator": {
 		"title": "新的投票",
@@ -161,10 +311,12 @@
 		"opensLabel": "開始時間",
 		"opensHint": "留空則立即開始。",
 		"endsLabel": "結束並公開結果",
+		"endsAtLabel": "結束時間",
 		"preset1h": "1 小時",
 		"preset24h": "24 小時",
 		"preset3d": "3 天",
 		"preset1w": "1 週",
+		"presetCustom": "自訂",
 		"visibilityLabel": "結束後，誰能看到每個人選了什麼？",
 		"visibility": {
 			"nobody": "沒有人",
@@ -173,9 +325,10 @@
 			"ownerHint": "你能看到誰選了哪個選項。",
 			"signed-in": "所有登入的使用者",
 			"signed-inHint": "每位登入的使用者都能看到誰選了什麼。",
-			"invited": "所有受邀者"
+			"invited": "所有受邀者",
+			"invitedHint": "所有受邀者都能看到誰選了什麼。"
 		},
-		"visibilityNote": "投票開始後就不能再更改。投票者在投票前會看到這個設定。",
+		"visibilityNote": "投票者在投票前會看到這個設定。",
 		"publish": "發布投票",
 		"saveChanges": "儲存變更",
 		"draftSaved": "已儲存草稿",
@@ -185,23 +338,21 @@
 			"titleRequired": "請輸入問題。",
 			"titleTooLong": "問題請勿超過 200 個字元。",
 			"optionRequired": "請填寫每個選項。",
+			"optionDuplicate": "每個選項都必須不同。",
 			"endRequired": "請選擇結束時間。",
 			"endBeforeStart": "結束時間必須晚於開始時間。",
-			"inviteesRequired": "請至少邀請一個人或群組。"
+			"inviteesRequired": "請至少邀請一個人或邀請名單。"
 		},
 		"discardEditTitle": "要捨棄變更嗎？",
 		"discardEditBody": "你對這個投票的修改不會被儲存。",
 		"keepEditing": "繼續編輯",
 		"discardEdit": "捨棄",
+		"keepDraftTitle": "要保留為草稿嗎？",
+		"keepDraftBody": "之後可以在「我的投票」的草稿中繼續完成。",
+		"keepDraft": "保留草稿",
 		"addContext": "加入背景說明（選填）",
-		"optionsHint": "按 Enter 新增下一個選項。",
+		"optionsHint": "按 Enter 前往下一個選項。",
 		"settingsTitle": "時間與隱私",
-		"settingsChange": "變更",
-		"settingsDone": "完成",
-		"summaryOpensNow": "現在開始，{end} 結束",
-		"summaryOpensLater": "{start} 開始，{end} 結束",
-		"summaryNoEnd": "選擇結束時間",
-		"summaryVisibility": "結束後：{level}",
 		"review": "預覽",
 		"reviewTitle": "預覽你的投票",
 		"reviewPreview": "投票者看到的樣子",
@@ -215,6 +366,11 @@
 		"ruleFixed": "投票開始後就不能再更改。",
 		"ruleOneVote": "每人一票。投票結束前可以更改或撤回。",
 		"audienceLabel": "誰能看到並投票？",
+		"audienceOption": {
+			"public": "所有人",
+			"unlisted": "不公開列出",
+			"invite-only": "僅限受邀者"
+		},
 		"audienceHint": {
 			"public": "會出現在動態、探索與搜尋中，任何人都能投票。",
 			"unlisted": "不會出現在任何列表，持有連結的人都能投票。",
@@ -231,27 +387,48 @@
 		}
 	},
 	"homePage": {
-		"feedListNoData": "發起投票，引領群眾。",
+		"feedListNoData": "還沒有投票，發起第一則吧。",
 		"allTopics": "為你推薦",
+		"following": "追蹤中",
+		"followingEmpty": "你追蹤的人還沒有投票。",
+		"followingEmptyHint": "你追蹤的人所發起的進行中投票會顯示在這裡。到對方的個人檔案即可追蹤。",
+		"followingEmptyCta": "探索投票",
 		"topics": "主題",
 		"feedFailed": "目前無法載入投票。",
 		"topicEmpty": "這個主題還沒有投票。",
 		"createFirst": "建立第一個投票",
-		"joinToCreate": "加入後即可發起投票"
+		"joinToCreate": "加入後即可發起投票",
+		"resultsIn": "結果出爐",
+		"resultsTie": "平手",
+		"closingSoon": "即將結束",
+		"askTitle": "有問題想問大家嗎？",
+		"askBody": "寫一則投票只要一分鐘，一開始就會自動密封。",
+		"askCta": "寫一則"
 	},
 	"poll": {
+		"invitation": {
+			"title": "{username} 邀請你參加投票",
+			"signIn": "請用收到邀請的電子郵件地址登入。",
+			"wrongAccount": "這個帳號無法開啟此投票，請用收到邀請的電子郵件地址登入。",
+			"switchAccount": "切換帳號"
+		},
 		"vote": "投票",
 		"updateVote": "更新投票",
+		"updatingHint": "將取代你投給「{option}」的票，結果在投票結束前仍保持密封。",
 		"withdrawVote": "撤回投票",
-		"withdrawConfirm": "要撤回你的投票嗎？撤回後不會被計入，也不會收到通知。",
+		"withdrawTitle": "要撤回你的投票嗎？",
+		"withdrawBody": "撤回後不會被計入，也不會收到通知。",
 		"withdraw": "撤回",
 		"keep": "保留",
-		"yourVote": "你的選擇",
 		"yourVoteShort": "你的選擇",
+		"yourVoteCaption": "你投給了「{option}」。",
 		"revealHint": "投票結束後才會公開結果",
 		"sealed": "結果將於 {date} 公開，屆時會通知你。",
+		"sealedNoEnd": "結果將於投票結束後公開，屆時會通知你。",
+		"sealedTitle": "已密封，謝謝你。",
 		"opensHint": "投票將於{distance}開始",
 		"voted": "{count} 人已投票",
+		"votedPill": "已投票",
 		"comments": "{count} 則留言",
 		"comment": "1 則留言",
 		"share": "分享",
@@ -262,16 +439,28 @@
 		"withdrawFailed": "無法撤回你的投票，請再試一次。",
 		"tooManyVotes": "投票太頻繁了，請稍候一分鐘再試。",
 		"anonymousToggle": "在投票者名單中隱藏我的名字",
+		"anonymousHidden": "你的票會被計入，但不會列在投票者名單中。",
+		"nameListed": "你的名字會出現在投票者名單中",
+		"nameHidden": "你的名字已從投票者名單中隱藏",
+		"hideMyName": "隱藏我的名字",
+		"showMyName": "顯示我的名字",
 		"resultsFailed": "無法載入結果。",
-		"won": "「{option}」勝出，支持率以 {count} 位參與者計算",
+		"won": "「{option}」勝出，共 {count} 人參與決定。",
 		"tie": "{options}平手",
 		"and": "與",
 		"noVotes": "沒有人投票",
+		"elected": "當選",
 		"chipOpens": "{date} 開始",
-		"chipEnds": "{date} 結束",
-		"chipEndsIn": "{distance}結束",
-		"chipEnded": "{date} 結束",
-		"chipEndedShort": "已結束",
+		"chipEnds": "{date} 截止",
+		"chipEndsIn": "{duration}後截止",
+		"chipEnded": "{day}結束",
+		"endsIn": "{duration}後截止",
+		"status": {
+			"scheduled": "即將開始",
+			"open": "進行中",
+			"closing": "即將截止",
+			"ended": "已結束"
+		},
 		"visibility": {
 			"nobody": "結束後，沒有人能看到你選了什麼。",
 			"owner": "結束後，只有發起人能看到你選了什麼。",
@@ -280,13 +469,13 @@
 		},
 		"edit": "編輯",
 		"keepPoll": "保留投票",
-		"stamp": "已投票",
 		"discuss": "討論",
 		"votersHint": "點選選項查看誰投了它",
 		"voters": "投票者",
 		"votersHidden": "這個投票的投票者名單已隱藏，以保護匿名投票，或是依照投票的公開設定。",
 		"votersTruncated": "這裡只能列出前 {count} 位投票者。",
 		"votersNone": "沒有可顯示的投票者。",
+		"votersChoicesHidden": "此投票含有匿名票，因此不顯示選擇。以下為所有參與者。",
 		"votersFailed": "無法載入投票者。",
 		"deletePoll": "刪除投票",
 		"deletePollTitle": "要刪除這個投票嗎？",
@@ -301,15 +490,23 @@
 			"public": "公開",
 			"unlisted": "不公開列出",
 			"invite-only": "僅限受邀者"
-		}
+		},
+		"audienceMeta": {
+			"unlisted": "不公開列出",
+			"invite-only": "僅限受邀者"
+		},
+		"moreActions": "「{title}」的更多動作",
+		"endNowEllipsis": "立即結束投票…",
+		"deletePollEllipsis": "刪除投票…"
 	},
 	"auth": {
-		"continueWithEmail": "使用電子郵件繼續"
+		"continueWithEmail": "使用電子郵件繼續",
+		"continueWithPasskey": "使用通行密鑰繼續"
 	},
 	"authError": {
 		"invalidCode": "驗證碼不正確，請確認信件後再試一次。",
 		"codeExpired": "驗證碼已過期，請重新取得。",
-		"tooManyAttempts": "錯誤次數過多，請 15 分鐘後再試。",
+		"tooManyAttempts": "錯誤次數過多，請稍候幾分鐘再試。",
 		"resendCooldown": "剛剛已寄出驗證碼，請稍候再試。",
 		"emailSendFailed": "無法寄送信件，請確認信箱後再試一次。",
 		"accountSuspended": "此帳號已被停權。",
@@ -329,6 +526,7 @@
 	"comments": {
 		"title": "討論",
 		"placeholder": "你為什麼這樣投？說說你的理由",
+		"addComment": "新增留言",
 		"post": "發佈",
 		"you": "你",
 		"empty": "還沒有留言，來說說你的選擇吧。",
@@ -346,38 +544,53 @@
 		"replyPlaceholder": "寫下你的回覆…",
 		"viewReply": "查看 1 則回覆",
 		"viewReplies": "查看 {count} 則回覆",
-		"moreReplies": "顯示更多回覆",
-		"deleted": "此留言已刪除。"
+		"moreReply": "查看另外 1 則回覆",
+		"moreReplies": "查看另外 {count} 則回覆",
+		"deleted": "此留言已刪除。",
+		"replying": "回覆中",
+		"replyingTo": "回覆",
+		"cancelReply": "取消回覆",
+		"editing": "編輯中",
+		"more": "更多",
+		"copyText": "複製文字",
+		"copyLink": "複製連結",
+		"textCopied": "已複製文字",
+		"linkCopied": "已複製連結",
+		"copyFailed": "無法複製。",
+		"deleteBody": "此操作無法復原。",
+		"deleteBodyReply": "它的 1 則回覆會留在討論中，顯示為已刪除的留言。此操作無法復原。",
+		"deleteBodyReplies": "它的 {count} 則回覆會留在討論中，顯示為已刪除的留言。此操作無法復原。",
+		"report": "檢舉",
+		"reportTitle": "檢舉這則留言",
+		"reportBody": "管理員會審核這則留言，作者不會收到通知。",
+		"reportReasonLabel": "這則留言有什麼問題？",
+		"reportReason": {
+			"spam": "垃圾訊息",
+			"harassment": "騷擾或霸凌",
+			"hate": "仇恨言論",
+			"misinformation": "不實資訊",
+			"other": "其他原因"
+		},
+		"reportNote": "補充說明（選填）",
+		"reportDone": "謝謝，我們會進行審核。",
+		"reportFailed": "無法送出檢舉，請再試一次。"
 	},
 	"account": {
 		"usernameLabel": "使用者名稱",
 		"usernameHint": "你的個人頁位於 {path}。變更後，舊連結將失效。",
 		"usernameInvalid": "使用者名稱需為 3–50 個小寫英文字母、數字或底線。",
-		"stats": "你的數據",
-		"votesCast": "已投票數",
-		"pollsCreated": "發起的投票",
-		"peopleReached": "觸及人數",
-		"majorityRate": "與多數一致",
-		"majorityNone": "尚無",
-		"majorityHint": "在已結束且你有參與的投票中，你的選擇勝出或並列的比例",
-		"tabActivity": "你的投票",
-		"tabPolls": "你發起的",
-		"tabSettings": "設定",
-		"noVotes": "你還沒有在最近的投票中投票。",
-		"findPolls": "找個投票",
-		"youChose": "你選擇了",
-		"noPolls": "你還沒有發起投票。",
-		"outcome": {
-			"pending": "等待結果",
-			"won": "你的選擇勝出",
-			"tied": "並列第一",
-			"lost": "未獲多數",
-			"unknown": "已結束"
-		},
+		"usernameReserved": "{username} 是保留名稱，請換一個使用者名稱。",
+		"usernameConfirmTitle": "要變更使用者名稱嗎？",
+		"usernameConfirmBody": "你的個人頁將移到 {newPath}。指向 {oldPath} 的連結會失效，包括你分享過的連結。",
+		"usernameConfirmCta": "變更使用者名稱",
 		"privacyTitle": "他人可見的資訊",
 		"privacyBody": "選擇哪些個人資料會顯示在你的公開個人頁。",
 		"anonymousDefault": "預設匿名投票",
 		"anonymousDefaultBody": "在投票者名單中隱藏你的名字。每次投票都可以另外調整，已投出的票不受影響。",
+		"fieldVisible": "他人現在看得到{field}。",
+		"fieldHidden": "他人現在看不到{field}。",
+		"anonymousDefaultOn": "新的投票預設為匿名。",
+		"anonymousDefaultOff": "新的投票預設會顯示你的名字。",
 		"field": {
 			"displayName": "顯示名稱",
 			"bio": "自我介紹",
@@ -386,15 +599,23 @@
 			"membershipLevel": "會員等級"
 		},
 		"saveFailed": "儲存失敗，請再試一次。",
+		"exportTitle": "下載我的資料",
+		"exportBody": "包含個人檔案、投票、留言與投票紀錄的 JSON 檔，每天可下載一次。",
+		"exportCta": "下載",
+		"exportFailed": "無法匯出資料，請再試一次。",
 		"signOutTitle": "目前登入",
 		"signOut": "登出",
 		"deleteTitle": "刪除帳號",
 		"deleteBody": "刪除你的帳號並登出所有裝置，此操作無法復原。",
 		"deleteCta": "刪除帳號",
+		"deleteFailed": "無法刪除帳號，帳號仍然有效，請再試一次。",
 		"deleteConfirmTitle": "確定要刪除帳號？",
 		"deleteConfirmBody": "請輸入 {username} 以確認，帳號將被永久刪除。",
 		"deleteConfirmLabel": "輸入你的使用者名稱以確認",
-		"tabGroups": "群組"
+		"deleteConfirmMismatch": "請輸入 {username} 以刪除帳號。",
+		"deleteLastAdmin": "你是唯一的管理員，請先將其他人設為管理員再刪除帳號。",
+		"tabGroups": "邀請名單",
+		"deleteCtaEllipsis": "刪除帳號…"
 	},
 	"cookieConsent": {
 		"label": "Cookie 同意",
@@ -407,7 +628,7 @@
 	"invitees": {
 		"title": "受邀者",
 		"description": "能看到這個投票並參與的人。",
-		"summary": "{count} 人受邀 · {voted} 人已投票",
+		"summary": "{count} 人受邀，{voted} 人已投票",
 		"placeholder": "使用者名稱或信箱",
 		"inviteEmail": "邀請 {email}",
 		"suggestions": "符合的使用者",
@@ -415,8 +636,8 @@
 		"searchFailed": "無法搜尋，請再試一次。",
 		"picked": "已邀請",
 		"remove": "移除 {name}",
-		"groups": "你的群組",
-		"groupPill": "{name} · {count}",
+		"groups": "你的邀請名單",
+		"groupPill": "{name}，{count} 位成員",
 		"voted": "已投票",
 		"empty": "還沒有邀請任何人。",
 		"loadFailed": "無法載入受邀者。",
@@ -426,25 +647,26 @@
 		"removeFailed": "無法移除，請再試一次。"
 	},
 	"groups": {
-		"title": "群組",
+		"title": "邀請名單",
 		"intro": "可重複使用的邀請名單，用於僅限受邀者的投票。只有你看得到，成員也不會被通知。",
-		"nameLabel": "群組名稱",
+		"nameLabel": "邀請名單名稱",
+		"nameRequired": "請先為邀請名單命名。",
+		"addRequired": "請至少選一個人加入。",
 		"namePlaceholder": "例如：讀書會",
-		"create": "新增群組",
-		"empty": "還沒有群組。",
-		"loadFailed": "無法載入你的群組。",
+		"create": "新增邀請名單",
+		"empty": "還沒有邀請名單。",
+		"loadFailed": "無法載入你的邀請名單。",
 		"memberCount": "{count} 位成員",
-		"dialogIntro": "邀請群組時會邀請當下的成員，之後的變動不會影響已送出的投票。",
+		"dialogIntro": "邀請某份名單時，會邀請其當下的成員，之後的變動不會影響已送出的投票。",
 		"rename": "重新命名",
 		"members": "成員",
 		"noMembers": "還沒有成員。",
 		"membersFailed": "無法載入成員。",
 		"addLabel": "新增成員",
 		"add": "新增",
-		"delete": "刪除群組",
-		"deleteConfirm": "要刪除這個群組嗎？已邀請過它的投票會保留受邀者。",
-		"saveFailed": "無法儲存，請再試一次。",
-		"memberCountOne": "1 位成員"
+		"delete": "刪除邀請名單",
+		"deleteConfirm": "要刪除這份邀請名單嗎？已邀請過它的投票會保留受邀者。",
+		"saveFailed": "無法儲存，請再試一次。"
 	},
 	"avatar": {
 		"title": "頭像",
@@ -455,10 +677,15 @@
 		"savedToast": "頭像已更新",
 		"choose": "選擇{name}",
 		"families": {
+			"plain": "不選角色",
 			"bites": "台灣小吃",
 			"guardians": "廟宇守護",
 			"visitors": "外星訪客",
 			"animals": "島上動物"
+		},
+		"none": {
+			"name": "帳號圖示",
+			"trait": "只有你，不用角色"
 		},
 		"bots": {
 			"boba": {
@@ -654,5 +881,278 @@
 				"trait": "捲尾巴"
 			}
 		}
+	},
+	"apiError": {
+		"common": {
+			"bad_request": "請求格式錯誤",
+			"internal_error": "伺服器錯誤，請稍後再試",
+			"service_unavailable": "服務暫時無法使用，請稍後再試",
+			"unauthorized": "未授權的請求",
+			"forbidden": "沒有權限執行此操作",
+			"rate_limited": "請求過於頻繁，請稍後再試",
+			"conflict": "資源衝突，請重試",
+			"validation_failed": "輸入資料驗證失敗",
+			"missing_param": "缺少必要參數：{0}",
+			"type_mismatch": "參數格式錯誤：{0}",
+			"invalid_status": "無效的狀態：{0}",
+			"invalid_sort": "無效的排序：{0}",
+			"cursor_invalid": "分頁 cursor 無效"
+		},
+		"auth": {
+			"token": {
+				"invalid": "Token 無效",
+				"expired": "登入已過期，請重新登入"
+			},
+			"invalid_otp": "驗證碼錯誤",
+			"otp": {
+				"invalid_or_expired": "驗證碼錯誤或已過期",
+				"too_many_attempts": "驗證次數過多，請稍後再試",
+				"resend_cooldown": "請等 {0} 秒後再重新發送",
+				"daily_limit": "今天發送的驗證碼次數已達上限，請明天再試"
+			},
+			"admin": {
+				"forbidden": "此帳號無管理員權限"
+			},
+			"identifier": {
+				"required": "請提供 email 或手機號碼"
+			},
+			"email": {
+				"send_failed": "郵件發送失敗：{0}"
+			},
+			"phone": {
+				"not_registered": "此手機號碼尚未註冊",
+				"invalid": "手機號碼格式錯誤，請輸入 09 開頭的台灣手機號碼或含國碼的號碼（例如 +886912345678）"
+			},
+			"sms": {
+				"send_failed": "簡訊發送失敗：{0}"
+			},
+			"refresh_token": {
+				"invalid": "Refresh token 無效或已過期"
+			},
+			"suspicious_login": "安全性警告：此登入階段被重複更新，已將其登出，請重新登入",
+			"google": {
+				"not_configured": "Google OAuth 尚未設定",
+				"no_email": "Google 驗證失敗：無法取得用戶信箱",
+				"invalid_audience": "Google 驗證失敗：audience 不正確"
+			},
+			"line": {
+				"not_configured": "LINE Login 尚未設定",
+				"token_exchange_failed": "LINE token 交換失敗",
+				"profile_failed": "LINE 用戶資料取得失敗"
+			},
+			"apple": {
+				"invalid_token": "Apple token 格式無效",
+				"key_not_found": "Apple 驗證失敗：找不到對應公鑰",
+				"invalid_signature": "Apple 驗證失敗：簽名無效",
+				"invalid_issuer": "Apple 驗證失敗：發行者不正確",
+				"invalid_audience": "Apple 驗證失敗：audience 不正確",
+				"token_expired": "Apple 驗證失敗：token 已過期",
+				"no_email": "Apple 驗證失敗：無法取得用戶信箱",
+				"login_failed": "Apple 登入失敗",
+				"not_configured": "Apple 登入尚未設定"
+			},
+			"email_not_verified": "此 OAuth 帳號的 email 尚未驗證，無法登入或合併既有帳號",
+			"account_banned": "此帳號已被停權，無法登入",
+			"passkey": {
+				"invalid": "通行密鑰驗證失敗，請重新操作一次"
+			}
+		},
+		"user": {
+			"not_found": "找不到此使用者",
+			"username": {
+				"taken": "使用者名稱已被使用"
+			},
+			"delete": {
+				"forbidden": "只能刪除自己的帳號"
+			},
+			"block": {
+				"self": "無法封鎖自己"
+			},
+			"follow": {
+				"blocked": "不能追蹤已封鎖的使用者，請先解除封鎖"
+			}
+		},
+		"vote": {
+			"not_found": "找不到投票",
+			"option": {
+				"not_found": "找不到投票選項",
+				"not_in_vote": "選項不屬於此投票"
+			},
+			"not_allowed": "投票尚未開始或已結束",
+			"ended": "投票已結束，無法再投票或撤回",
+			"results": {
+				"sealed": "投票結束前無法查看結果"
+			},
+			"voters": {
+				"hidden": "你沒有權限查看此投票的投票者"
+			},
+			"not_editable": "只能在投票開始前編輯",
+			"list": {
+				"sort_not_allowed": "已結束的投票固定依結束時間排序，不可指定 sort"
+			},
+			"search": {
+				"query_too_short": "搜尋字串至少需要 2 個字"
+			},
+			"multiple": {
+				"not_allowed": "此投票不允許複選"
+			},
+			"end_time": {
+				"past": "結束時間不可早於現在",
+				"before_start": "結束時間不可早於開始時間"
+			},
+			"forbidden": "只有投票建立者可執行此操作",
+			"delete": {
+				"window_passed": "投票發布超過 {0} 分鐘後，只有尚未開始的投票可以刪除"
+			},
+			"close": {
+				"public_not_allowed": "公開投票不可提早結束，會持續到截止時間",
+				"scheduled": "尚未開始的投票無法結束，請改為刪除"
+			},
+			"invitee": {
+				"not_invite_only": "只有僅限受邀者的投票可以設定受邀者",
+				"ids_invalid": "部分受邀使用者不存在或已停權",
+				"has_ballot": "已投票的受邀者無法移除"
+			},
+			"options": {
+				"min": "至少需要 {0} 個選項",
+				"max": "最多只能有 {0} 個選項"
+			},
+			"duration": {
+				"exceeded": "投票期間不可超過 {0} 天"
+			}
+		},
+		"comment": {
+			"not_found": "找不到留言",
+			"forbidden": "只能修改或刪除自己的留言",
+			"parent": {
+				"invalid": "要回覆的留言不存在或不屬於此投票"
+			}
+		},
+		"notification": {
+			"not_found": "找不到此通知"
+		},
+		"invite_list": {
+			"not_found": "找不到邀請名單",
+			"max_reached": "最多只能建立 {0} 份邀請名單",
+			"members": {
+				"max": "每份邀請名單最多 {0} 位成員"
+			},
+			"member": {
+				"ids_invalid": "部分使用者不存在或已停權"
+			}
+		},
+		"tag": {
+			"not_found": "找不到標籤",
+			"name": {
+				"exists": "標籤名稱已存在：{0}"
+			},
+			"slug": {
+				"exists": "標籤 slug 已存在：{0}"
+			},
+			"in_use": "標籤仍被投票使用，無法刪除",
+			"ids": {
+				"invalid": "部分標籤 ID 不存在"
+			}
+		},
+		"lookup": {
+			"not_found": "找不到字典資料",
+			"exists": "字典資料已存在：{0}/{1}"
+		},
+		"admin": {
+			"self_action_forbidden": "不能停權自己或移除自己的管理員角色",
+			"last_admin": "不能移除最後一位管理員"
+		}
+	},
+	"blocks": {
+		"title": "已封鎖的人",
+		"empty": "你尚未封鎖任何人。",
+		"loadFailed": "無法載入已封鎖的人。",
+		"unblock": "解除封鎖",
+		"unblocked": "已解除封鎖 @{username}",
+		"unblockFailed": "無法解除封鎖，請再試一次。",
+		"block": "封鎖",
+		"blocked": "已封鎖 @{username}",
+		"manage": "管理已封鎖的人",
+		"blockFailed": "無法封鎖，請再試一次。",
+		"confirmTitle": "要封鎖 @{username} 嗎？",
+		"confirmBody": "你將不再看到他們的投票與留言，對方也無法再開啟你建立的投票。對方不會收到通知。你可以在對方的個人頁面或設定中解除封鎖。",
+		"blockedBadge": "已封鎖",
+		"blockEllipsis": "封鎖…"
+	},
+	"follows": {
+		"title": "追蹤中的人",
+		"intro": "你追蹤的人所發起的進行中公開投票會顯示在「追蹤中」動態。你追蹤對方時，對方會收到通知；已登入的使用者也可在個人頁看到追蹤關係。",
+		"empty": "你尚未追蹤任何人。",
+		"loadFailed": "無法載入追蹤中的人。",
+		"unfollow": "取消追蹤",
+		"unfollowed": "已取消追蹤 @{username}",
+		"unfollowFailed": "無法取消追蹤，請再試一次。",
+		"follow": "追蹤",
+		"followed": "已追蹤 @{username}",
+		"manage": "管理追蹤中的人",
+		"followFailed": "無法追蹤，請再試一次。",
+		"notFound": "找不到要追蹤的使用者。",
+		"following": "追蹤中",
+		"listFailed": "無法載入名單。",
+		"listEmptyFollowers": "還沒有追蹤者。",
+		"listEmptyFollowing": "尚未追蹤任何人。",
+		"listEmptyMutuals": "你追蹤的人之中，還沒有人追蹤對方。",
+		"followBack": "追蹤對方",
+		"followsYou": "追蹤了你"
+	},
+	"settings": {
+		"voting": "投票",
+		"inviteListsBody": "可重複使用的名單，用於僅限受邀的投票。名單中的人不會收到通知。",
+		"inviteListCount": "{count} 份名單",
+		"theme": "主題",
+		"themeBody": "「自動」會跟隨系統設定。也可在側邊欄的「更多」選單中變更。",
+		"language": "語言",
+		"privacy": "隱私與安全",
+		"whatOthersSeeBody": "在「編輯個人資料」中逐項設定。",
+		"shownCount": "顯示 {shown}/{total} 項",
+		"account": "帳號",
+		"onThisPage": "本頁內容",
+		"appearanceAndLanguage": "外觀與語言",
+		"languageBody": "vomatt 上的按鈕、標題及其他文字。",
+		"languageTitle": "語言偏好",
+		"backToSettings": "返回設定",
+		"appLanguage": "介面語言",
+		"appLanguageBody": "以你偏好的語言顯示 vomatt 上的按鈕、標題及其他文字。",
+		"appLanguageNote": "投票與留言會保留撰寫時使用的語言。",
+		"legal": "法律資訊",
+		"terms": "服務條款",
+		"privacyPolicy": "隱私權政策",
+		"cookies": "Cookie 政策",
+		"notifyResultsIn": "結果出爐",
+		"notifyResultsInBody": "你參與或發起的投票結束時通知你。這是每張選票的承諾。",
+		"notifyInvitations": "邀請",
+		"notifyInvitationsBody": "有人邀請你參加僅限受邀的投票時。",
+		"notifyComments": "你的投票的留言",
+		"notifyCommentsBody": "有人在你發起的投票下發表看法時。",
+		"notifyClosingSoon": "即將結束",
+		"notifyClosingSoonBody": "你還沒投的投票結束前一天提醒你。",
+		"notifyOn": "已開啟「{name}」通知。",
+		"notifyOff": "已關閉「{name}」通知。",
+		"notificationsFailed": "無法載入你的通知設定。"
+	},
+	"passkey": {
+		"title": "通行密鑰",
+		"body": "改用 Face ID、Touch ID 或裝置密碼登入，不必再收驗證碼。",
+		"add": "新增通行密鑰",
+		"added": "已新增通行密鑰",
+		"alreadyAdded": "這部裝置已經有你帳號的通行密鑰。",
+		"addFailed": "無法新增通行密鑰，請再試一次。",
+		"unnamed": "通行密鑰",
+		"created": "新增於 {date}",
+		"lastUsed": "上次使用 {date}",
+		"neverUsed": "尚未使用",
+		"empty": "還沒有通行密鑰。",
+		"loadFailed": "無法載入你的通行密鑰。",
+		"delete": "移除",
+		"deleteLabel": "移除 {name}",
+		"deleteConfirmTitle": "要移除這個通行密鑰嗎？",
+		"deleteConfirmBody": "移除後就不能再用 {name} 登入。裝置上的通行密鑰要到裝置設定中另外刪除。",
+		"deleted": "已移除通行密鑰",
+		"deleteFailed": "無法移除通行密鑰，請再試一次。"
 	}
 }

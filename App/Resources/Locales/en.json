@@ -1,6 +1,8 @@
 {
 	"common": {
-		"home": "home",
+		"back": "Back",
+		"busy": "Another change is in progress. Try again in a moment.",
+		"home": "Home",
 		"createPoll": "Create a poll",
 		"myPolls": "My Polls",
 		"explore": "Explore",
@@ -8,7 +10,8 @@
 		"login": "login",
 		"email": "Email",
 		"welcome": "Welcome",
-		"loading": "Loading...",
+		"loading": "Loading",
+		"signingIn": "Signing you in",
 		"error": "Something went wrong",
 		"cancel": "Cancel",
 		"close": "Close",
@@ -23,13 +26,35 @@
 		"comments": "comments",
 		"active": "Active",
 		"ended": "Ended",
-		"invalidEmailAddress": "Invalid email address"
+		"invalidEmailAddress": "Invalid email address",
+		"errorBody": "Please try again. If it keeps happening, come back in a few minutes.",
+		"tryAgain": "Try again",
+		"notFoundTitle": "Page not found",
+		"notFoundBody": "We couldn’t find what you were looking for.",
+		"goHome": "Go home",
+		"skipToContent": "Skip to content"
 	},
 	"navigation": {
 		"home": "Home",
 		"profile": "Profile",
 		"settings": "Settings",
-		"logout": "Logout"
+		"logout": "Logout",
+		"howCountsTitle": "How vomatt counts",
+		"howCountsBody": "One vote per person. Ballots stay sealed while a poll is open, so nobody votes with the crowd.",
+		"more": "More",
+		"appearance": "Appearance",
+		"themeLight": "Light",
+		"themeDark": "Dark",
+		"themeAuto": "Auto",
+		"reportProblem": "Report a problem"
+	},
+	"feedback": {
+		"title": "Report a problem",
+		"label": "Describe the problem",
+		"placeholder": "Please include as many details as possible…",
+		"submit": "Submit",
+		"sent": "Thanks. We got your report.",
+		"failed": "Couldn’t send your report. Try again."
 	},
 	"user": {
 		"profile": {
@@ -42,16 +67,20 @@
 	"loginPrompt": {
 		"title": "Log in or sign up for Vomatt",
 		"subtitle": "See what people are talking about and join the conversation.",
+		"pollNote": "Log in to open this poll.",
 		"ctaLabel": "Log in"
 	},
 	"login": {
 		"title": "Log in or sign up",
 		"brandHeadline": "Every voice, counted.",
 		"brandBody": "Ask a clear question, give everyone an equal say, and see the result when the poll closes.",
-		"subtitle": "Enter your email and we'll send you a code. New here? We'll create your account.",
+		"brandRuleSealed": "Ballots stay sealed until the poll closes.",
+		"brandRuleOneVote": "One person, one vote.",
+		"brandRuleResults": "Results go back to everyone who voted.",
+		"subtitle": "Enter your email and we’ll send you a code. New here? We’ll create your account.",
 		"sessionExpired": "Your session expired. Please log in again.",
 		"dialogDescription": "Log in or sign up with your email to continue",
-		"sessionRevoked": "For your security, you were signed out on all devices. Please sign in again."
+		"sessionRevoked": "For your security, you were signed out on this device. Please log in again."
 	},
 	"verificationCode": {
 		"title": "Check your email",
@@ -60,7 +89,8 @@
 		"codeSent": "A new code is on its way.",
 		"useAnotherEmail": "Use a different email",
 		"resendIn": "Resend code in {time}",
-		"inputLabel": "6-digit verification code"
+		"inputLabel": "6-digit verification code",
+		"resendReady": "You can send a new code now."
 	},
 	"myPolls": {
 		"title": "My Polls",
@@ -73,79 +103,205 @@
 		"actionEnd": "End Poll",
 		"draftContinue": "Continue",
 		"draftSavedAt": "Saved {date}",
-		"untitledDraft": "Untitled poll"
+		"draftNoEnd": "no end date yet",
+		"untitledDraft": "Untitled poll",
+		"youChose": "You chose",
+		"outcome": {
+			"won": "Your pick won",
+			"tied": "Tied for first",
+			"lost": "Outvoted"
+		},
+		"draftOptions": "{count} options",
+		"draftOptions_one": "{count} option",
+		"draftMore": "More for {title}"
 	},
 	"explore": {
 		"title": "Explore",
 		"searchPlaceholder": "Search poll titles and descriptions…",
+		"searchLabel": "Search",
 		"filterActive": "Open",
 		"filterEnded": "Ended",
 		"sortNewest": "Newest",
 		"noResults": "No polls found.",
-		"topics": "Browse by topic",
+		"noResultsHint": "Try other words, or switch to Ended polls.",
+		"noResultsHintEnded": "Try other words, or switch to Open polls.",
 		"status": "Status",
 		"sort": "Sort",
 		"sortEnding": "Ending soon",
 		"searchTooShort": "Type at least 2 characters to search.",
-		"loadFailed": "Couldn't load polls.",
+		"loadFailed": "Couldn’t load polls.",
 		"sortTop": "Most voted"
 	},
 	"pollDetail": {
 		"backToFeed": "Back",
+		"about": "About this poll",
 		"share": "Share",
 		"notFound": "Poll not found.",
-		"askedBy": "Asked by",
-		"opened": "Opened {date}",
+		"notFoundBody": "It may have been deleted, or the link is wrong.",
+		"notFoundExplore": "Explore polls",
+		"opened": "Opened",
+		"opens": "Opens",
+		"results": "Results",
 		"timeline": "Voting window",
-		"revealsIn": "Results reveal {distance}",
 		"resultsIn": "Voting has closed. Results are in.",
 		"noEnd": "No end time set",
-		"participants": "people voted",
 		"topics": "Topics",
 		"sealedExplainer": "Votes stay sealed until the poll ends, so no one is swayed by the running count. You can change or withdraw your vote until then.",
-		"shareCta": "Invite others to vote",
+		"ruleSealed": "Ballots are sealed. Counts are revealed only when the poll ends.",
+		"ruleOneVote": "One vote per person. You can change it until the end.",
 		"endedEarly": "Ended early. It was set to close {date}.",
-		"invited": "{count} invited",
-		"audience": {
-			"unlisted": "Only people with the link can find it. It isn't listed in the feed or search.",
-			"invite-only": "Only the people invited can see it and vote."
-		}
+		"moreFrom": "More from @{username}",
+		"ended": "ended"
 	},
 	"profile": {
-		"notFoundTitle": "This profile doesn't exist",
+		"notFoundTitle": "This profile doesn’t exist",
 		"notFoundBody": "No one uses this username. It may have changed, or the account was deleted.",
-		"pageNotFoundTitle": "This page doesn't exist",
+		"pageNotFoundTitle": "This page doesn’t exist",
 		"pageNotFoundBody": "The link may be broken, or the page was removed.",
 		"notFoundExplore": "Explore polls",
 		"notFoundHome": "Go home",
 		"polls": "Polls",
 		"noPollsYet": "No polls yet.",
-		"stats": "Numbers",
+		"noPollsYetOwn": "Your polls show up here once they open.",
+		"pollsLoadFailed": "Couldn’t load polls.",
 		"points": "{count} points",
-		"cardFailed": "Couldn't load this profile.",
+		"points_one": "{count} point",
+		"cardFailed": "Couldn’t load this profile.",
 		"joined": "Joined {date}",
 		"membership": "{level} member",
 		"followers": "Followers",
 		"following": "Following",
-		"editProfile": "Edit Profile",
+		"noFollowers": "No followers yet.",
+		"noFollowing": "Not following anyone yet.",
+		"listFailed": "Couldn’t load this list.",
+		"onlyYou": "Only you can see this",
+		"onlyYouSee": "Only you see: {items}.",
+		"onlyYouSettings": "Change in Settings",
+		"statVoted": "Public polls voted in",
+		"statCreated": "Public polls created",
+		"statTurnout": "Votes received",
+		"editProfile": "Edit profile",
 		"bio": "Bio",
 		"joinedAt": "Joined",
 		"totalVotes": "Votes",
-		"displayName": "Display Name",
-		"saveChanges": "Save Changes"
+		"displayName": "Display name",
+		"saveChanges": "Save changes",
+		"displayNamePlaceholder": "Your display name",
+		"bioPlaceholder": "Tell people about yourself",
+		"firstName": "First name",
+		"lastName": "Last name",
+		"birthday": "Birthday",
+		"birthdayInvalid": "Pick a date between 1900 and yesterday.",
+		"updated": "Profile updated",
+		"askedCount": "{count} asked",
+		"askedCount_one": "{count} asked",
+		"followersCount": "{count} followers",
+		"followersCount_one": "{count} follower",
+		"followingCount": "{count} following",
+		"followingCount_one": "{count} following",
+		"wonBy": "{option} won",
+		"tieBetween": "Tie between {options}",
+		"endsAt": "ends {date}",
+		"resultsAt": "results {date}",
+		"new": "new",
+		"recordAsked": "polls asked",
+		"recordVoted": "polls voted in",
+		"recordReached": "people reached",
+		"recordPicksWon": "picks that won",
+		"recordAskedCount": "{count} polls asked",
+		"recordAskedCount_one": "{count} poll asked",
+		"recordVotedCount": "{count} polls voted in",
+		"recordVotedCount_one": "{count} poll voted in",
+		"tabAsked": "Asked",
+		"tabVoted": "Voted",
+		"askedUnread": "Results are in on your polls",
+		"filterLabel": "Show",
+		"filterAll": "All",
+		"filterOpen": "Open",
+		"filterSealed": "Sealed",
+		"filterDecided": "Decided",
+		"sectionOpen": "Open now",
+		"sectionSealed": "Sealed, waiting for results",
+		"onlyYouSeeThese": "only you see these",
+		"noDrafts": "No drafts. Save one from the poll creator.",
+		"noVotesYet": "Polls you vote in show up here, with what you chose. Only you see this list.",
+		"showMore": "Show more",
+		"everyoneSees": "What everyone sees",
+		"openPublicPage": "Open your public page",
+		"askedNoteTitle": "Everyone sees your Asked list",
+		"askedNoteBody": "The polls you asked are public, as on any profile. Drafts, the ••• menu and the unread dots are yours alone.",
+		"votedNoteTitle": "Your ballots are yours",
+		"votedNoteBody": "Your profile never lists the polls you voted in or what you chose. The lock marks everything only you see.",
+		"previewNote": "This is how others see your profile.",
+		"previewBack": "Back to your profile",
+		"moreFor": "More for @{username}",
+		"followingNoteTitle": "What following does",
+		"followingNoteBody": "Their polls join your Following feed. It never shows them how you voted, and you can undo it with one tap.",
+		"mutualsOne": "Followed by @{name}",
+		"mutualsTwo": "Followed by @{name} and @{other}",
+		"mutualsMore": "Followed by @{name} and {count} others you follow",
+		"mutualsMore_one": "Followed by @{name} and {count} other you follow",
+		"mutualFollowers": "Followers you know",
+		"allFollowers": "All {count} followers",
+		"allFollowers_one": "All {count} follower",
+		"editIntro": "Each detail says who sees it. Change it right where you type.",
+		"groupOnProfile": "On your profile",
+		"groupAboutYou": "About you",
+		"alwaysShown": "Always shown",
+		"realName": "Real name",
+		"onlyYouShort": "Only you",
+		"everyone": "Everyone",
+		"visibilityPillEveryone": "{field}: everyone sees it. Change",
+		"visibilityPillOnlyYou": "{field}: only you see it. Change",
+		"visibilityPillEveryonePlural": "{field}: everyone sees them. Change",
+		"visibilityPillOnlyYouPlural": "{field}: only you see them. Change",
+		"notSet": "Not set",
+		"visibilitySavesHint": "Visibility changes save when you save.",
+		"visibilitySaveFailed": "Your details were saved, but who sees them wasn’t. Try again."
 	},
 	"notifications": {
 		"title": "Notifications",
 		"empty": "No notifications yet.",
+		"emptyHint": "Results of polls you asked or voted in show up here.",
 		"unread": "Unread",
-		"intro": "Invitations, and polls you created, voted in or were invited to that have ended.",
+		"intro": "Results, invitations, people who followed you, and comments on your polls.",
 		"markAllHint": "Opening a poll marks it read.",
-		"loadFailed": "Couldn't load notifications.",
+		"loadFailed": "Couldn’t load notifications.",
 		"ended": "Results are in",
 		"cancelled": "Cancelled",
-		"invitations": "Invitations",
-		"results": "Results",
-		"invitedBy": "{name} invited you"
+		"markAllRead": "Mark all read",
+		"caughtUp": "You’re all caught up.",
+		"day": {
+			"today": "Today",
+			"yesterday": "Yesterday",
+			"earlier": "Earlier"
+		},
+		"invitedYou": "{name} invited you",
+		"inviteOnly": "Invite only",
+		"view": "View",
+		"cancelledBy": "{title} was cancelled by {name}",
+		"railTitle": "Opening a poll marks it read",
+		"railBody": "Results rows stay until you open them, so a sealed promise is never lost in the list.",
+		"markAllFailed": "Couldn’t mark notifications read. Try again.",
+		"followedYou": "{name} followed you",
+		"followedYouGroup": "{name} and {count} others followed you",
+		"followedYouGroup_one": "{name} and {count} other followed you",
+		"seeFollowers": "See followers",
+		"commented": "{name} made the case under {title}",
+		"excerpt": "“{text}”",
+		"endsIn": "{title} ends in {duration}",
+		"notVoted": "You haven’t voted",
+		"votedSoFar": "{count} voted so far",
+		"settingsTitle": "Notification settings",
+		"kindName": {
+			"resultsIn": "results",
+			"invitations": "invitations",
+			"comments": "comments",
+			"closingSoon": "closing soon"
+		},
+		"summaryOn": "{kinds} on",
+		"summaryOff": "{kinds} off",
+		"summarySeparator": ", "
 	},
 	"pollCreator": {
 		"title": "New poll",
@@ -165,21 +321,24 @@
 		"opensLabel": "Opens",
 		"opensHint": "Leave empty to open now.",
 		"endsLabel": "Ends and reveals results",
+		"endsAtLabel": "Ends",
 		"preset1h": "1 hour",
 		"preset24h": "24 hours",
 		"preset3d": "3 days",
 		"preset1w": "1 week",
+		"presetCustom": "Custom",
 		"visibilityLabel": "After it ends, who can see what each person chose?",
 		"visibility": {
 			"nobody": "Nobody",
 			"nobodyHint": "Only totals are shown.",
 			"owner": "Only me",
 			"ownerHint": "You see who chose each option.",
-			"signed-in": "Anyone signed in",
+			"signed-in": "Everyone signed in",
 			"signed-inHint": "Every signed-in user sees who chose what.",
-			"invited": "Everyone invited"
+			"invited": "Everyone invited",
+			"invitedHint": "Everyone invited sees who chose what."
 		},
-		"visibilityNote": "You can't change this once the poll opens. Voters see it before they vote.",
+		"visibilityNote": "Voters see it before they vote.",
 		"publish": "Publish poll",
 		"saveChanges": "Save changes",
 		"draftSaved": "Draft saved",
@@ -189,23 +348,21 @@
 			"titleRequired": "Ask a question.",
 			"titleTooLong": "Keep the question to 200 characters.",
 			"optionRequired": "Fill in every option.",
+			"optionDuplicate": "Each option must be different.",
 			"endRequired": "Choose when the poll ends.",
 			"endBeforeStart": "The end must be after the poll opens.",
-			"inviteesRequired": "Invite at least one person or group."
+			"inviteesRequired": "Invite at least one person or invite list."
 		},
 		"discardEditTitle": "Discard your changes?",
-		"discardEditBody": "Your edits to this poll won't be saved.",
+		"discardEditBody": "Your edits to this poll won’t be saved.",
 		"keepEditing": "Keep editing",
 		"discardEdit": "Discard",
+		"keepDraftTitle": "Keep this poll as a draft?",
+		"keepDraftBody": "You can finish it later from Drafts in My Polls.",
+		"keepDraft": "Keep draft",
 		"addContext": "Add context (optional)",
-		"optionsHint": "Press Return to add the next option.",
+		"optionsHint": "Press Enter for the next option.",
 		"settingsTitle": "Timing & privacy",
-		"settingsChange": "Change",
-		"settingsDone": "Done",
-		"summaryOpensNow": "Opens now, closes {end}",
-		"summaryOpensLater": "Opens {start}, closes {end}",
-		"summaryNoEnd": "Choose when it closes",
-		"summaryVisibility": "After it ends: {level}",
 		"review": "Review",
 		"reviewTitle": "Review your poll",
 		"reviewPreview": "How voters will see it",
@@ -216,15 +373,20 @@
 			"signed-in": "Anyone signed in will see who chose what once it ends.",
 			"invited": "Everyone invited will see who chose what once it ends."
 		},
-		"ruleFixed": "You can't change this after it opens.",
+		"ruleFixed": "You can’t change this after it opens.",
 		"ruleOneVote": "One vote per person. Voters can change or withdraw it until the poll closes.",
 		"audienceLabel": "Who can see and vote?",
+		"audienceOption": {
+			"public": "Everyone",
+			"unlisted": "Unlisted",
+			"invite-only": "Invite only"
+		},
 		"audienceHint": {
 			"public": "Listed in the feed, Explore and search. Anyone can vote.",
 			"unlisted": "Not listed anywhere. Anyone with the link can vote.",
 			"invite-only": "Only the people you invite can see it and vote."
 		},
-		"audienceNote": "You can't change this once the poll opens.",
+		"audienceNote": "You can’t change this once the poll opens.",
 		"inviteesLabel": "Invite people",
 		"inviteesHint": "People you add get an invitation. Emails without an account get access once they sign up with that address.",
 		"inviteesManaged": "Add or remove people with Invitees on the poll.",
@@ -235,47 +397,81 @@
 		}
 	},
 	"homePage": {
-		"feedListNoData": "Start the poll, lead the crowd.",
+		"feedListNoData": "No polls yet. Start the first one.",
 		"allTopics": "For you",
+		"following": "Following",
+		"followingEmpty": "Nothing from people you follow yet.",
+		"followingEmptyHint": "Open polls by people you follow show up here. Follow someone from their profile.",
+		"followingEmptyCta": "Explore polls",
 		"topics": "Topics",
-		"feedFailed": "Couldn't load polls right now.",
+		"feedFailed": "Couldn’t load polls right now.",
 		"topicEmpty": "No polls on this topic yet.",
 		"createFirst": "Create the first poll",
-		"joinToCreate": "Join to start a poll"
+		"joinToCreate": "Join to start a poll",
+		"resultsIn": "Results are in",
+		"resultsTie": "Tie",
+		"closingSoon": "Closing soon",
+		"askTitle": "Got a question for everyone?",
+		"askBody": "A poll takes a minute to write and seals itself the moment it opens.",
+		"askCta": "Write one"
 	},
 	"poll": {
+		"invitation": {
+			"title": "{username} invited you to a poll",
+			"signIn": "Log in with the email address the invitation was sent to.",
+			"wrongAccount": "This account can’t open it. Log in with the email address the invitation was sent to.",
+			"switchAccount": "Switch account"
+		},
 		"vote": "Vote",
 		"updateVote": "Update vote",
+		"updatingHint": "Replaces your vote for {option}. Still sealed until the poll ends.",
 		"withdrawVote": "Withdraw vote",
-		"withdrawConfirm": "Withdraw your vote? You won't be counted or notified.",
+		"withdrawTitle": "Withdraw your vote?",
+		"withdrawBody": "You won’t be counted or notified.",
 		"withdraw": "Withdraw",
 		"keep": "Keep",
-		"yourVote": "Your vote",
 		"yourVoteShort": "your vote",
+		"yourVoteCaption": "“{option}” was your vote.",
 		"revealHint": "Results are revealed when the poll ends",
-		"sealed": "Results are sealed until {date}. We'll notify you when they're in.",
+		"sealed": "Results are sealed until {date}. We’ll notify you when they’re in.",
+		"sealedNoEnd": "Results are sealed until the poll ends. We’ll notify you when they’re in.",
+		"sealedTitle": "Sealed. Thank you.",
 		"opensHint": "Voting opens {distance}",
 		"voted": "{count} voted",
+		"votedPill": "Voted",
 		"comments": "{count} comments",
 		"comment": "1 comment",
 		"share": "Share",
 		"linkCopied": "Link copied",
 		"justEnded": "This poll just ended.",
 		"voteCast": "Vote cast.",
-		"voteFailed": "Couldn't save your vote. Try again.",
-		"withdrawFailed": "Couldn't withdraw your vote. Try again.",
-		"tooManyVotes": "You're voting too fast. Wait a minute and try again.",
+		"voteFailed": "Couldn’t save your vote. Try again.",
+		"withdrawFailed": "Couldn’t withdraw your vote. Try again.",
+		"tooManyVotes": "You’re voting too fast. Wait a minute and try again.",
 		"anonymousToggle": "Hide my name from voter lists",
-		"resultsFailed": "Couldn't load the results.",
-		"won": "{option} won. Support is the share of {count} participants",
+		"anonymousHidden": "You’re counted, but left out of the voter list.",
+		"nameListed": "Your name shows in the voter list",
+		"nameHidden": "Your name is hidden from the voter list",
+		"hideMyName": "Hide my name",
+		"showMyName": "Show my name",
+		"resultsFailed": "Couldn’t load the results.",
+		"won": "“{option}” won. {count} people decided this.",
+		"won_one": "“{option}” won. {count} person decided this.",
 		"tie": "Tie between {options}",
 		"and": " and ",
 		"noVotes": "No votes were cast",
+		"elected": "Elected",
 		"chipOpens": "Opens {date}",
 		"chipEnds": "Ends {date}",
-		"chipEndsIn": "Ends {distance}",
-		"chipEnded": "Ended {date}",
-		"chipEndedShort": "Ended",
+		"chipEndsIn": "Ends in {duration}",
+		"chipEnded": "Ended {day}",
+		"endsIn": "ends in {duration}",
+		"status": {
+			"scheduled": "Soon",
+			"open": "Open",
+			"closing": "Closing",
+			"ended": "Ended"
+		},
 		"visibility": {
 			"nobody": "After it ends, no one can see what you chose.",
 			"owner": "After it ends, only the poll owner can see what you chose.",
@@ -284,36 +480,44 @@
 		},
 		"edit": "Edit",
 		"keepPoll": "Keep poll",
-		"stamp": "Voted",
 		"discuss": "Discuss",
 		"votersHint": "Select an option to see who chose it",
 		"voters": "Who voted",
 		"votersHidden": "The voter list for this poll is hidden, to keep anonymous votes anonymous or because of its visibility setting.",
 		"votersTruncated": "Only the first {count} voters can be listed here.",
 		"votersNone": "No one to show.",
-		"votersFailed": "Couldn't load who voted.",
+		"votersChoicesHidden": "This poll has anonymous votes, so choices are hidden. Showing everyone who took part.",
+		"votersFailed": "Couldn’t load who voted.",
 		"deletePoll": "Delete poll",
 		"deletePollTitle": "Delete this poll?",
-		"deletePollBody": "It's removed for everyone, with its votes and comments. No one is notified.",
+		"deletePollBody": "It’s removed for everyone, with its votes and comments. No one is notified.",
 		"deleted": "Poll deleted.",
-		"deleteFailed": "Couldn't delete the poll. Try again.",
+		"deleteFailed": "Couldn’t delete the poll. Try again.",
 		"endNow": "End now",
 		"endNowTitle": "End this poll now?",
-		"endNowBody": "Voting stops and the results are revealed. This can't be undone.",
-		"endFailed": "Couldn't end the poll. Try again.",
+		"endNowBody": "Voting stops and the results are revealed. This can’t be undone.",
+		"endFailed": "Couldn’t end the poll. Try again.",
 		"audience": {
 			"public": "Public",
 			"unlisted": "Unlisted",
 			"invite-only": "Invite only"
-		}
+		},
+		"audienceMeta": {
+			"unlisted": "unlisted",
+			"invite-only": "invite only"
+		},
+		"moreActions": "More actions for {title}",
+		"endNowEllipsis": "End poll now…",
+		"deletePollEllipsis": "Delete poll…"
 	},
 	"auth": {
-		"continueWithEmail": "Continue with email"
+		"continueWithEmail": "Continue with email",
+		"continueWithPasskey": "Continue with a passkey"
 	},
 	"authError": {
 		"invalidCode": "That code is not right. Check the email and try again.",
 		"codeExpired": "This code has expired. Request a new one.",
-		"tooManyAttempts": "Too many wrong attempts. Try again in 15 minutes.",
+		"tooManyAttempts": "Too many wrong attempts. Wait a few minutes, then try again.",
 		"resendCooldown": "A code was sent recently. Please wait before requesting another.",
 		"emailSendFailed": "We could not send the email. Check the address and try again.",
 		"accountSuspended": "This account has been suspended.",
@@ -333,55 +537,72 @@
 	"comments": {
 		"title": "Discussion",
 		"placeholder": "Why did you vote the way you did?",
+		"addComment": "Add a comment",
 		"post": "Post",
 		"you": "You",
 		"empty": "No comments yet. Make the case for your choice.",
-		"loadFailed": "Couldn't load comments.",
+		"loadFailed": "Couldn’t load comments.",
 		"retry": "Try again",
 		"loadMore": "Show older comments",
 		"edited": "edited",
 		"edit": "Edit",
 		"like": "Like",
 		"deleteConfirm": "Delete this comment?",
-		"postFailed": "Couldn't post your comment. Try again.",
-		"editFailed": "Couldn't save your edit.",
-		"deleteFailed": "Couldn't delete the comment.",
+		"postFailed": "Couldn’t post your comment. Try again.",
+		"editFailed": "Couldn’t save your edit.",
+		"deleteFailed": "Couldn’t delete the comment.",
 		"reply": "Reply",
 		"replyPlaceholder": "Write a reply…",
 		"viewReply": "View 1 reply",
 		"viewReplies": "View {count} replies",
-		"moreReplies": "Show more replies",
-		"deleted": "This comment was deleted."
+		"moreReply": "View 1 more reply",
+		"moreReplies": "View {count} more replies",
+		"deleted": "This comment was deleted.",
+		"replying": "Replying",
+		"replyingTo": "Replying to",
+		"cancelReply": "Cancel reply",
+		"editing": "Editing",
+		"more": "More",
+		"copyText": "Copy text",
+		"copyLink": "Copy link",
+		"textCopied": "Text copied",
+		"linkCopied": "Link copied",
+		"copyFailed": "Couldn’t copy.",
+		"deleteBody": "This can’t be undone.",
+		"deleteBodyReply": "Its reply stays in the discussion under a deleted placeholder. This can’t be undone.",
+		"deleteBodyReplies": "Its {count} replies stay in the discussion under a deleted placeholder. This can’t be undone.",
+		"report": "Report",
+		"reportTitle": "Report this comment",
+		"reportBody": "A moderator will look at it. The author won’t be told.",
+		"reportReasonLabel": "What’s wrong with it?",
+		"reportReason": {
+			"spam": "Spam",
+			"harassment": "Harassment or bullying",
+			"hate": "Hate speech",
+			"misinformation": "False information",
+			"other": "Something else"
+		},
+		"reportNote": "Add a note (optional)",
+		"reportDone": "Thanks. We’ll review it.",
+		"reportFailed": "Couldn’t send the report. Try again."
 	},
 	"account": {
 		"usernameLabel": "Username",
 		"usernameHint": "Your profile lives at {path}. Old links stop working after a change.",
 		"usernameInvalid": "Usernames are 3–50 lowercase letters, numbers or underscores.",
-		"stats": "Your numbers",
-		"votesCast": "Votes cast",
-		"pollsCreated": "Polls created",
-		"peopleReached": "People reached",
-		"majorityRate": "With the majority",
-		"majorityNone": "n/a",
-		"majorityHint": "How often your pick won or tied, among decided polls you voted in",
-		"tabActivity": "Your votes",
-		"tabPolls": "Your polls",
-		"tabSettings": "Settings",
-		"noVotes": "You haven't voted on any recent polls yet.",
-		"findPolls": "Find a poll",
-		"youChose": "You chose",
-		"noPolls": "You haven't started a poll yet.",
-		"outcome": {
-			"pending": "Results pending",
-			"won": "Your pick won",
-			"tied": "Tied for first",
-			"lost": "Outvoted",
-			"unknown": "Ended"
-		},
-		"privacyTitle": "What others can see",
+		"usernameReserved": "{username} is reserved. Choose another username.",
+		"usernameConfirmTitle": "Change your username?",
+		"usernameConfirmBody": "Your profile moves to {newPath}. Links to {oldPath} stop working, including ones you’ve shared.",
+		"usernameConfirmCta": "Change username",
+		"turnout_one": "{count} vote on your polls",
+		"privacyTitle": "What others see",
 		"privacyBody": "Choose which profile details appear on your public profile.",
 		"anonymousDefault": "Vote anonymously by default",
-		"anonymousDefaultBody": "Leaves your name out of voter lists. You can change it on each vote, and it doesn't touch votes you've already cast.",
+		"anonymousDefaultBody": "Leaves your name out of voter lists. You can change it on each vote, and it doesn’t touch votes you’ve already cast.",
+		"fieldVisible": "{field} is now visible to others.",
+		"fieldHidden": "{field} is now hidden from others.",
+		"anonymousDefaultOn": "New votes are anonymous by default.",
+		"anonymousDefaultOff": "New votes show your name by default.",
 		"field": {
 			"displayName": "Display name",
 			"bio": "Bio",
@@ -389,20 +610,28 @@
 			"points": "Points",
 			"membershipLevel": "Membership level"
 		},
-		"saveFailed": "Couldn't save. Try again.",
+		"saveFailed": "Couldn’t save. Try again.",
+		"exportTitle": "Download your data",
+		"exportBody": "A JSON file with your profile, polls, comments and votes. Available once a day.",
+		"exportCta": "Download",
+		"exportFailed": "Couldn’t export your data. Try again.",
 		"signOutTitle": "Signed in as",
 		"signOut": "Log out",
 		"deleteTitle": "Delete account",
 		"deleteBody": "Removes your account and signs you out everywhere. This cannot be undone.",
 		"deleteCta": "Delete account",
+		"deleteFailed": "Couldn’t delete your account. It’s still active; try again.",
 		"deleteConfirmTitle": "Delete your account?",
 		"deleteConfirmBody": "Type {username} to confirm. Your account will be removed permanently.",
 		"deleteConfirmLabel": "Type your username to confirm",
-		"tabGroups": "Groups"
+		"deleteConfirmMismatch": "Type {username} to delete your account.",
+		"deleteLastAdmin": "You are the only active admin. Make someone else an admin before deleting your account.",
+		"tabGroups": "Invite lists",
+		"deleteCtaEllipsis": "Delete account…"
 	},
 	"cookieConsent": {
 		"label": "Cookie consent",
-		"message": "We'd like to use analytics cookies to understand how vomatt is used. Sign-in and language cookies are always on.",
+		"message": "We’d like to use analytics cookies to understand how vomatt is used. Sign-in and language cookies are always on.",
 		"policy": "Cookies Policy",
 		"accept": "Accept analytics",
 		"decline": "Decline",
@@ -411,44 +640,46 @@
 	"invitees": {
 		"title": "Invitees",
 		"description": "People who can see this poll and vote.",
-		"summary": "{count} invited · {voted} voted",
+		"summary": "{count} invited, {voted} voted",
 		"placeholder": "Username or email",
 		"inviteEmail": "Invite {email}",
 		"suggestions": "Matching people",
 		"noUsers": "No one with that username.",
-		"searchFailed": "Couldn't search. Try again.",
+		"searchFailed": "Couldn’t search. Try again.",
 		"picked": "Invited",
 		"remove": "Remove {name}",
-		"groups": "Your groups",
-		"groupPill": "{name} · {count}",
+		"groups": "Your invite lists",
+		"groupPill": "{name}, {count} members",
 		"voted": "Voted",
 		"empty": "No one is invited yet.",
-		"loadFailed": "Couldn't load the invitees.",
+		"loadFailed": "Couldn’t load the invitees.",
 		"addLabel": "Invite more people",
 		"add": "Invite",
-		"addFailed": "Couldn't invite them. Try again.",
-		"removeFailed": "Couldn't remove them. Try again."
+		"addFailed": "Couldn’t invite them. Try again.",
+		"removeFailed": "Couldn’t remove them. Try again."
 	},
 	"groups": {
-		"title": "Groups",
-		"intro": "Reusable lists of people to invite to Invite-only polls. Only you can see them, and nobody is told they're in one.",
-		"nameLabel": "Group name",
+		"title": "Invite Lists",
+		"intro": "Reusable lists of people to invite to Invite-only polls. Only you can see them, and nobody is told they’re in one.",
+		"nameLabel": "Invite list name",
+		"nameRequired": "Name the invite list first.",
+		"addRequired": "Pick at least one person to add.",
 		"namePlaceholder": "e.g. Book club",
-		"create": "New group",
-		"empty": "No groups yet.",
-		"loadFailed": "Couldn't load your groups.",
+		"create": "New invite list",
+		"empty": "No invite lists yet.",
+		"loadFailed": "Couldn’t load your invite lists.",
 		"memberCount": "{count} members",
-		"dialogIntro": "Inviting a group invites its members at that moment. Later changes don't affect polls already sent.",
+		"memberCount_one": "{count} member",
+		"dialogIntro": "Inviting a list invites its members as they are right now. Later changes don’t affect polls already sent.",
 		"rename": "Rename",
 		"members": "Members",
 		"noMembers": "No members yet.",
-		"membersFailed": "Couldn't load the members.",
+		"membersFailed": "Couldn’t load the members.",
 		"addLabel": "Add people",
 		"add": "Add",
-		"delete": "Delete group",
-		"deleteConfirm": "Delete this group? Polls you invited it to keep their invitees.",
-		"saveFailed": "Couldn't save. Try again.",
-		"memberCountOne": "1 member"
+		"delete": "Delete invite list",
+		"deleteConfirm": "Delete this invite list? Polls you invited it to keep their invitees.",
+		"saveFailed": "Couldn’t save. Try again."
 	},
 	"avatar": {
 		"title": "Avatar",
@@ -459,10 +690,15 @@
 		"savedToast": "Avatar updated",
 		"choose": "Choose {name}",
 		"families": {
+			"plain": "No character",
 			"bites": "Taiwan bites",
 			"guardians": "Temple guardians",
 			"visitors": "Visitors",
 			"animals": "Island animals"
+		},
+		"none": {
+			"name": "Account icon",
+			"trait": "Just you, no character"
 		},
 		"bots": {
 			"boba": {
@@ -658,5 +894,279 @@
 				"trait": "Taiwan dog, curly tail"
 			}
 		}
+	},
+	"apiError": {
+		"common": {
+			"bad_request": "Bad request format",
+			"internal_error": "Internal server error, please try again later",
+			"service_unavailable": "Service temporarily unavailable, please try again later",
+			"unauthorized": "Unauthorized request",
+			"forbidden": "You do not have permission to perform this action",
+			"rate_limited": "Too many requests, please try again later",
+			"conflict": "Resource conflict, please try again",
+			"validation_failed": "Validation failed",
+			"missing_param": "Missing required parameter: {0}",
+			"type_mismatch": "Invalid parameter format: {0}",
+			"invalid_status": "Invalid status: {0}",
+			"invalid_sort": "Invalid sort: {0}",
+			"cursor_invalid": "Invalid pagination cursor"
+		},
+		"auth": {
+			"token": {
+				"invalid": "Invalid token",
+				"expired": "Session expired, please log in again"
+			},
+			"invalid_otp": "Invalid verification code",
+			"otp": {
+				"invalid_or_expired": "Verification code is invalid or has expired",
+				"too_many_attempts": "Too many attempts, please try again later",
+				"resend_cooldown": "Please wait {0} seconds before resending",
+				"daily_limit": "Too many codes requested today, please try again tomorrow"
+			},
+			"admin": {
+				"forbidden": "This account does not have admin privileges"
+			},
+			"identifier": {
+				"required": "Please provide an email or phone number"
+			},
+			"email": {
+				"send_failed": "Email delivery failed: {0}"
+			},
+			"phone": {
+				"not_registered": "This phone number is not registered",
+				"invalid": "Invalid phone number. Use a Taiwan mobile number starting with 09 or a number with a country code (e.g. +886912345678)"
+			},
+			"sms": {
+				"send_failed": "SMS delivery failed: {0}"
+			},
+			"refresh_token": {
+				"invalid": "Refresh token is invalid or has expired"
+			},
+			"suspicious_login": "Security alert: this session was refreshed twice, so it has been signed out. Please log in again",
+			"google": {
+				"not_configured": "Google OAuth is not configured",
+				"no_email": "Google verification failed: unable to retrieve email",
+				"invalid_audience": "Google verification failed: incorrect audience"
+			},
+			"line": {
+				"not_configured": "LINE Login is not configured",
+				"token_exchange_failed": "LINE token exchange failed",
+				"profile_failed": "Failed to retrieve LINE profile"
+			},
+			"apple": {
+				"invalid_token": "Invalid Apple token format",
+				"key_not_found": "Apple verification failed: matching public key not found",
+				"invalid_signature": "Apple verification failed: invalid signature",
+				"invalid_issuer": "Apple verification failed: incorrect issuer",
+				"invalid_audience": "Apple verification failed: incorrect audience",
+				"token_expired": "Apple verification failed: token has expired",
+				"no_email": "Apple verification failed: unable to retrieve email",
+				"login_failed": "Apple login failed",
+				"not_configured": "Apple Sign In is not configured"
+			},
+			"email_not_verified": "This OAuth account’s email is not verified; cannot sign in or merge an existing account",
+			"account_banned": "This account has been banned and cannot sign in",
+			"passkey": {
+				"invalid": "Passkey verification failed. Please try again"
+			}
+		},
+		"user": {
+			"not_found": "User not found",
+			"username": {
+				"taken": "Username already taken"
+			},
+			"delete": {
+				"forbidden": "You can only delete your own account"
+			},
+			"block": {
+				"self": "You can’t block yourself"
+			},
+			"follow": {
+				"blocked": "You can’t follow a user you blocked; unblock them first"
+			}
+		},
+		"vote": {
+			"not_found": "Vote not found",
+			"option": {
+				"not_found": "Vote option not found",
+				"not_in_vote": "Option does not belong to this vote"
+			},
+			"not_allowed": "Voting period has ended or not started",
+			"ended": "This poll has ended; ballots can no longer be cast or retracted",
+			"results": {
+				"sealed": "Results are sealed until the poll ends"
+			},
+			"voters": {
+				"hidden": "You are not allowed to see who voted in this poll"
+			},
+			"not_editable": "A poll can only be edited before it opens",
+			"list": {
+				"sort_not_allowed": "Ended polls are always ordered by end time; sort is not allowed"
+			},
+			"search": {
+				"query_too_short": "Search query must be at least 2 characters"
+			},
+			"multiple": {
+				"not_allowed": "Multiple choices not allowed for this vote"
+			},
+			"end_time": {
+				"past": "End time cannot be in the past",
+				"before_start": "End time cannot be before start time"
+			},
+			"forbidden": "Only the vote creator can perform this action",
+			"delete": {
+				"window_passed": "A Poll can only be deleted while it is scheduled or within {0} minutes of posting"
+			},
+			"close": {
+				"public_not_allowed": "A Public Poll cannot be closed early; it runs until its deadline",
+				"scheduled": "A scheduled Poll cannot be closed; delete it instead"
+			},
+			"invitee": {
+				"not_invite_only": "Invitees can only be set on an Invite-only Poll",
+				"ids_invalid": "One or more invited users do not exist or are suspended",
+				"has_ballot": "An Invitee who holds a Ballot cannot be removed"
+			},
+			"options": {
+				"min": "Minimum {0} options required",
+				"max": "Maximum {0} options allowed"
+			},
+			"duration": {
+				"exceeded": "Vote duration cannot exceed {0} days"
+			}
+		},
+		"comment": {
+			"not_found": "Comment not found",
+			"forbidden": "You can only modify your own comments",
+			"parent": {
+				"invalid": "The comment being replied to does not exist in this poll"
+			}
+		},
+		"notification": {
+			"not_found": "Notification not found"
+		},
+		"invite_list": {
+			"not_found": "Invite List not found",
+			"max_reached": "You can keep at most {0} Invite Lists",
+			"members": {
+				"max": "An Invite List can hold at most {0} members"
+			},
+			"member": {
+				"ids_invalid": "One or more users do not exist or are suspended"
+			}
+		},
+		"tag": {
+			"not_found": "Tag not found",
+			"name": {
+				"exists": "Tag name already exists: {0}"
+			},
+			"slug": {
+				"exists": "Slug already exists: {0}"
+			},
+			"in_use": "Cannot delete tag that is referenced by votes",
+			"ids": {
+				"invalid": "Some tag IDs do not exist"
+			}
+		},
+		"lookup": {
+			"not_found": "Lookup not found",
+			"exists": "Dictionary item already exists: {0}/{1}"
+		},
+		"admin": {
+			"self_action_forbidden": "You cannot suspend yourself or remove your own admin role",
+			"last_admin": "Cannot remove the last active admin"
+		}
+	},
+	"blocks": {
+		"title": "Blocked people",
+		"empty": "You haven’t blocked anyone.",
+		"loadFailed": "Couldn’t load blocked people.",
+		"unblock": "Unblock",
+		"unblocked": "Unblocked @{username}",
+		"unblockFailed": "Couldn’t unblock. Try again.",
+		"block": "Block",
+		"blocked": "Blocked @{username}",
+		"manage": "Manage blocked people",
+		"blockFailed": "Couldn’t block. Try again.",
+		"confirmTitle": "Block @{username}?",
+		"confirmBody": "Their polls and comments will no longer show up for you, and your polls will no longer be reachable for them. They won’t be told. You can unblock them from their profile or in Settings.",
+		"blockedBadge": "Blocked",
+		"blockEllipsis": "Block…"
+	},
+	"follows": {
+		"title": "Following",
+		"intro": "Open public polls by people you follow appear in your Following feed. They get a notification when you follow them, and signed-in users can see who follows whom on profiles.",
+		"empty": "You aren’t following anyone.",
+		"loadFailed": "Couldn’t load followed users.",
+		"unfollow": "Unfollow",
+		"unfollowed": "Unfollowed @{username}",
+		"unfollowFailed": "Couldn’t unfollow. Try again.",
+		"follow": "Follow",
+		"followed": "Following @{username}",
+		"manage": "Manage who you follow",
+		"followFailed": "Couldn’t follow. Try again.",
+		"notFound": "Couldn’t find that user to follow.",
+		"following": "Following",
+		"listFailed": "Couldn’t load this list.",
+		"listEmptyFollowers": "No followers yet.",
+		"listEmptyFollowing": "Not following anyone yet.",
+		"listEmptyMutuals": "No one you follow follows them yet.",
+		"followBack": "Follow back",
+		"followsYou": "follows you"
+	},
+	"settings": {
+		"voting": "Voting",
+		"inviteListsBody": "Reusable lists for Invite-only polls. Nobody is told they’re in one.",
+		"inviteListCount": "{count} lists",
+		"inviteListCount_one": "{count} list",
+		"theme": "Theme",
+		"themeBody": "Auto follows your system. Also in the sidebar’s More menu.",
+		"language": "Language",
+		"privacy": "Privacy and safety",
+		"whatOthersSeeBody": "Set it beside each detail in Edit profile.",
+		"shownCount": "{shown} of {total} shown",
+		"account": "Account",
+		"onThisPage": "On this page",
+		"appearanceAndLanguage": "Appearance and language",
+		"languageBody": "Buttons, titles and other text on vomatt.",
+		"languageTitle": "Language preferences",
+		"backToSettings": "Back to Settings",
+		"appLanguage": "App language",
+		"appLanguageBody": "See buttons, titles and other text on vomatt in your preferred language.",
+		"appLanguageNote": "Polls and comments stay in the language they were written in.",
+		"legal": "Legal",
+		"terms": "Terms",
+		"privacyPolicy": "Privacy",
+		"cookies": "Cookies",
+		"notifyResultsIn": "Results are in",
+		"notifyResultsInBody": "When a poll you voted in or asked ends. This is the promise on every ballot.",
+		"notifyInvitations": "Invitations",
+		"notifyInvitationsBody": "When someone invites you to an Invite-only poll.",
+		"notifyComments": "Comments on your polls",
+		"notifyCommentsBody": "When someone makes their case under a poll you asked.",
+		"notifyClosingSoon": "Closing soon",
+		"notifyClosingSoonBody": "A nudge the day before a poll you haven’t voted in ends.",
+		"notifyOn": "{name} notifications on.",
+		"notifyOff": "{name} notifications off.",
+		"notificationsFailed": "Couldn’t load your notification settings."
+	},
+	"passkey": {
+		"title": "Passkeys",
+		"body": "Sign in with Face ID, Touch ID or your device PIN instead of a code.",
+		"add": "Add passkey",
+		"added": "Passkey added",
+		"alreadyAdded": "This device already has a passkey for your account.",
+		"addFailed": "Couldn't add the passkey. Please try again.",
+		"unnamed": "Passkey",
+		"created": "Added {date}",
+		"lastUsed": "last used {date}",
+		"neverUsed": "never used",
+		"empty": "No passkeys yet.",
+		"loadFailed": "Couldn’t load your passkeys.",
+		"delete": "Remove",
+		"deleteLabel": "Remove {name}",
+		"deleteConfirmTitle": "Remove this passkey?",
+		"deleteConfirmBody": "{name} will no longer sign you in. It stays on the device until you remove it there.",
+		"deleted": "Passkey removed",
+		"deleteFailed": "Couldn’t remove the passkey. Please try again."
 	}
 }

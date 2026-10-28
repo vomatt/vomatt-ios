@@ -56,17 +56,7 @@ struct StatusChip: View {
     }
 
     private var label: String? {
-        let t = app.t
-        switch status {
-        case .scheduled:
-            return t("poll.chipOpens", ["date": app.dates.pollDate(startTime)])
-        case .ended:
-            return endTime.map { t("poll.chipEnded", ["date": app.dates.pollDate($0)]) } ?? t("poll.chipEndedShort")
-        case .closing:
-            return endTime.map { t("poll.chipEndsIn", ["distance": app.dates.fromNow($0)]) }
-        case .open:
-            return endTime.map { t("poll.chipEnds", ["date": app.dates.pollDate($0)]) }
-        }
+        PollTiming(startTime: startTime, endTime: endTime, status: status, t: app.t, dates: app.dates).chip
     }
 }
 

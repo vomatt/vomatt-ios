@@ -286,7 +286,10 @@ private struct CommentItemView: View {
             return app.t(comment.replyCount == 1 ? "comments.viewReply" : "comments.viewReplies", ["count": comment.replyCount])
         }
         if list.status == .error { return app.t("comments.retry") }
-        if list.status == .ready, list.nextCursor != nil { return app.t("comments.moreReplies") }
+        if list.status == .ready, list.nextCursor != nil {
+            let more = max(1, comment.replyCount - list.items.count)
+            return app.t(more == 1 ? "comments.moreReply" : "comments.moreReplies", ["count": more])
+        }
         return nil
     }
 }

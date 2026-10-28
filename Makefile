@@ -19,7 +19,8 @@ project: ## Regenerate Vomatt.xcodeproj from project.yml
 open: project
 	open Vomatt.xcodeproj
 
-test-core: ## Domain, networking and API contract tests (fast, no simulator)
+test-core: ## Domain, networking and API contract tests, and the app's string keys (fast, no simulator)
+	python3 scripts/check-strings.py
 	cd Packages/VomattKit && swift test
 
 build: project ## Build the app for the simulator

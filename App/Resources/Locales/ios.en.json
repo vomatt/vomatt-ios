@@ -51,7 +51,13 @@
 		"invitedBy": "{name} invited you",
 		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",
 		"sealedTitle": "Sealed. Thank you.",
-		"sealedTurnout": "{count} voted, you included"
+		"sealedTurnout": "{count} voted, you included",
+		"firstName": "First name",
+		"lastName": "Last name",
+		"birthday": "Birthday",
+		"setBirthday": "Add birthday",
+		"birthdayHint": "Once set, a birthday can be changed but not removed.",
+		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
@@ -138,13 +144,53 @@
 		"tag.ids.invalid": "Some tag IDs do not exist",
 		"lookup.not_found": "Lookup not found",
 		"lookup.exists": "Dictionary item already exists: {0}/{1}",
-		"firstName": "First name",
-		"lastName": "Last name",
-		"birthday": "Birthday",
-		"setBirthday": "Add birthday",
-		"birthdayHint": "Once set, a birthday can be changed but not removed.",
 		"field.firstName": "First name",
-		"field.lastName": "Last name",
-		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"
+		"field.lastName": "Last name"
+	},
+	"account": {
+		"findPolls": "Find a poll",
+		"majorityNone": "n/a",
+		"majorityRate": "With the majority",
+		"noPolls": "You haven't started a poll yet.",
+		"noVotes": "You haven't voted on any recent polls yet.",
+		"peopleReached": "People reached",
+		"pollsCreated": "Polls created",
+		"stats": "Your numbers",
+		"tabActivity": "Your votes",
+		"tabPolls": "Your polls",
+		"tabSettings": "Settings",
+		"votesCast": "Votes cast",
+		"youChose": "You chose"
+	},
+	"explore": {
+		"topics": "Browse by topic"
+	},
+	"groups": {
+		"memberCountOne": "1 member"
+	},
+	"notifications": {
+		"invitations": "Invitations",
+		"invitedBy": "{name} invited you",
+		"results": "Results"
+	},
+	"poll": {
+		"stamp": "Voted",
+		"withdrawConfirm": "Withdraw your vote? You won't be counted or notified.",
+		"yourVote": "Your vote"
+	},
+	"pollCreator": {
+		"summaryNoEnd": "Choose when it closes",
+		"summaryOpensLater": "Opens {start}, closes {end}",
+		"summaryOpensNow": "Opens now, closes {end}",
+		"summaryVisibility": "After it ends: {level}"
+	},
+	"pollDetail": {
+		"askedBy": "Asked by",
+		"invited": "{count} invited",
+		"participants": "people voted",
+		"revealsIn": "Results reveal {distance}"
+	},
+	"profile": {
+		"stats": "Numbers"
 	}
 }

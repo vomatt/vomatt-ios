@@ -235,6 +235,15 @@ extension UserSummary {
             avatarUrl: dto.avatarUrl
         )
     }
+
+    init(_ dto: Schemas.FollowUserDto) throws {
+        self.init(
+            id: try required(dto.id, "FollowUserDto.id"),
+            username: try required(dto.username, "FollowUserDto.username"),
+            displayName: dto.displayName,
+            avatarUrl: dto.avatarUrl
+        )
+    }
 }
 
 extension PollOwner {

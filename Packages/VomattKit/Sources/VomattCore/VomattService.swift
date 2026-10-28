@@ -544,7 +544,7 @@ public final class VomattService: Sendable {
     /// Marks the Poll's current notification read. Idempotent; nothing to read is ignored.
     public func markNotificationRead(pollId: String) async {
         do {
-            _ = try await call { try await client.markRead(path: .init(voteId: pollId)).ok }
+            _ = try await call { try await client.markRead(path: .init(id: pollId)).ok }
         } catch let error as APIError where ["notification.not_found", "vote.not_found"].contains(error.errorCode) {
             return
         } catch {

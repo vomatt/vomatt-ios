@@ -71,6 +71,7 @@ sync_avatars() {
 		set="$AVATARS/bot-$kind.imageset"
 		mkdir -p "$set"
 		cp "$svg" "$set/$kind.svg"
+		python3 "$ROOT/scripts/svg_oklch.py" "$set/$kind.svg"
 		cat > "$set/Contents.json" <<-JSON
 		{
 		  "images" : [ { "filename" : "$kind.svg", "idiom" : "universal" } ],
@@ -92,7 +93,7 @@ check() {
 	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$WEB_DIR/api-docs.json")"
 	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from the web:"; echo "$diff"; status=1; }
 	local web_avatars ios_avatars
-	web_avatars="$(ls "$WEB_DIR/public/avatars" | sed 's/\.svg$//' | sort)"
+	web_avatars="$(cd "$WEB_DIR/public/avatars" && ls *.svg | sed 's/\.svg$//' | sort)"
 	ios_avatars="$(ls "$AVATARS" | grep imageset | sed 's/^bot-//; s/\.imageset$//' | sort)"
 	[[ "$web_avatars" == "$ios_avatars" ]] || { echo "avatars differ from the web"; status=1; }
 	[[ $status -eq 0 ]] && echo "In sync with $WEB_DIR"
