@@ -185,6 +185,13 @@ struct AvatarTests {
         #expect(Avatars.resolve(username: "alice", avatarUrl: "https://x/y.png") == "banyan")
     }
 
+    @Test func botNoneIsAPlainIconNotABot() {
+        #expect(Avatars.isNone("bot:none"))
+        #expect(!Avatars.isNone("bot:boba"))
+        #expect(!Avatars.isNone(nil))
+        #expect(Avatars.parse("bot:none") == nil)
+    }
+
     @Test func castHas48WithTints() {
         #expect(Avatars.kinds.count == 48)
         #expect(Avatars.kinds.allSatisfy { Avatars.tints[$0] != nil })
