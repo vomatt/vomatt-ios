@@ -16,12 +16,11 @@ One PR per stage, stacked in this order. Each stage ends green before the next s
 **Status**: Complete (`6f12790`)
 
 ## Stage 2: Activity
-**Goal**: An Activity tab built on `GET /api/notifications`: six kinds (result, cancelled, invitation,
-followed, comment, closing soon), All/Unread, Today/Yesterday/Earlier sections, mark one read on open,
-Mark all read, Follow back on follow rows, the design's empty state. The tab's unread mark clears.
-**Success Criteria**: Every kind renders; opening a row marks it read; the badge falls to 0 after
-Mark all read; `notifications.*` strings from the web.
-**Tests**: Service tests for list/markRead/readAll with fixtures; a domain test for day grouping.
+**Goal**: Notifications become the Activity tab (bell, Alert dot) in place of My Polls, with the design's
+All/Unread toggle, Today/Yesterday/Earlier sections and empty state. The feed, mark read, Mark all read
+and Follow back already landed on main (#23); this stage moves and reshapes it.
+**Success Criteria**: Activity is a tab; the badge falls to 0 after Mark all read.
+**Tests**: A domain test for day grouping.
 **Status**: Not Started
 
 ## Stage 3: Profile and Settings
@@ -32,17 +31,16 @@ follower/following counts; Settings as its own screen. The My Polls tab goes awa
 **Status**: Not Started
 
 ## Stage 4: People and safety
-**Goal**: Visitor profile (counts, "follows you", mutual followers, Follow back, ••• with Share,
-Copy link, Block with confirm); follow lists with per-row buttons; comment reports through the API;
-share tracking (`POST /votes/{id}/share`).
-**Success Criteria**: A comment report reaches the API; blocking asks first.
-**Tests**: Service tests for each new endpoint.
+**Goal**: Visitor profile to the design: full-width Follow / Follow back, ••• menu with Share profile,
+Copy link and Block with a confirm step. Counts, mutuals, comment reports and share tracking already
+landed on main (#21–#23).
+**Success Criteria**: Blocking asks first; the menu works from a visitor profile.
 **Status**: Not Started
 
 ## Stage 5: Settings parity
-**Goal**: Notification preference switches, passkeys (sign in, add, remove; `webcredentials` entitlement),
-`common.conflict` shown as busy, the design's grouped Settings and Edit profile.
-**Tests**: Service tests for preferences and passkeys.
+**Goal**: The design's grouped Settings and Edit profile; `common.conflict` shown as busy. Notification
+switches and passkeys already landed on main (#22, #23).
+**Tests**: The conflict override in `I18nTests`.
 **Status**: Not Started
 
 ## Stage 6: Poll, create, home, explore to the design
