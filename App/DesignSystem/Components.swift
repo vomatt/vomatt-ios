@@ -229,9 +229,10 @@ struct AvatarView: View {
                 .resizable()
                 .scaledToFit()
                 .padding(size * 0.25)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Tokens.mutedForeground)
                 .frame(width: size, height: size)
                 .background(Tokens.avatarStone, in: Circle())
+                .clipShape(Circle())
                 .accessibilityHidden(true)
         } else {
             let kind = Avatars.resolve(username: username, avatarUrl: avatarUrl)

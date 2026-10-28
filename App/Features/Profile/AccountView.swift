@@ -773,6 +773,7 @@ struct AvatarPickerSheet: View {
     let username: String
     let avatarUrl: String?
     @State private var selected = ""
+    @State private var initial = ""
 
     var body: some View {
         NavigationStack {
@@ -818,10 +819,15 @@ struct AvatarPickerSheet: View {
                 }
             }
         }
-        .onAppear { selected = Avatars.resolve(username: username, avatarUrl: avatarUrl) }
+        .onAppear {
+            initial = Avatars.resolve(username: username, avatarUrl: avatarUrl)
+            selected = initial
+        }
     }
 
     private func save() async {
+        // Saving an untouched picker must not turn `bot:none` into the hash-derived bot.
+        if Avatars.isNone(avatarUrl), selected == initial { dismiss(); return }
         do {
             try await app.service.chooseAvatar(kind: selected)
             app.updateMe { $0.avatarUrl = Avatars.avatarUrl(for: selected) }
