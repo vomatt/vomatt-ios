@@ -189,5 +189,34 @@
 		"field.firstName": "名字",
 		"field.lastName": "姓氏",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
+	},
+	"auth": {
+		"continueWithPasskey": "使用通行密鑰繼續"
+	},
+	"authError": {
+		"passkeyInvalid": "通行密鑰驗證失敗，請重新操作一次"
+	},
+	"passkey": {
+		"title": "通行密鑰",
+		"body": "改用 Face ID、Touch ID 或裝置密碼登入，不必再收驗證碼。",
+		"add": "新增通行密鑰",
+		"added": "已新增通行密鑰",
+		"alreadyAdded": "這部裝置已經有你帳號的通行密鑰。",
+		"addFailed": "無法新增通行密鑰，請再試一次。",
+		"unnamed": "通行密鑰",
+		"created": "新增於 {date}",
+		"lastUsed": "上次使用 {date}",
+		"neverUsed": "尚未使用",
+		"empty": "還沒有通行密鑰。",
+		"loadFailed": "無法載入你的通行密鑰。",
+		"delete": "移除",
+		"deleteLabel": "移除 {name}",
+		"deleteConfirmTitle": "要移除這個通行密鑰嗎？",
+		"deleteConfirmBody": "移除後就不能再用 {name} 登入。裝置上的通行密鑰要到裝置設定中另外刪除。",
+		"deleted": "已移除通行密鑰",
+		"deleteFailed": "無法移除通行密鑰，請再試一次。"
+	},
+	"common": {
+		"tryAgain": "再試一次"
 	}
 }

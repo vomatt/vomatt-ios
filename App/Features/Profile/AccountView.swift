@@ -267,6 +267,8 @@ private struct AccountSettings: View {
             .tint(Tokens.primary)
             .card()
 
+            PasskeysSection(service: app.service)
+
             NotificationPreferencesSection()
 
             if !app.following.isEmpty { followingSection }
@@ -358,6 +360,100 @@ private struct AccountSettings: View {
             app.updateMe { $0.visibilitySettings = previous }
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
+    }
+}
+
+/// Passkeys on the account (the web's `PasskeysPanel`): the list, each removable after
+/// confirmation, and Add passkey for this device.
+private struct PasskeysSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var model: PasskeysModel
+    @State private var confirming: Passkey?
+
+    init(service: VomattService) {
+        _model = State(initialValue: PasskeysModel(service: service))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(app.t("passkey.title")).font(.vm(15, .medium))
+                    Text(app.t("passkey.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                LoadingButton(style: .vm(.outline), action: add) { Text(app.t("passkey.add")) }
+            }
+            if model.loadFailed {
+                HStack(spacing: 12) {
+                    Text(app.t("passkey.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
+                }
+            } else if let passkeys = model.passkeys {
+                if passkeys.isEmpty {
+                    Text(app.t("passkey.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+                ForEach(passkeys) { passkey in row(passkey) }
+            } else {
+                ProgressView().frame(maxWidth: .infinity)
+            }
+        }
+        .card()
+        .task { await model.load() }
+        .alert(
+            app.t("passkey.deleteConfirmTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { passkey in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("passkey.delete"), role: .destructive) { Task { await delete(passkey) } }
+        } message: { passkey in
+            Text(app.t("passkey.deleteConfirmBody", ["name": name(passkey)]))
+        }
+    }
+
+    private func row(_ passkey: Passkey) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name(passkey)).font(.vm(14, .medium)).lineLimit(1)
+                Text(dates(passkey)).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("passkey.delete")) { confirming = passkey }
+                .buttonStyle(.vm(.outline, size: .sm))
+                .accessibilityLabel(app.t("passkey.deleteLabel", ["name": name(passkey)]))
+        }
+        .padding(.top, 12)
+        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+
+    private func name(_ passkey: Passkey) -> String { passkey.name ?? app.t("passkey.unnamed") }
+
+    private func dates(_ passkey: Passkey) -> String {
+        let created = app.t("passkey.created", ["date": app.dates.pollDate(passkey.createdAt)])
+        let used = passkey.lastUsedAt.map { app.t("passkey.lastUsed", ["date": app.dates.pollDate($0)]) } ?? app.t("passkey.neverUsed")
+        return "\(created) · \(used)"
+    }
+
+    private func add() async {
+        if await model.add(authenticate: PasskeyAuthenticator.register) {
+            app.showToast(app.t("passkey.added"))
+        } else if let failure = model.failure {
+            showError(failure)
+        }
+    }
+
+    private func delete(_ passkey: Passkey) async {
+        if await model.delete(passkey) {
+            app.showToast(app.t("passkey.deleted"))
+        } else if let failure = model.failure {
+            showError(failure)
+        }
+    }
+
+    private func showError(_ failure: PasskeyFailure) {
+        app.showToast(failure.error.map { app.t.message(for: $0, fallback: failure.key) } ?? app.t(failure.key), isError: true)
     }
 }
 

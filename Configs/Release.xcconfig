@@ -3,7 +3,9 @@
 // Production
 VOMATT_API_URL = https:$(SLASH)$(SLASH)vomatt-api-production.up.railway.app
 VOMATT_SITE_URL = https:$(SLASH)$(SLASH)vomatt.com
-VOMATT_ASSOCIATED_DOMAINS = applinks:vomatt.com
+// Associated domains: universal links and passkeys (one entitlement entry each)
+VOMATT_APPLINKS_DOMAIN = applinks:vomatt.com
+VOMATT_WEBCREDENTIALS_DOMAIN = webcredentials:vomatt.com
 VOMATT_LOG_REQUESTS = NO
 
 #include? "Local.xcconfig"

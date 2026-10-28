@@ -97,6 +97,24 @@ public final class VomattService: Sendable {
         return isNewUser
     }
 
+    /// A fresh one-time challenge for signing in with any passkey on the device (lasts 5 minutes).
+    public func passkeySignInChallenge() async throws -> Data {
+        try await call {
+            let data = try await client.passkeyLoginOptions().ok.body.json.data
+            return try required(Data(base64URLEncoded: required(data?.challenge, "passkeyLoginOptions.challenge")), "passkeyLoginOptions.challenge")
+        }
+    }
+
+    /// Verifies the signed challenge and starts the session, like `verifyOtp`. A passkey only
+    /// exists on an account that is already set up, so there is no new-user step.
+    public func signIn(with assertion: PasskeyAssertion) async throws {
+        let tokens = try await call {
+            let output = try await client.passkeyLoginVerify(body: .json(.init(credential: .init(assertion))))
+            return try AuthTokens(required(output.ok.body.json.data, "passkeyLoginVerify.data"))
+        }
+        await session.signIn(tokens)
+    }
+
     /// Revokes the refresh token on the backend, then ends the session here even when the backend can't be reached.
     public func signOut() async {
         if let refreshToken = await session.refreshToken {
@@ -564,6 +582,35 @@ public final class VomattService: Sendable {
         let id = try await myProfile().id
         _ = try await retryingWhenBusy { try await client.deleteUser(path: .init(userId: id)).ok }
         await session.signOut()
+    }
+
+    // MARK: Passkeys
+
+    /// Creation options for a new passkey on the signed-in account; each call issues a challenge
+    /// that lasts 5 minutes and is spent by one `registerPasskey`.
+    public func passkeyRegistrationOptions() async throws -> PasskeyRegistrationOptions {
+        try await call {
+            try await PasskeyRegistrationOptions(required(client.registrationOptions().ok.body.json.data, "registrationOptions.data"))
+        }
+    }
+
+    /// Stores the new passkey. A failure spends the challenge: retry with new options.
+    @discardableResult
+    public func registerPasskey(_ registration: PasskeyRegistration, name: String? = nil) async throws -> Passkey {
+        try await call {
+            try await Passkey(required(client.verifyRegistration(body: .json(.init(credential: .init(registration), name: name)))
+                .ok.body.json.data, "verifyRegistration.data"))
+        }
+    }
+
+    /// The signed-in user's passkeys, oldest first.
+    public func passkeys() async throws -> [Passkey] {
+        try await call { try (try await client.listMyPasskeys().ok.body.json.data ?? []).map(Passkey.init) }
+    }
+
+    /// It stops signing in to the account; the passkey stays on the device until removed there.
+    public func deletePasskey(id: String) async throws {
+        _ = try await call { try await client.deleteMyPasskey(path: .init(passkeyId: id)).ok }
     }
 
     // MARK: Notifications
