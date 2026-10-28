@@ -44,6 +44,7 @@ final class CommentsModel {
             let page = try await service.comments(pollId: pollId)
             comments = page.items
             replies = [:]
+            seedReplies(page.items)
             nextCursor = page.nextCursor
             status = .ready
         } catch {
@@ -57,7 +58,15 @@ final class CommentsModel {
         defer { isLoadingMore = false }
         guard let page = try? await service.comments(pollId: pollId, cursor: cursor) else { return }
         comments = mergeById(comments, page.items)
+        seedReplies(page.items)
         nextCursor = page.nextCursor
+    }
+
+    /// The list carries each Comment's first Replies; "Show more" continues after them.
+    private func seedReplies(_ page: [Comment]) {
+        for comment in page where !comment.replies.isEmpty && replies[comment.id] == nil {
+            replies[comment.id] = ReplyList(items: comment.replies, nextCursor: comment.repliesNextCursor)
+        }
     }
 
     /// First call loads the Replies; later calls load the next page.
@@ -360,6 +369,7 @@ private struct CommentRow: View {
     @State private var isEditing = false
     @State private var draft = ""
     @State private var confirmingDelete = false
+    @State private var reporting = false
 
     private var isReply: Bool { if case .reply = rail { return true } else { return false } }
     private var avatarSize: CGFloat { isReply ? 24 : 32 }
@@ -470,6 +480,7 @@ private struct CommentRow: View {
         .opacity(comment.isPending ? 0.6 : 1)
         .animation(.easeOut(duration: 0.15), value: isTarget)
         .sheet(isPresented: $confirmingDelete) { DeleteCommentSheet(comment: comment, model: model) }
+        .sheet(isPresented: $reporting) { ReportCommentSheet(comment: comment, pollId: model.pollId) }
     }
 
     private var actions: some View {
@@ -526,7 +537,9 @@ private struct CommentRow: View {
             Divider()
             Button(role: .destructive) { confirmingDelete = true } label: { Label(app.t("common.delete"), systemImage: "trash") }
         } else {
-            ReportButton(subject: "Comment \(comment.id) on poll \(model.pollId)", url: app.config.pollURL(model.pollId))
+            Button(role: .destructive) {
+                app.requireAuth { reporting = true }
+            } label: { Label(app.t("ios.report"), systemImage: "flag") }
             if let author = comment.author { BlockButton(username: author, userId: comment.userId) }
         }
     }
@@ -615,6 +628,71 @@ private struct DeleteCommentSheet: View {
             dismiss()
         } catch {
             app.showToast(app.t.message(for: error, fallback: "comments.deleteFailed"), isError: true)
+        }
+    }
+}
+
+/// "Report this comment": a reason, an optional note. The API keeps the first report of a repeat.
+private struct ReportCommentSheet: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    let comment: Comment
+    let pollId: String
+    @State private var reason: ReportReason?
+    @State private var note = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(app.t("ios.reportCommentTitle")).displayHeading(20)
+                    Text(app.t("ios.reportCommentBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                }
+                VStack(spacing: 0) {
+                    ForEach(ReportReason.allCases, id: \.self) { option in
+                        Button { reason = option } label: {
+                            HStack {
+                                Text(app.t("ios.reportReason.\(option.rawValue)")).font(.vm(15))
+                                Spacer()
+                                if reason == option { Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)) }
+                            }
+                            .foregroundStyle(Tokens.foreground)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 48)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(reason == option ? .isSelected : [])
+                        .overlay(alignment: .bottom) {
+                            if option != ReportReason.allCases.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                        }
+                    }
+                }
+                .card(padding: nil)
+                VMTextEditor(placeholder: app.t("ios.reportNote"), text: $note, minHeight: 80, font: .vm(16), autoFocus: false)
+                Text("\(note.count) / \(reportNoteMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                VStack(spacing: 8) {
+                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: send) { Text(app.t("ios.reportSend")) }
+                        .disabled(reason == nil || note.count > reportNoteMax)
+                    Button(app.t("common.cancel")) { dismiss() }.buttonStyle(.vm(.ghost, size: .lg, fullWidth: true))
+                }
+            }
+            .padding(20)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(Tokens.card)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func send() async {
+        guard let reason else { return }
+        do {
+            try await app.service.reportComment(pollId: pollId, commentId: comment.id, reason: reason, note: note)
+            app.showToast(app.t("ios.reportSent"))
+            dismiss()
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "ios.reportFailed"), isError: true)
         }
     }
 }

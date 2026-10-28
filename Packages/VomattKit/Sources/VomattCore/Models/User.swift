@@ -16,13 +16,28 @@ public struct UserProfile: Hashable, Sendable {
     /// Whether the viewer follows / has blocked this user; nil when signed out.
     public var isFollowing: Bool?
     public var isBlocked: Bool?
+    public var followersCount: Int
+    public var followingCount: Int
+    /// Whether this user follows the viewer; nil when signed out.
+    public var followsYou: Bool?
+    /// Followers of this user whom the viewer follows; nil when signed out and on the viewer's own profile.
+    public var mutualFollowersCount: Int?
+    /// The first 3 of them.
+    public var mutualFollowersPreview: [UserSummary]
 
     public init(
         id: String? = nil, username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
         joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, location: String? = nil,
-        points: Int? = nil, membershipLevel: String? = nil, isFollowing: Bool? = nil, isBlocked: Bool? = nil
+        points: Int? = nil, membershipLevel: String? = nil, isFollowing: Bool? = nil, isBlocked: Bool? = nil,
+        followersCount: Int = 0, followingCount: Int = 0, followsYou: Bool? = nil,
+        mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = []
     ) {
         self.id = id
+        self.followersCount = followersCount
+        self.followingCount = followingCount
+        self.followsYou = followsYou
+        self.mutualFollowersCount = mutualFollowersCount
+        self.mutualFollowersPreview = mutualFollowersPreview
         self.isFollowing = isFollowing
         self.isBlocked = isBlocked
         self.username = username
@@ -56,6 +71,8 @@ public struct MyProfile: Hashable, Sendable {
     public var joinedAt: Date?
     public var totalPolls: Int
     public var totalVotes: Int
+    public var followersCount: Int
+    public var followingCount: Int
     public var visibilitySettings: [String: Bool]
     /// Whether a first Ballot is Anonymous unless the voter says otherwise.
     public var anonymousBallotByDefault: Bool
@@ -64,9 +81,11 @@ public struct MyProfile: Hashable, Sendable {
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
         avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, location: String? = nil,
         birthday: String? = nil, points: Int = 0,
-        membershipLevel: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, visibilitySettings: [String: Bool] = [:],
-        anonymousBallotByDefault: Bool = false
+        membershipLevel: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, followersCount: Int = 0, followingCount: Int = 0,
+        visibilitySettings: [String: Bool] = [:], anonymousBallotByDefault: Bool = false
     ) {
+        self.followersCount = followersCount
+        self.followingCount = followingCount
         self.id = id
         self.username = username
         self.email = email
@@ -99,19 +118,30 @@ public struct MyProfile: Hashable, Sendable {
             totalVotes: totalVotes,
             location: visibilitySettings["location"] == true ? location : nil,
             points: visibilitySettings["points"] == true ? points : nil,
-            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil
+            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil,
+            followersCount: followersCount,
+            followingCount: followingCount
         )
     }
 }
 
-/// A `/users/search` item: public fields only.
+/// A `/users/search` item: public fields only. Follower and following lists (and a notification's
+/// actor) also say how the viewer and the user follow each other.
 public struct UserSummary: Identifiable, Hashable, Sendable {
     public let id: String
     public var username: String
     public var displayName: String?
     public var avatarUrl: String?
+    /// Whether the viewer follows this user / this user follows the viewer; nil where the API doesn't say.
+    public var isFollowing: Bool?
+    public var followsYou: Bool?
 
-    public init(id: String, username: String, displayName: String? = nil, avatarUrl: String? = nil) {
+    public init(
+        id: String, username: String, displayName: String? = nil, avatarUrl: String? = nil,
+        isFollowing: Bool? = nil, followsYou: Bool? = nil
+    ) {
+        self.isFollowing = isFollowing
+        self.followsYou = followsYou
         self.id = id
         self.username = username
         self.displayName = displayName

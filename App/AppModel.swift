@@ -34,12 +34,19 @@ enum AppTab: Hashable, CaseIterable {
     case home, explore, myPolls, account
 }
 
+/// Which people a `FollowListView` lists.
+enum FollowListKind: Hashable {
+    case followers, following
+    /// The followers of the user whom the viewer follows too.
+    case mutual
+}
+
 /// Screens pushed inside a tab.
 enum Route: Hashable {
     case poll(String)
     case profile(String)
     case topic(Tag)
-    case people(username: String, followers: Bool)
+    case people(username: String, kind: FollowListKind)
     case notifications
 }
 
@@ -221,6 +228,13 @@ final class AppModel {
 
     /// Shares a Poll's canonical web link.
     func shareURL(for poll: Poll) -> URL { config.pollURL(poll.id) }
+
+    /// Tells the API a signed-in user opened the share sheet for a Poll (signed-out shares aren't counted).
+    /// `ShareLink` reports no completion, so this counts the tap, not the delivery.
+    func recordShare(of poll: Poll) {
+        guard isSignedIn else { return }
+        Task { try? await service.sharePoll(id: poll.id) }
+    }
 
     // MARK: Poll cache
 

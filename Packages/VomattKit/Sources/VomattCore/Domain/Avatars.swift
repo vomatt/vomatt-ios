@@ -33,6 +33,9 @@ public enum Avatars {
 
     public static func isKind(_ value: String) -> Bool { tints[value] != nil }
 
+    /// `bot:none`: the user picked no character and gets a plain account icon.
+    public static func isNone(_ avatarUrl: String?) -> Bool { avatarUrl == prefix + "none" }
+
     /// The kind in a `bot:<kind>` value; nil for anything else, including an unknown kind.
     public static func parse(_ avatarUrl: String?) -> String? {
         guard let avatarUrl, avatarUrl.hasPrefix(prefix) else { return nil }

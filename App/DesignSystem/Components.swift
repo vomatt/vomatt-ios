@@ -214,15 +214,27 @@ struct AvatarView: View {
     var size: CGFloat = 32
 
     var body: some View {
-        let kind = Avatars.resolve(username: username, avatarUrl: avatarUrl)
-        Image("bot-\(kind)")
-            .resizable()
-            .scaledToFit()
-            .padding(size * 0.06)
-            .frame(width: size, height: size)
-            .background(tint(Avatars.tints[kind] ?? .stone), in: Circle())
-            .clipShape(Circle())
-            .accessibilityHidden(true)
+        if Avatars.isNone(avatarUrl) {
+            Image(systemName: "person.fill")
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.25)
+                .foregroundStyle(Tokens.mutedForeground)
+                .frame(width: size, height: size)
+                .background(Tokens.avatarStone, in: Circle())
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+        } else {
+            let kind = Avatars.resolve(username: username, avatarUrl: avatarUrl)
+            Image("bot-\(kind)")
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.06)
+                .frame(width: size, height: size)
+                .background(tint(Avatars.tints[kind] ?? .stone), in: Circle())
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+        }
     }
 
     private func tint(_ tint: Avatars.Tint) -> Color {

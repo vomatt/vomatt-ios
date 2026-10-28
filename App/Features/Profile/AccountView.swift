@@ -23,6 +23,7 @@ struct AccountView: View {
                 ProfileHeader(profile: profile.asPublicProfile, onAvatarTap: { showAvatar = true }) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
                 }
+                FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
                     (app.t("account.votesCast"), app.t.number(profile.totalVotes)),
                     (app.t("account.pollsCreated"), app.t.number(profile.totalPolls)),
@@ -112,6 +113,105 @@ struct AccountView: View {
     }
 }
 
+/// Which kinds of notification show in the feed and the unread count.
+private struct NotificationPreferencesSection: View {
+    @Environment(AppModel.self) private var app
+    private enum Switch: CaseIterable { case resultsIn, invitations, comments, closingSoon }
+
+    @State private var preferences: NotificationPreferences?
+    @State private var failed = false
+    @State private var inFlight = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                SectionTitle(text: app.t("ios.notifPrefsTitle"))
+                Text(app.t("ios.notifPrefsBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            if let preferences {
+                VStack(spacing: 0) {
+                    ForEach(Switch.allCases, id: \.self) { item in
+                        Toggle(label(item), isOn: Binding(
+                            get: { value(item, preferences) },
+                            set: { newValue in Task { await set(item, newValue) } }
+                        ))
+                        .font(.vm(14))
+                        .tint(Tokens.primary)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 52)
+                        .overlay(alignment: .bottom) {
+                            if item != Switch.allCases.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                        }
+                    }
+                }
+                .card(padding: nil)
+            } else if failed {
+                LoadFailed(message: app.t("ios.notifPrefFailed")) { await load() }
+            } else {
+                Skeleton(height: 208, radius: Radius.xl)
+            }
+        }
+        .task(id: app.sessionGeneration) { await load() }
+    }
+
+    private func label(_ item: Switch) -> String {
+        switch item {
+        case .resultsIn: app.t("ios.notifPrefResults")
+        case .invitations: app.t("ios.notifPrefInvitations")
+        case .comments: app.t("ios.notifPrefComments")
+        case .closingSoon: app.t("ios.notifPrefClosingSoon")
+        }
+    }
+
+    private func value(_ item: Switch, _ preferences: NotificationPreferences) -> Bool {
+        switch item {
+        case .resultsIn: preferences.resultsIn
+        case .invitations: preferences.invitations
+        case .comments: preferences.comments
+        case .closingSoon: preferences.closingSoon
+        }
+    }
+
+    private func load() async {
+        failed = false
+        do {
+            preferences = try await app.service.notificationPreferences()
+        } catch {
+            failed = preferences == nil
+        }
+    }
+
+    /// Shows the new value at once; the API's answer, or the old value after a failure, replaces it.
+    private func set(_ item: Switch, _ newValue: Bool) async {
+        guard let previous = preferences else { return }
+        let before = value(item, previous)
+        setValue(item, newValue)
+        inFlight += 1
+        defer { inFlight -= 1 }
+        do {
+            let saved = try await app.service.updateNotificationPreferences(
+                resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
+                comments: item == .comments ? newValue : nil, closingSoon: item == .closingSoon ? newValue : nil
+            )
+            // Another toggle still in flight: its answer carries the final state.
+            if inFlight == 1 { preferences = saved }
+            await app.refreshUnread()
+        } catch {
+            setValue(item, before)
+            app.showToast(app.t.message(for: error, fallback: "ios.notifPrefFailed"), isError: true)
+        }
+    }
+
+    private func setValue(_ item: Switch, _ newValue: Bool) {
+        switch item {
+        case .resultsIn: preferences?.resultsIn = newValue
+        case .invitations: preferences?.invitations = newValue
+        case .comments: preferences?.comments = newValue
+        case .closingSoon: preferences?.closingSoon = newValue
+        }
+    }
+}
+
 /// Visibility switches, sign out, delete account.
 private struct AccountSettings: View {
     @Environment(AppModel.self) private var app
@@ -166,6 +266,10 @@ private struct AccountSettings: View {
             }
             .tint(Tokens.primary)
             .card()
+
+            PasskeysSection(service: app.service)
+
+            NotificationPreferencesSection()
 
             if !app.following.isEmpty { followingSection }
             if !app.blocked.isEmpty { blockedSection }
@@ -256,6 +360,100 @@ private struct AccountSettings: View {
             app.updateMe { $0.visibilitySettings = previous }
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
+    }
+}
+
+/// Passkeys on the account (the web's `PasskeysPanel`): the list, each removable after
+/// confirmation, and Add passkey for this device.
+private struct PasskeysSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var model: PasskeysModel
+    @State private var confirming: Passkey?
+
+    init(service: VomattService) {
+        _model = State(initialValue: PasskeysModel(service: service))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(app.t("passkey.title")).font(.vm(15, .medium))
+                    Text(app.t("passkey.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                LoadingButton(style: .vm(.outline), action: add) { Text(app.t("passkey.add")) }
+            }
+            if model.loadFailed {
+                HStack(spacing: 12) {
+                    Text(app.t("passkey.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
+                }
+            } else if let passkeys = model.passkeys {
+                if passkeys.isEmpty {
+                    Text(app.t("passkey.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+                ForEach(passkeys) { passkey in row(passkey) }
+            } else {
+                ProgressView().frame(maxWidth: .infinity)
+            }
+        }
+        .card()
+        .task { await model.load() }
+        .alert(
+            app.t("passkey.deleteConfirmTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { passkey in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("passkey.delete"), role: .destructive) { Task { await delete(passkey) } }
+        } message: { passkey in
+            Text(app.t("passkey.deleteConfirmBody", ["name": name(passkey)]))
+        }
+    }
+
+    private func row(_ passkey: Passkey) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name(passkey)).font(.vm(14, .medium)).lineLimit(1)
+                Text(dates(passkey)).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("passkey.delete")) { confirming = passkey }
+                .buttonStyle(.vm(.outline, size: .sm))
+                .accessibilityLabel(app.t("passkey.deleteLabel", ["name": name(passkey)]))
+        }
+        .padding(.top, 12)
+        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+
+    private func name(_ passkey: Passkey) -> String { passkey.name ?? app.t("passkey.unnamed") }
+
+    private func dates(_ passkey: Passkey) -> String {
+        let created = app.t("passkey.created", ["date": app.dates.pollDate(passkey.createdAt)])
+        let used = passkey.lastUsedAt.map { app.t("passkey.lastUsed", ["date": app.dates.pollDate($0)]) } ?? app.t("passkey.neverUsed")
+        return "\(created) · \(used)"
+    }
+
+    private func add() async {
+        if await model.add(authenticate: PasskeyAuthenticator.register) {
+            app.showToast(app.t("passkey.added"))
+        } else if let failure = model.failure {
+            showError(failure)
+        }
+    }
+
+    private func delete(_ passkey: Passkey) async {
+        if await model.delete(passkey) {
+            app.showToast(app.t("passkey.deleted"))
+        } else if let failure = model.failure {
+            showError(failure)
+        }
+    }
+
+    private func showError(_ failure: PasskeyFailure) {
+        app.showToast(failure.error.map { app.t.message(for: $0, fallback: failure.key) } ?? app.t(failure.key), isError: true)
     }
 }
 
@@ -575,6 +773,7 @@ struct AvatarPickerSheet: View {
     let username: String
     let avatarUrl: String?
     @State private var selected = ""
+    @State private var initial = ""
 
     var body: some View {
         NavigationStack {
@@ -620,10 +819,15 @@ struct AvatarPickerSheet: View {
                 }
             }
         }
-        .onAppear { selected = Avatars.resolve(username: username, avatarUrl: avatarUrl) }
+        .onAppear {
+            initial = Avatars.resolve(username: username, avatarUrl: avatarUrl)
+            selected = initial
+        }
     }
 
     private func save() async {
+        // Saving an untouched picker must not turn `bot:none` into the hash-derived bot.
+        if Avatars.isNone(avatarUrl), selected == initial { dismiss(); return }
         do {
             try await app.service.chooseAvatar(kind: selected)
             app.updateMe { $0.avatarUrl = Avatars.avatarUrl(for: selected) }

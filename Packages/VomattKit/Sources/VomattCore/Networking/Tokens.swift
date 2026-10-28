@@ -19,7 +19,7 @@ public struct AccessTokenClaims: Equatable, Sendable {
 
     public init(token: String) {
         let parts = token.split(separator: ".")
-        guard parts.count >= 2, let data = Self.base64URLDecode(String(parts[1])),
+        guard parts.count >= 2, let data = Data(base64URLEncoded: String(parts[1])),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
         subject = json["sub"] as? String
@@ -31,11 +31,19 @@ public struct AccessTokenClaims: Equatable, Sendable {
         guard let expiresAt else { return false }
         return expiresAt.timeIntervalSince(now) < leeway
     }
+}
 
-    static func base64URLDecode(_ value: String) -> Data? {
+/// base64url without padding: JWT segments and WebAuthn's binary fields.
+extension Data {
+    init?(base64URLEncoded value: String) {
         var base64 = value.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
-        return Data(base64Encoded: base64)
+        self.init(base64Encoded: base64)
+    }
+
+    func base64URLEncodedString() -> String {
+        base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }
 

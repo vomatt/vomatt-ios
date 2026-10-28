@@ -36,6 +36,7 @@ struct AuthMiddleware: ClientMiddleware {
     static let unauthenticated: Set<String> = [
         "refresh", "logout", "sendOtp", "verifyOtp",
         "phoneSendOtp", "phoneVerifyOtp", "appleLogin", "googleLogin", "lineLogin",
+        "passkeyLoginOptions", "passkeyLoginVerify",
     ]
 
     func intercept(

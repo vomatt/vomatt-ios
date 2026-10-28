@@ -92,7 +92,9 @@ targets:
     entitlements:
       path: App/Vomatt.entitlements
       properties:
-        com.apple.developer.associated-domains: $(VOMATT_ASSOCIATED_DOMAINS)
+        com.apple.developer.associated-domains:
+          - $(VOMATT_APPLINKS_DOMAIN)
+          - $(VOMATT_WEBCREDENTIALS_DOMAIN)
     scheme:
       testTargets:
         - VomattUITests

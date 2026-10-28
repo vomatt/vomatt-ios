@@ -82,6 +82,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var deletable: Bool?
     public var participantCount: Int?
     public var commentCount: Int?
+    /// Distinct signed-in users who shared the Poll.
+    public var shareCount: Int?
     /// The viewer's Ballot; nil without one (or signed out).
     public var myOptionId: String?
     /// Whether the viewer's Ballot is left out of the voter list; nil without a Ballot.
@@ -97,7 +99,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         creatorId: String, creatorUsername: String, creatorAvatarUrl: String? = nil,
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
-        participantCount: Int? = nil, commentCount: Int? = nil, myOptionId: String? = nil,
+        participantCount: Int? = nil, commentCount: Int? = nil, shareCount: Int? = nil, myOptionId: String? = nil,
         myBallotAnonymous: Bool? = nil, unread: Bool? = nil, options: [PollOption], tags: [Tag] = []
     ) {
         self.id = id
@@ -118,6 +120,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         self.deletable = deletable
         self.participantCount = participantCount
         self.commentCount = commentCount
+        self.shareCount = shareCount
         self.myOptionId = myOptionId
         self.myBallotAnonymous = myBallotAnonymous
         self.unread = unread
@@ -232,12 +235,19 @@ public struct Comment: Identifiable, Hashable, Sendable {
     public var parentId: String?
     public var replyCount: Int
     public var deleted: Bool
+    /// The first Replies of a top-level Comment as the list returns them (oldest first, at most 2).
+    public var replies: [Comment]
+    /// Passed as `cursor` to load the rest of the Replies; nil when `replies` holds them all.
+    public var repliesNextCursor: String?
 
     public init(
         id: String, userId: String? = nil, author: String?, authorAvatarUrl: String? = nil,
         text: String?, createdAt: Date, likeCount: Int = 0, edited: Bool = false,
-        likedByCurrentUser: Bool = false, parentId: String? = nil, replyCount: Int = 0, deleted: Bool = false
+        likedByCurrentUser: Bool = false, parentId: String? = nil, replyCount: Int = 0, deleted: Bool = false,
+        replies: [Comment] = [], repliesNextCursor: String? = nil
     ) {
+        self.replies = replies
+        self.repliesNextCursor = repliesNextCursor
         self.id = id
         self.userId = userId
         self.author = author
