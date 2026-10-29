@@ -150,6 +150,16 @@ struct APIErrorMessageTests {
         for (key, text) in en { #expect(placeholders(text) == placeholders(zh[key] ?? ""), "\(key)") }
     }
 
+    // A 409 `common.conflict` changed nothing; the web words it as busy, not as a conflict
+    @Test func conflictSaysBusyInTheShippedStrings() throws {
+        let locales = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../../App/Resources/Locales").standardized
+        let bundle = try #require(Bundle(url: locales))
+        let error = APIError(.http(409), errorCode: "common.conflict", message: "Resource conflict, please try again")
+        #expect(Localizer.load(.en, bundle: bundle).message(for: error, fallback: "account.saveFailed")
+            == "Another change is in progress. Try again in a moment.")
+        #expect(Localizer.load(.zh, bundle: bundle).message(for: error, fallback: "account.saveFailed") == "目前有其他變更正在進行，請稍後再試。")
+    }
+
     @Test func unknownCodeUsesTheAPIMessageThenTheFallback() {
         #expect(t.message(for: APIError(.http(400), errorCode: "new.code", message: "新錯誤"), fallback: "groups.saveFailed") == "新錯誤")
         #expect(t.message(for: APIError(.http(500)), fallback: "groups.saveFailed") == "儲存失敗")

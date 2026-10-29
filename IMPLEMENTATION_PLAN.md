@@ -45,8 +45,9 @@ works from a visitor profile.
 ## Stage 5: Settings parity
 **Goal**: The design's grouped Settings and Edit profile; `common.conflict` shown as busy. Notification
 switches and passkeys already landed on main (#22, #23).
-**Tests**: The conflict override in `I18nTests`.
-**Status**: Not Started
+**Tests**: `conflictSaysBusyInTheShippedStrings` in `I18nTests`; `AccountTests` (the web's visibility and
+username tests). Push settings wait for a device-registration API.
+**Status**: Complete
 
 ## Stage 6: Poll, create, home, explore to the design
 **Goal**: Poll action footer and Seal, results summary, Discussion "See all", create sheet (duration chips,

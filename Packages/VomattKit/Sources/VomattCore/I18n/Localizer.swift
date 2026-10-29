@@ -104,13 +104,17 @@ public extension Localizer {
     /// Codes whose API message carries detail (which field, which value) the app's string drops.
     private static let detailedErrorCodes: Set<String> = ["common.bad_request", "common.validation_failed"]
 
-    /// What to show for a failed request: the `apiError.<errorCode>` string when there is one,
+    /// Codes shown with the app's own wording instead of the `apiError.*` copy (the web's `OVERRIDES`).
+    private static let overrides = ["common.conflict": "common.busy"]
+
+    /// What to show for a failed request: the app's override for its errorCode, else the `apiError.<errorCode>` string when there is one,
     /// else the API's own localized `message`, else `fallback`. A string that takes a value
     /// (`{0}`), or a detailed code, yields to the API's message, which carries that detail.
     func message(for error: Error, fallback: String) -> String {
         guard let error = error as? APIError else { return self(fallback) }
         // Only the API's answers carry a localized message; network and decoding failures don't
         let apiMessage = error.kind == .network || error.kind == .decoding ? nil : error.message
+        if let code = error.errorCode, let key = Self.overrides[code] { return self(key) }
         if let code = error.errorCode, has("apiError.\(code)") {
             let text = self("apiError.\(code)")
             let takesValue = text.range(of: #"\{[A-Za-z0-9_-]+\}"#, options: .regularExpression) != nil

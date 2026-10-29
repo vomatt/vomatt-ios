@@ -27,11 +27,13 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The tab bar steps aside while typing, like UITabBar
     @State private var isKeyboardVisible = false
+    @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
 
     var body: some View {
         @Bindable var app = app
         tabs
         .toastHost(app)
+        .preferredColorScheme(theme.colorScheme)
         .sheet(item: $app.pendingAuth) { pending in
             AuthSheet(onSignedIn: pending.onSignedIn)
         }
@@ -161,6 +163,7 @@ struct RouteView: View {
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)
         case .settings: SettingsView()
+        case .inviteLists: InviteListsView()
         }
     }
 }
