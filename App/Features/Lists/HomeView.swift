@@ -98,11 +98,10 @@ struct FeedView: View {
             }
         }
         .task(id: app.sessionGeneration) {
-            if let tag, app.isSignedIn {
-                followingTag = (try? await app.service.followedTags())?.contains { $0.id == tag.id }
-            } else {
-                followingTag = nil
-            }
+            guard let tag, app.isSignedIn else { return followingTag = nil }
+            followingTag = (try? await app.service.followedTags())?.contains { $0.id == tag.id }
+        }
+        .task(id: app.sessionGeneration) {
             let list = list ?? makeList()
             self.list = list
             await list.reload()

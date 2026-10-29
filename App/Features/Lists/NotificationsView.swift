@@ -8,6 +8,8 @@ struct NotificationsView: View {
     @State private var list: CursorList<FeedNotification>?
     /// The tab; nil is every category.
     @State private var category: FeedNotification.Category?
+    /// The category `list` was built for.
+    @State private var listCategory: FeedNotification.Category?
 
     var body: some View {
         ScrollView {
@@ -86,8 +88,15 @@ struct NotificationsView: View {
         let service = app.service
         let category = category
         // A tab switch starts a fresh list: a cursor belongs to one category
-        let list = CursorList { try await service.notifications(category: category, cursor: $0) }
-        self.list = list
+        // while refresh and retry keep the list on screen
+        let list: CursorList<FeedNotification>
+        if let current = self.list, listCategory == category {
+            list = current
+        } else {
+            list = CursorList { try await service.notifications(category: category, cursor: $0) }
+            self.list = list
+            listCategory = category
+        }
         await list.reload()
         await app.refreshUnread()
     }

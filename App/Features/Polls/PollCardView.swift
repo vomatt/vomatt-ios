@@ -96,7 +96,7 @@ struct PollCardView: View {
             if app.userId == nil {
                 ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
             } else if app.userId != poll.creatorId {
-                Button(role: .destructive) { reporting = true } label: { Label(app.t("ios.report"), systemImage: "flag") }
+                Button(role: .destructive) { reporting = true } label: { Label(app.t("ios.reportPoll"), systemImage: "flag") }
             }
             if app.userId != poll.creatorId {
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
