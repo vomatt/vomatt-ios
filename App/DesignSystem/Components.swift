@@ -60,6 +60,59 @@ struct StatusChip: View {
     }
 }
 
+/// How the viewer's Ballot fared on an Ended Poll (`OutcomeChip`); the words carry it, never the color alone.
+/// A pick that won is the viewer's own: the Volt tint with an ink line, as on a cast Ballot.
+struct OutcomeChip: View {
+    @Environment(AppModel.self) private var app
+    let outcome: BallotOutcome
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if outcome == .won { Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).accessibilityHidden(true) }
+            if outcome == .tied { Text(verbatim: "=").accessibilityHidden(true) }
+            Text(app.t("myPolls.outcome.\(outcome.rawValue)").uppercased())
+        }
+        .font(.vm(11, .semibold, relativeTo: .caption2))
+        .tracking(0.55)
+        .lineLimit(1)
+        .foregroundStyle(Tokens.foreground)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
+        .background(outcome == .won ? Tokens.highlightTint : Tokens.secondary, in: Capsule())
+        .overlay(Capsule().strokeBorder(Tokens.foreground.opacity(outcome == .won ? 1 : 0), lineWidth: 1))
+        .fixedSize()
+    }
+}
+
+/// A row of toggle pills where one is current, a list filter (`FilterPills`); the current one is ink.
+struct FilterPills<Value: Hashable>: View {
+    /// Names the group for VoiceOver.
+    let label: String
+    @Binding var selection: Value
+    let options: [(value: Value, label: String, count: Int?)]
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(options, id: \.value) { option in
+                let isActive = option.value == selection
+                Button { selection = option.value } label: {
+                    HStack(spacing: 6) {
+                        Text(option.label)
+                        if let count = option.count {
+                            Text("\(count)").font(.vmMono(13, medium: true))
+                                .foregroundStyle(isActive ? Tokens.primaryForeground : Tokens.mutedForeground)
+                        }
+                    }
+                }
+                .buttonStyle(.vm(isActive ? .default : .outline, size: .sm, pill: true))
+                .accessibilityAddTraits(isActive ? .isSelected : [])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+}
+
 /// The Alert dot that marks something unread (the web's `UnreadDot`).
 struct UnreadDot: View {
     let label: String

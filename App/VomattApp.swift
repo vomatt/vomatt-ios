@@ -20,7 +20,8 @@ struct VomattApp: App {
     }
 }
 
-/// The four tabs plus the create action, like the web's mobile `TabBar`.
+/// The four tabs plus the create action, like the web's mobile `TabBar`: Home, Explore, Create,
+/// Notifications, Profile.
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
@@ -69,8 +70,8 @@ struct RootView: View {
                 Color.clear
             }
             .accessibilityLabel(app.t("common.createPoll"))
-            Tab(app.t(AppTab.myPolls.titleKey), systemImage: AppTab.myPolls.icon, value: SystemTab.app(.myPolls)) {
-                tab(.myPolls) { MyPollsView() }
+            Tab(app.t(AppTab.notifications.titleKey), systemImage: AppTab.notifications.icon, value: SystemTab.app(.notifications)) {
+                tab(.notifications) { NotificationsView() }
             }
             .badge(app.unreadBadge.map(Text.init))
             Tab(app.t(AppTab.account.titleKey), systemImage: AppTab.account.icon, value: SystemTab.app(.account)) {
@@ -86,7 +87,7 @@ struct RootView: View {
         return TabView(selection: $app.selectedTab) {
             tab(.home) { HomeView() }.tag(AppTab.home)
             tab(.explore) { ExploreView() }.tag(AppTab.explore)
-            tab(.myPolls) { MyPollsView() }.tag(AppTab.myPolls)
+            tab(.notifications) { NotificationsView() }.tag(AppTab.notifications)
             tab(.account) { AccountTab() }.tag(AppTab.account)
         }
         .toolbar(.hidden, for: .tabBar)
@@ -119,7 +120,7 @@ private extension AppTab {
         switch self {
         case .home: "navigation.home"
         case .explore: "common.explore"
-        case .myPolls: "common.myPolls"
+        case .notifications: "common.notifications"
         case .account: "navigation.profile"
         }
     }
@@ -128,7 +129,7 @@ private extension AppTab {
         switch self {
         case .home: "house"
         case .explore: "magnifyingglass"
-        case .myPolls: "star"
+        case .notifications: "bell"
         case .account: "person.crop.circle"
         }
     }
@@ -149,7 +150,7 @@ struct RouteView: View {
         case let .profile(username): ProfileView(username: username)
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)
-        case .notifications: NotificationsView()
+        case .myPolls: MyPollsView()
         }
     }
 }
@@ -170,7 +171,7 @@ struct VMTabBar: View {
             .buttonStyle(.vm(.default, size: .icon))
             .frame(maxWidth: .infinity)
             .accessibilityLabel(app.t("common.createPoll"))
-            item(.myPolls, badge: app.unreadBadge)
+            item(.notifications, badge: app.unreadBadge)
             item(.account)
         }
         .frame(height: 64)
@@ -188,8 +189,9 @@ struct VMTabBar: View {
                 .overlay(alignment: .bottom) {
                     if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
                 }
+                // The web's tab: an Alert dot on the bell, the count read out by VoiceOver
                 .overlay(alignment: .topTrailing) {
-                    if let badge { UnreadBadge(count: badge, label: badge, ring: Tokens.card).offset(x: 2, y: 2) }
+                    if badge != nil { UnreadDot(label: "").offset(x: -10, y: 10).accessibilityHidden(true) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())

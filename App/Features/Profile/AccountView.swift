@@ -22,6 +22,7 @@ struct AccountView: View {
                 // The header leaves out fields hidden from visitors, as they see it
                 ProfileHeader(profile: profile.asPublicProfile, onAvatarTap: { showAvatar = true }) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
+                    Button(app.t("common.myPolls")) { app.push(.myPolls) }.buttonStyle(.vm(.outline, size: .sm))
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [

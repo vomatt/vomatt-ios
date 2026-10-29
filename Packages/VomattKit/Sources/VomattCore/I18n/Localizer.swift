@@ -87,6 +87,13 @@ public struct Localizer: Sendable {
         return output
     }
 
+    /// A "{count} …" string in the language's plural form: `key_one` for one where the language has
+    /// that form (en), `key` otherwise, with the count grouped (1,200). From the web's `countText`.
+    public func count(_ key: String, _ count: Int, _ values: [String: CustomStringConvertible] = [:]) -> String {
+        let one = count == 1 && has("\(key)_one")
+        return self(one ? "\(key)_one" : key, values.merging(["count": number(count)]) { _, new in new })
+    }
+
     /// A number with grouping separators in this language: "1,234".
     public func number(_ value: Int) -> String {
         value.formatted(.number.locale(Locale(identifier: language.localeIdentifier)))

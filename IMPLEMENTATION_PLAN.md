@@ -15,13 +15,14 @@ One PR per stage, stacked in this order. Each stage ends green before the next s
 **Tests**: `PollTimingTests` (port of `timing.test.ts`); the string-key check.
 **Status**: Complete (`6f12790`)
 
-## Stage 2: Activity
-**Goal**: Notifications become the Activity tab (bell, Alert dot) in place of My Polls, with the design's
-All/Unread toggle, Today/Yesterday/Earlier sections and empty state. The feed, mark read, Mark all read
-and Follow back already landed on main (#23); this stage moves and reshapes it.
-**Success Criteria**: Activity is a tab; the badge falls to 0 after Mark all read.
-**Tests**: A domain test for day grouping.
-**Status**: Not Started
+## Stage 2: Notifications tab
+**Goal**: Notifications become a tab (bell, Alert dot) in place of My Polls, ported from the web's
+`NotificationList`: All/Unread pills, Today/Yesterday/Earlier sections, folded follows, per-row actions.
+The tab keeps the web's word, Notifications, so the strings stay shared. My Polls is reachable from
+Profile until Stage 3 folds it in.
+**Success Criteria**: Notifications is a tab; the badge clears after Mark all read (observed in the simulator).
+**Tests**: `ActivityTests` (port of the web's day grouping, follow folding, age, plural counts).
+**Status**: Complete
 
 ## Stage 3: Profile and Settings
 **Goal**: Own profile with Asked/Voted tabs and filters (drafts under Asked, "only you"), stats,

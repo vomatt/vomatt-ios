@@ -61,6 +61,18 @@ public struct DateFormatting: Sendable {
         return unit(Int((interval / 86_400).rounded()), en: "d", zh: "天")
     }
 
+    /// A post's age for an author line: "now" (剛剛) under a minute, "45m", "2h", "3d", then "Oct 7".
+    public func age(_ date: Date, now: Date = .now) -> String {
+        let seconds = now.timeIntervalSince(date)
+        switch seconds {
+        case ..<60: return language == .zh ? "剛剛" : "now"
+        case ..<3600: return unit(Int(seconds / 60), en: "m", zh: "分鐘")
+        case ..<86_400: return unit(Int(seconds / 3600), en: "h", zh: "小時")
+        case ..<(7 * 86_400): return unit(Int(seconds / 86_400), en: "d", zh: "天")
+        default: return formatter(template: "MMMd", timeZone: timeZone).string(from: date)
+        }
+    }
+
     private func unit(_ value: Int, en: String, zh: String) -> String {
         language == .zh ? "\(value) \(zh)" : "\(value)\(en)"
     }
