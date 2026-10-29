@@ -42,10 +42,6 @@
 		"followFailed": "Couldn't follow this person. Try again.",
 		"unfollowFailed": "Couldn't unfollow this person. Try again.",
 		"followingEmpty": "Nothing here yet. Follow people from a poll's menu to see their open polls here.",
-		"invitedBy": "{name} invited you",
-		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",
-		"sealedTitle": "Sealed. Thank you.",
-		"sealedTurnout": "{count} voted, you included",
 		"setBirthday": "Add birthday",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:",
 		"followsYou": "Follows you",
@@ -62,7 +58,8 @@
 		"reportNote": "Add details (optional)",
 		"reportSend": "Send report",
 		"reportSent": "Thanks, we got your report.",
-		"reportFailed": "Couldn't send your report. Try again."
+		"reportFailed": "Couldn't send your report. Try again.",
+		"seeAll": "See all"
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
@@ -162,8 +159,6 @@
 		"results": "Results"
 	},
 	"poll": {
-		"stamp": "Voted",
-		"withdrawConfirm": "Withdraw your vote? You won't be counted or notified.",
 		"yourVote": "Your vote"
 	},
 	"pollCreator": {
@@ -171,12 +166,6 @@
 		"summaryOpensLater": "Opens {start}, closes {end}",
 		"summaryOpensNow": "Opens now, closes {end}",
 		"summaryVisibility": "After it ends: {level}"
-	},
-	"pollDetail": {
-		"askedBy": "Asked by",
-		"invited": "{count} invited",
-		"participants": "people voted",
-		"revealsIn": "Results reveal {distance}"
 	},
 	"profile": {
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"

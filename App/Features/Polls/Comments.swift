@@ -198,17 +198,28 @@ final class CommentsModel {
 }
 
 /// The discussion under a Poll. Results stay sealed while it is open, so this is where people argue their case.
-/// The screen owns the model so `ReplyDock` can sit above the keyboard.
+/// The screen owns and loads the model so `ReplyDock` can sit above the keyboard.
 struct CommentThreadView: View {
     @Environment(AppModel.self) private var app
     let model: CommentsModel
+    /// Set on the poll page: the newest Comments only, and See all opens the whole discussion.
+    var onSeeAll: (() -> Void)?
+
+    private static let previewCount = 2
 
     var body: some View {
+        let shown = model.comments.filter { !app.isBlocked($0.author) }
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 SectionTitle(text: app.t("comments.title"))
                 if let total = model.total {
                     Text("\(total)").font(.vmMono(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+                Spacer(minLength: 0)
+                if let onSeeAll, !shown.isEmpty {
+                    Button(app.t("ios.seeAll"), action: onSeeAll)
+                        .font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(minHeight: Metrics.minTarget)
                 }
             }
             CommentComposer(placeholder: app.t("comments.placeholder")) { text in
@@ -238,21 +249,38 @@ struct CommentThreadView: View {
             }
 
             LazyVStack(alignment: .leading, spacing: 20) {
-                ForEach(model.comments.filter { !app.isBlocked($0.author) }) { comment in
+                ForEach(onSeeAll == nil ? shown : Array(shown.prefix(Self.previewCount))) { comment in
                     CommentItemView(comment: comment, model: model)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .animation(.easeOut(duration: 0.2), value: model.comments.map(\.id))
 
-            if model.hasMore {
+            if onSeeAll == nil, model.hasMore {
                 LoadingButton(style: .vm(.ghost, size: .sm, fullWidth: true), action: { await model.loadMore(app.service) }) {
                     Text(app.t("comments.loadMore")).foregroundStyle(Tokens.mutedForeground)
                 }
             }
         }
-        .padding(20)
-        .task(id: app.sessionGeneration) { await model.reload(app.service) }
+    }
+}
+
+/// The whole discussion on its own screen, reached from See all on the poll page (iOS · Discussion).
+struct PollDiscussionView: View {
+    let model: CommentsModel
+    let title: String
+
+    var body: some View {
+        ScrollView {
+            CommentThreadView(model: model)
+                .pageColumn(720)
+                .padding(.vertical, 20)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) { ReplyDock(model: model) }
+        .canvas()
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

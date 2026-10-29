@@ -53,7 +53,7 @@ final class SmokeTests: XCTestCase {
 
         // A poll title opens its page with the about panel and discussion
         app.buttons.matching(identifier: "poll-title").firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Asked by"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["ABOUT THIS POLL"].waitForExistence(timeout: 10))
         snapshot("5-poll-detail")
         app.swipeUp()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Discussion'")).firstMatch.waitForExistence(timeout: 10))

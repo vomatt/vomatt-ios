@@ -119,6 +119,22 @@ public enum Results {
         return top > 0 ? rows.filter { $0.votes == top } : []
     }
 
+    /// What the rows decided: one winner, a tie, or no votes.
+    public static func summary(_ rows: [ResultRow]) -> EndedSummary {
+        let winners = winners(rows)
+        if winners.count == 1 { return .won(winners[0].text) }
+        if winners.count > 1 { return .tie(winners.map(\.text)) }
+        return .none
+    }
+
+    /// How the viewer's pick fared: won, tied for first or outvoted; nil without a pick among the rows.
+    public static func outcome(of optionId: String?, in rows: [ResultRow]) -> BallotOutcome? {
+        guard let optionId, rows.contains(where: { $0.id == optionId }) else { return nil }
+        let winners = winners(rows)
+        guard winners.contains(where: { $0.id == optionId }) else { return .lost }
+        return winners.count > 1 ? .tied : .won
+    }
+
     /// Share of Participants, rounded to a whole percent.
     public static func support(votes: Int, participants: Int) -> Int {
         participants == 0 ? 0 : Int((Double(votes) / Double(participants) * 100).rounded())

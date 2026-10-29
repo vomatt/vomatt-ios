@@ -1,7 +1,7 @@
 import SwiftUI
 import VomattCore
 
-/// `/poll/[id]`: the card, who asked and when, and the discussion.
+/// `/poll/[id]`: the poll's card, what it promises, a look at the discussion and the author's other polls.
 struct PollDetailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
@@ -11,17 +11,24 @@ struct PollDetailView: View {
     enum Phase { case loading, ready(Poll), notFound(PollOwner?), failed }
     @State private var phase = Phase.loading
     @State private var comments: CommentsModel?
+    /// The session the comments were loaded in; a sign-in or out reloads them.
+    @State private var commentsSession: Int?
+    @State private var showDiscussion = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 switch phase {
                 case .loading:
                     PollCardSkeleton(options: 4)
-                case let .ready(poll):
-                    PollCardView(poll: poll, isDetail: true) { dismiss() }
-                    PollAboutView(poll: app.latest(poll))
-                    if let comments { CommentThreadView(model: comments).card(padding: nil) }
+                case let .ready(initial):
+                    let poll = app.latest(initial)
+                    PollDetailCard(poll: initial, commentCount: comments?.total ?? poll.commentCount) { showDiscussion = true }
+                    PollAboutView(poll: poll)
+                    if let comments {
+                        CommentThreadView(model: comments) { showDiscussion = true }.card(padding: 20)
+                    }
+                    if poll.status() != .ended { MoreFromAuthorView(poll: poll) }
                 case let .notFound(owner):
                     notFound(owner)
                 case .failed:
@@ -33,45 +40,69 @@ struct PollDetailView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let comments { ReplyDock(model: comments) }
+            if let comments, !showDiscussion { ReplyDock(model: comments) }
         }
-        .refreshable { await load() }
+        .refreshable { await load(reloadComments: true) }
         .canvas()
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if case let .ready(poll) = phase {
+                ToolbarItem(placement: .topBarTrailing) {
+                    PollMenu(poll: app.latest(poll), onChanged: refetch) {
+                        app.didDelete(poll.id)
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showDiscussion) {
+            if let comments, case let .ready(poll) = phase {
+                PollDiscussionView(model: comments, title: app.latest(poll).title)
+            }
+        }
         .task(id: "\(pollId)-\(app.sessionGeneration)") { await load() }
     }
 
     @ViewBuilder private func notFound(_ owner: PollOwner?) -> some View {
         if let owner {
-            UserChip(username: owner.username, avatarUrl: owner.avatarUrl,
-                     label: app.t("ios.invitedBy", ["name": owner.username]), avatarSize: 28, link: false)
-                .font(.vm(15, .semibold))
-                .foregroundStyle(Tokens.foreground)
-        }
-        // Signed out, a missing Poll may be Invite-only (e.g. from an invitation email)
-        if !app.isSignedIn {
-            LoginPromptCard()
-        } else if let owner {
-            EmptyState { Text(app.t("ios.inviteOnlyOtherAccount", ["name": owner.username])) }
+            InvitationPrompt(owner: owner)
+        } else if !app.isSignedIn {
+            // Signed out, a missing Poll may be Invite-only
+            LoginPromptCard(forPoll: true)
         } else {
-            EmptyState { Text(app.t("pollDetail.notFound")) }
+            EmptyState {
+                Text(app.t("pollDetail.notFound")).font(.vm(17, .medium)).foregroundStyle(Tokens.foreground)
+                    .accessibilityAddTraits(.isHeader)
+                Text(app.t("pollDetail.notFoundBody"))
+                Button(app.t("pollDetail.notFoundExplore")) { app.select(.explore) }
+                    .buttonStyle(.vm(.outline))
+            }
         }
     }
 
-    private func load() async {
+    private func load(reloadComments: Bool = false) async {
         do {
             guard let poll = try await app.service.poll(id: pollId) else {
                 phase = .notFound(try? await app.service.inviteOnlyOwner(pollId: pollId))
                 return
             }
-            if comments == nil { comments = CommentsModel(pollId: poll.id, initialTotal: poll.commentCount) }
+            let comments = comments ?? CommentsModel(pollId: poll.id, initialTotal: poll.commentCount)
+            self.comments = comments
             phase = .ready(poll)
             app.didUpdate(poll)
+            if reloadComments || commentsSession != app.sessionGeneration {
+                commentsSession = app.sessionGeneration
+                await comments.reload(app.service)
+            }
             await markReadIfNeeded(poll)
         } catch {
             if case .ready = phase { return }
             phase = .failed
         }
+    }
+
+    private func refetch() async {
+        if let fresh = try? await app.service.poll(id: pollId) { app.didUpdate(fresh) }
     }
 
     /// An Invitee has an Invitation until the Poll Ends; then the owner, Participants and
@@ -88,87 +119,410 @@ struct PollDetailView: View {
     }
 }
 
-/// Who asked, the voting window, turnout and topics (the web's `PollAbout`).
+/// The poll page's card (the web's `PollCard` with `isPage`): the Ballot until the Poll Ends, then
+/// the Results, and a footer whose Comments opens the discussion.
+private struct PollDetailCard: View {
+    @Environment(AppModel.self) private var app
+    let initialPoll: Poll
+    let commentCount: Int?
+    let onOpenDiscussion: () -> Void
+
+    @State private var poll: Poll
+    @State private var ballot: BallotModel
+    @State private var votersOption: ResultRow?
+
+    init(poll: Poll, commentCount: Int?, onOpenDiscussion: @escaping () -> Void) {
+        initialPoll = poll
+        self.commentCount = commentCount
+        self.onOpenDiscussion = onOpenDiscussion
+        _poll = State(initialValue: poll)
+        _ballot = State(initialValue: BallotModel(poll: poll))
+    }
+
+    var body: some View {
+        // Re-evaluated every minute so the chip and Ballot follow the clock
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            card(status: poll.status(at: context.date))
+        }
+        .onChange(of: initialPoll) { _, fresh in apply(fresh) }
+        .onChange(of: app.latestPolls[poll.id]) { _, fresh in
+            if let fresh, fresh != poll { apply(fresh) }
+        }
+        .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
+    }
+
+    private func card(status: PollStatus) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                        .font(.vm(14, .medium))
+                        .foregroundStyle(Tokens.foreground)
+                        .layoutPriority(1)
+                    Text("· " + app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
+                        .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                    Spacer(minLength: 0)
+                    StatusChip(poll: poll)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(poll.title).pollTitle().textSelection(.enabled).accessibilityAddTraits(.isHeader)
+                    if let description = poll.description, !description.isEmpty {
+                        Text(description).font(.vm(16)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                    }
+                }
+                Group {
+                    if status == .ended {
+                        ResultsView(
+                            poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
+                            onSealed: refetch,
+                            onSelectOption: poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                        )
+                    } else {
+                        BallotView(
+                            poll: poll, status: status, ballot: ballot,
+                            onPollChanged: { changed in
+                                // The last Invitee's Ballot can End the Poll
+                                if changed.status() == .ended { apply(changed) }
+                                app.didUpdate(changed)
+                            },
+                            onPollEnded: refetch
+                        )
+                    }
+                }
+                .id(status == .ended)
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: status == .ended)
+            }
+            .padding(20)
+
+            footer
+        }
+        .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
+    }
+
+    /// Turnout (and a non-Public Audience), comments and share (the web's `PollFooter`). Turnout shows in every state.
+    private var footer: some View {
+        let meta = [
+            ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
+            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
+        ].compactMap { $0 }.joined(separator: " · ")
+        return HStack(spacing: 20) {
+            if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit() }
+            Button(action: onOpenDiscussion) {
+                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
+            }
+            .frame(minHeight: Metrics.minTarget)
+            Spacer(minLength: 0)
+            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
+                Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
+            }
+            .frame(minHeight: Metrics.minTarget)
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+        }
+        .font(.vm(14))
+        .foregroundStyle(Tokens.mutedForeground)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
+        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+
+    private var commentLabel: String {
+        guard let commentCount else { return app.t("poll.discuss") }
+        return commentCount == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": commentCount])
+    }
+
+    private func apply(_ fresh: Poll) {
+        poll = fresh
+        ballot.sync(fresh)
+    }
+
+    private func refetch() async {
+        if let fresh = try? await app.service.poll(id: poll.id) {
+            apply(fresh)
+            app.didUpdate(fresh)
+        }
+    }
+}
+
+/// The poll page's ••• menu. The owner's controls (the web's `OwnerActions` menu) with Share, destructive
+/// ones last; for anyone else Share, Follow, Report and Block.
+private struct PollMenu: View {
+    @Environment(AppModel.self) private var app
+    let poll: Poll
+    let onChanged: () async -> Void
+    let onDeleted: () -> Void
+
+    enum Confirm: Identifiable { case delete, end; var id: Self { self } }
+    @State private var confirming: Confirm?
+    @State private var showInvitees = false
+
+    var body: some View {
+        let isOwner = app.userId == poll.creatorId
+        let actions = poll.ownerActions()
+        Menu {
+            if isOwner {
+                if actions.canEdit {
+                    Button { app.openCreator(poll: poll) { _ in Task { await onChanged() } } } label: {
+                        Label(app.t("poll.edit"), systemImage: "pencil")
+                    }
+                }
+                if actions.canEnd {
+                    Button { confirming = .end } label: { Label(app.t("poll.endNowEllipsis"), systemImage: "stop.circle") }
+                }
+                if actions.canInvite {
+                    Button { showInvitees = true } label: { Label(app.t("invitees.title"), systemImage: "person.2") }
+                }
+            }
+            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
+                Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
+            }
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            if isOwner {
+                if actions.canDelete {
+                    Divider()
+                    Button(role: .destructive) { confirming = .delete } label: {
+                        Label(app.t("poll.deletePollEllipsis"), systemImage: "trash")
+                    }
+                }
+            } else {
+                FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
+                ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
+                BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
+            }
+        } label: {
+            Image(systemName: "ellipsis").frame(width: Metrics.minTarget, height: Metrics.minTarget)
+        }
+        .accessibilityLabel(app.t("poll.moreActions", ["title": poll.title]))
+        .alert(
+            app.t(confirming == .end ? "poll.endNowTitle" : "poll.deletePollTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { action in
+            Button(app.t("poll.keepPoll"), role: .cancel) {}
+            Button(app.t(action == .end ? "poll.endNow" : "poll.deletePoll"), role: action == .delete ? .destructive : nil) {
+                Task { action == .delete ? await remove() : await end() }
+            }
+        } message: { action in
+            Text(app.t(action == .end ? "poll.endNowBody" : "poll.deletePollBody"))
+        }
+        .sheet(isPresented: $showInvitees) {
+            InviteeManagerView(pollId: poll.id) { invitees in
+                // The Poll Ends once every Invitee holds a Ballot; only then refetch it
+                if !invitees.isEmpty, invitees.allSatisfy(\.hasBallot) {
+                    Task { await onChanged() }
+                } else {
+                    var changed = poll
+                    changed.inviteeCount = invitees.count
+                    app.didUpdate(changed)
+                }
+            }
+        }
+    }
+
+    private func remove() async {
+        do {
+            try await app.service.deletePoll(id: poll.id)
+            app.showToast(app.t("poll.deleted"))
+            onDeleted()
+        } catch {
+            // The API explains a passed delete window
+            app.showToast(app.t.message(for: error, fallback: "poll.deleteFailed"), isError: true)
+        }
+    }
+
+    private func end() async {
+        do {
+            try await app.service.closePoll(id: poll.id)
+            await onChanged()
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "poll.endFailed"), isError: true)
+        }
+    }
+}
+
+/// The small uppercase heading of a card beside the poll (`text-[13px] uppercase tracking-[0.06em]`).
+private struct RailHeading: View {
+    let text: String
+    var body: some View {
+        Text(text.uppercased())
+            .font(.vm(13, .semibold, relativeTo: .footnote))
+            .tracking(0.78)
+            .foregroundStyle(Tokens.mutedForeground)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// The voting window, the rules and topics; once Ended, one line (the web's `PollAbout`).
 struct PollAboutView: View {
     @Environment(AppModel.self) private var app
     let poll: Poll
 
     var body: some View {
         let status = poll.status()
-        VStack(alignment: .leading, spacing: 20) {
-            Button { app.push(.profile(poll.creatorUsername)) } label: {
-                HStack(spacing: 12) {
-                    AvatarView(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, size: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(app.t("pollDetail.askedBy")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
-                        Text(poll.creatorUsername).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+        VStack(alignment: .leading, spacing: 16) {
+            RailHeading(text: app.t("pollDetail.about"))
+            if status == .ended {
+                Group {
+                    if poll.endedEarly, let deadline = poll.deadline {
+                        Text(app.t("pollDetail.endedEarly", ["date": app.dates.pollDate(deadline)]))
+                    } else {
+                        Text(app.t("pollDetail.resultsIn"))
                     }
                 }
-            }
-            .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(app.t("pollDetail.opened", ["date": app.dates.pollDate(poll.startTime)]))
-                    Spacer()
-                    if let endTime = poll.endTime { Text(app.dates.pollDate(endTime)) }
+                .font(.vm(14)).foregroundStyle(Tokens.foreground)
+            } else {
+                VStack(spacing: 8) {
+                    dateRow(app.t(status == .scheduled ? "pollDetail.opens" : "pollDetail.opened"), app.dates.pollDate(poll.startTime))
+                    if let progress = poll.timelineProgress() {
+                        ProgressView(value: progress.rounded(), total: 100)
+                            .progressViewStyle(TimelineStyle())
+                            .accessibilityLabel(app.t("pollDetail.timeline"))
+                    }
+                    dateRow(app.t("pollDetail.results"), poll.endTime.map { app.dates.pollDate($0) }, fallback: app.t("pollDetail.noEnd"))
                 }
-                .font(.vm(12))
-                .foregroundStyle(Tokens.mutedForeground)
-                if let progress = poll.timelineProgress() {
-                    ProgressView(value: progress, total: 100)
-                        .progressViewStyle(TimelineStyle())
-                        .accessibilityLabel(app.t("pollDetail.timeline"))
+                .font(.vmMeta)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    rule("lock", app.t("pollDetail.ruleSealed"))
+                    rule("person", app.t("pollDetail.ruleOneVote"))
+                    if let level = poll.visibilityLevel { rule("eye", app.t("poll.visibility.\(level.rawValue)")) }
                 }
-                Text(statusLine(status)).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
-            }
+                .font(.vm(14))
+                .lineSpacing(3)
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .tidePanel()
 
-            if let turnout = poll.turnout {
-                (Text(app.t.number(turnout)).font(.vmMono(30)).tracking(-0.5).foregroundStyle(Tokens.foreground)
-                    + Text(" " + app.t("pollDetail.participants")
-                        + (poll.inviteeCount.map { " · " + app.t("pollDetail.invited", ["count": app.t.number($0)]) } ?? ""))
-                    .font(.vm(14)).foregroundStyle(Tokens.mutedForeground))
-            }
-
-            if let audience = poll.audience, audience != .public {
-                (Text(app.t("poll.audience.\(audience.rawValue)")).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
-                    + Text(" · " + app.t("pollDetail.audience.\(audience.rawValue)")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground))
-                    .lineSpacing(3)
-            }
-
-            if !poll.tags.isEmpty {
-                FlowLayout(spacing: 6) {
-                    ForEach(poll.tags) { tag in TopicChip(tag: tag, compact: true) }
+                if !poll.tags.isEmpty {
+                    FlowLayout(spacing: 6) {
+                        ForEach(poll.tags) { tag in
+                            Button { app.push(.topic(tag)) } label: {
+                                Text(tag.name)
+                                    .font(.vm(12, .medium))
+                                    .foregroundStyle(Tokens.foreground)
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(Tokens.field, in: Capsule())
+                                    // A 44pt tall hit area; the row spacing keeps each chip's its own
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, -8)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(app.t("pollDetail.topics"))
                 }
-                .accessibilityLabel(app.t("pollDetail.topics"))
             }
-
-            if status != .ended {
-                Text(app.t("pollDetail.sealedExplainer")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
-            }
-
-            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
-                Label(app.t(poll.audience == .inviteOnly ? "poll.share" : "pollDetail.shareCta"), systemImage: "square.and.arrow.up")
-            }
-            .buttonStyle(.vm(.outline, size: .sm, fullWidth: true))
-            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .card(padding: 20)
     }
 
-    private func statusLine(_ status: PollStatus) -> String {
-        switch status {
-        case .ended:
-            if poll.endedEarly, let deadline = poll.deadline {
-                return app.t("pollDetail.endedEarly", ["date": app.dates.pollDate(deadline)])
-            }
-            return app.t("pollDetail.resultsIn")
-        case .scheduled:
-            return app.t("poll.opensHint", ["distance": app.dates.fromNow(poll.startTime)])
-        default:
-            guard let endTime = poll.endTime else { return app.t("pollDetail.noEnd") }
-            return app.t("pollDetail.revealsIn", ["distance": app.dates.fromNow(endTime)])
+    private func dateRow(_ label: String, _ value: String?, fallback: String = "") -> some View {
+        HStack(spacing: 12) {
+            Text(label).foregroundStyle(Tokens.mutedForeground)
+            Spacer(minLength: 0)
+            Text(value ?? fallback).font(value == nil ? .vmMeta : .vmMono(13)).foregroundStyle(Tokens.foreground)
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func rule(_ icon: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Tokens.tide).frame(width: 16).accessibilityHidden(true)
+            Text(text).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// Two of the author's other Polls, while this one is open (the web's `MoreFromAuthor`); left out when
+/// there are none or the list fails.
+private struct MoreFromAuthorView: View {
+    @Environment(AppModel.self) private var app
+    let poll: Poll
+    @State private var polls: [Poll] = []
+
+    var body: some View {
+        Group {
+            if !polls.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    RailHeading(text: app.t("pollDetail.moreFrom", ["username": poll.creatorUsername]))
+                    VStack(spacing: 0) {
+                        ForEach(app.visible(polls)) { other in
+                            Button { app.push(.poll(other.id)) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(other.title)
+                                        .font(.vm(15, .medium)).tracking(-0.15)
+                                        .foregroundStyle(Tokens.foreground)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                    Text(MoreFromAuthor.meta(other, t: app.t, dates: app.dates))
+                                        .font(.vmMono(13)).monospacedDigit()
+                                        .foregroundStyle(Tokens.mutedForeground)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: Metrics.minTarget, alignment: .leading)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .card(padding: 20)
+            }
+        }
+        .task(id: poll.id) {
+            let page = try? await app.service.userPolls(username: poll.creatorUsername, limit: 3)
+            polls = MoreFromAuthor.pick(page?.items ?? [], excluding: poll.id)
+        }
+    }
+}
+
+/// An Invitation link to an Invite-only Poll the viewer can't open yet (the web's `InvitationPrompt`).
+private struct InvitationPrompt: View {
+    @Environment(AppModel.self) private var app
+    let owner: PollOwner
+
+    var body: some View {
+        VStack(spacing: 12) {
+            AvatarView(username: owner.username, avatarUrl: owner.avatarUrl, size: 56)
+            Text(app.t("poll.invitation.title", ["username": owner.username]))
+                .pollTitle(25)
+                .accessibilityAddTraits(.isHeader)
+            Text(app.t(app.isSignedIn ? "poll.invitation.wrongAccount" : "poll.invitation.signIn"))
+                .font(.vm(16)).foregroundStyle(Tokens.mutedForeground)
+            Label {
+                Text(app.t("poll.audience.invite-only"))
+            } icon: {
+                Image(systemName: "lock").foregroundStyle(Tokens.tide)
+            }
+            .font(.vm(12, .medium))
+            .foregroundStyle(Tokens.foreground)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Tokens.field, in: Capsule())
+            Group {
+                if app.isSignedIn {
+                    LoadingButton(style: .vm(.outline), action: switchAccount) { Text(app.t("poll.invitation.switchAccount")) }
+                } else {
+                    Button(app.t("loginPrompt.ctaLabel")) { app.signIn() }.buttonStyle(.vm(.default))
+                }
+            }
+            .padding(.top, 8)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
+        .card(padding: nil)
+    }
+
+    /// Signs out and back in, for the account the invitation was sent to.
+    private func switchAccount() async {
+        await app.signOut()
+        app.signIn()
     }
 }
 
@@ -178,7 +532,7 @@ struct TimelineStyle: ProgressViewStyle {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule().fill(Tokens.muted)
-                Capsule().fill(Tokens.primary).frame(width: proxy.size.width * (configuration.fractionCompleted ?? 0))
+                Capsule().fill(Tokens.tide).frame(width: proxy.size.width * (configuration.fractionCompleted ?? 0))
             }
         }
         .frame(height: 6)
@@ -253,10 +607,13 @@ struct FlowLayout: Layout {
 /// "Log in or sign up for Vomatt" (the web's `LoginPrompt`).
 struct LoginPromptCard: View {
     @Environment(AppModel.self) private var app
+    /// Adds that logging in opens this Poll.
+    var forPoll = false
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(app.t("loginPrompt.title")).font(.vm(14, .semibold)).foregroundStyle(Tokens.foreground)
-            Text(app.t("loginPrompt.subtitle")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+            Text(app.t("loginPrompt.subtitle") + (forPoll ? " " + app.t("loginPrompt.pollNote") : ""))
+                .font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
             Button(app.t("loginPrompt.ctaLabel")) { app.signIn() }
                 .buttonStyle(.vm(.default, size: .sm, fullWidth: true))
                 .padding(.top, 10)

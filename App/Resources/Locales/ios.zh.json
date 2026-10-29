@@ -42,10 +42,6 @@
 		"followFailed": "無法追蹤，請再試一次。",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
 		"followingEmpty": "還沒有內容。從投票的選單追蹤其他人，就能在這裡看到他們進行中的投票。",
-		"invitedBy": "{name} 邀請了你",
-		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
-		"sealedTitle": "已封存，謝謝你。",
-		"sealedTurnout": "{count} 人已投票，包括你",
 		"setBirthday": "新增生日",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followsYou": "追蹤了你",
@@ -62,7 +58,8 @@
 		"reportNote": "補充說明（選填）",
 		"reportSend": "送出檢舉",
 		"reportSent": "謝謝，我們已收到你的檢舉。",
-		"reportFailed": "無法送出檢舉，請再試一次。"
+		"reportFailed": "無法送出檢舉，請再試一次。",
+		"seeAll": "查看全部"
 	},
 	"apiError": {
 		"common.bad_request": "請求格式錯誤",
@@ -162,8 +159,6 @@
 		"results": "結果"
 	},
 	"poll": {
-		"stamp": "已投票",
-		"withdrawConfirm": "要撤回你的投票嗎？撤回後不會被計入，也不會收到通知。",
 		"yourVote": "你的選擇"
 	},
 	"pollCreator": {
@@ -171,12 +166,6 @@
 		"summaryOpensLater": "{start} 開始，{end} 結束",
 		"summaryOpensNow": "現在開始，{end} 結束",
 		"summaryVisibility": "結束後：{level}"
-	},
-	"pollDetail": {
-		"askedBy": "發起人",
-		"invited": "{count} 人受邀",
-		"participants": "人已投票",
-		"revealsIn": "結果將於{distance}揭曉"
 	},
 	"profile": {
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
