@@ -508,7 +508,7 @@ private struct CommentRow: View {
         .opacity(comment.isPending ? 0.6 : 1)
         .animation(.easeOut(duration: 0.15), value: isTarget)
         .sheet(isPresented: $confirmingDelete) { DeleteCommentSheet(comment: comment, model: model) }
-        .sheet(isPresented: $reporting) { ReportCommentSheet(comment: comment, pollId: model.pollId) }
+        .sheet(isPresented: $reporting) { ReportSheet(pollId: model.pollId, commentId: comment.id) }
     }
 
     private var actions: some View {
@@ -660,27 +660,31 @@ private struct DeleteCommentSheet: View {
     }
 }
 
-/// "Report this comment": a reason, an optional note. The API keeps the first report of a repeat.
-private struct ReportCommentSheet: View {
+/// Reports someone else's comment, or with no `commentId` the poll itself, to the moderators: a reason
+/// and an optional note (the web's `ReportCommentDialog`). The API keeps the first report of a repeat.
+struct ReportSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
-    let comment: Comment
     let pollId: String
+    var commentId: String?
     @State private var reason: ReportReason?
     @State private var note = ""
+
+    /// Comment and poll reports share their reasons, with their own words around them.
+    private var copy: String { commentId == nil ? "poll" : "comments" }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(app.t("ios.reportCommentTitle")).displayHeading(20)
-                    Text(app.t("ios.reportCommentBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                    Text(app.t("\(copy).reportTitle")).displayHeading(20)
+                    Text(app.t("\(copy).reportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
                 }
                 VStack(spacing: 0) {
                     ForEach(ReportReason.allCases, id: \.self) { option in
                         Button { reason = option } label: {
                             HStack {
-                                Text(app.t("ios.reportReason.\(option.rawValue)")).font(.vm(15))
+                                Text(app.t("comments.reportReason.\(option.rawValue)")).font(.vm(15))
                                 Spacer()
                                 if reason == option { Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)) }
                             }
@@ -697,10 +701,12 @@ private struct ReportCommentSheet: View {
                     }
                 }
                 .card(padding: nil)
-                VMTextEditor(placeholder: app.t("ios.reportNote"), text: $note, minHeight: 80, font: .vm(16), autoFocus: false)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(app.t("comments.reportReasonLabel"))
+                VMTextEditor(placeholder: app.t("comments.reportNote"), text: $note, minHeight: 80, font: .vm(16), autoFocus: false)
                 Text("\(note.count) / \(reportNoteMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
                 VStack(spacing: 8) {
-                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: send) { Text(app.t("ios.reportSend")) }
+                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: send) { Text(app.t("\(copy).report")) }
                         .disabled(reason == nil || note.count > reportNoteMax)
                     Button(app.t("common.cancel")) { dismiss() }.buttonStyle(.vm(.ghost, size: .lg, fullWidth: true))
                 }
@@ -716,11 +722,15 @@ private struct ReportCommentSheet: View {
     private func send() async {
         guard let reason else { return }
         do {
-            try await app.service.reportComment(pollId: pollId, commentId: comment.id, reason: reason, note: note)
-            app.showToast(app.t("ios.reportSent"))
+            if let commentId {
+                try await app.service.reportComment(pollId: pollId, commentId: commentId, reason: reason, note: note)
+            } else {
+                try await app.service.reportPoll(id: pollId, reason: reason, note: note)
+            }
+            app.showToast(app.t("\(copy).reportDone"))
             dismiss()
         } catch {
-            app.showToast(app.t.message(for: error, fallback: "ios.reportFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "\(copy).reportFailed"), isError: true)
         }
     }
 }

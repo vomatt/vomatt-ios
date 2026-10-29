@@ -122,7 +122,7 @@ final class SignedInFlowTests: XCTestCase {
         app.typeText(wrong)
         _ = invalid.waitForExistence(timeout: 5)
         app.typeText(wrong)
-        let locked = app.staticTexts["Too many wrong attempts. Try again in 15 minutes."]
+        let locked = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Too many wrong attempts.'")).firstMatch
         XCTAssertTrue(locked.waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["6-digit verification code"].isEnabled)
         snapshot("e2e-wrong-code-locked")

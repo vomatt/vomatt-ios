@@ -201,7 +201,7 @@ private struct PollDetailCard: View {
         .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
     }
 
-    /// Turnout (and a non-Public Audience), comments and share (the web's `PollFooter`). Turnout shows in every state.
+    /// Turnout (and a non-Public Audience), comments, save and share (the web's `PollFooter`). Turnout shows in every state.
     private var footer: some View {
         let meta = [
             ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
@@ -214,11 +214,7 @@ private struct PollDetailCard: View {
             }
             .frame(minHeight: Metrics.minTarget)
             Spacer(minLength: 0)
-            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
-                Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
-            }
-            .frame(minHeight: Metrics.minTarget)
-            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            PollFooterActions(poll: $poll)
         }
         .font(.vm(14))
         .foregroundStyle(Tokens.mutedForeground)
@@ -257,6 +253,7 @@ private struct PollMenu: View {
     enum Confirm: Identifiable { case delete, end; var id: Self { self } }
     @State private var confirming: Confirm?
     @State private var showInvitees = false
+    @State private var reporting = false
 
     var body: some View {
         let isOwner = app.userId == poll.creatorId
@@ -288,7 +285,7 @@ private struct PollMenu: View {
                 }
             } else {
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
-                ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
+                ReportPollButton { reporting = true }
                 BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
             }
         } label: {
@@ -307,6 +304,7 @@ private struct PollMenu: View {
         } message: { action in
             Text(app.t(action == .end ? "poll.endNowBody" : "poll.deletePollBody"))
         }
+        .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
         .sheet(isPresented: $showInvitees) {
             InviteeManagerView(pollId: poll.id) { invitees in
                 // The Poll Ends once every Invitee holds a Ballot; only then refetch it

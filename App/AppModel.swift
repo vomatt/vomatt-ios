@@ -166,9 +166,15 @@ final class AppModel {
     }
 
     func refreshAccount() async {
-        async let profile = try? service.myProfile()
         async let unread = try? service.unreadCount()
-        if let profile = await profile { me = profile }
+        do {
+            me = try await service.myProfile()
+        } catch let error as APIError where error.isAccountGone {
+            // Deleted on another device: this token still verifies until it expires, but nothing is left behind it
+            await service.signOut()
+            showToast(t("login.accountDeleted"))
+            return
+        } catch {}
         if let unread = await unread { unreadCount = unread }
         await syncBlocked()
         let changes = followChanges

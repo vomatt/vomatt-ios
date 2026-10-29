@@ -39,6 +39,7 @@ extension Poll {
             myOptionId: dto.myOptionId,
             myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,
+            bookmarked: dto.bookmarked,
             options: try (dto.options ?? []).map(PollOption.init).sorted { $0.displayOrder < $1.displayOrder },
             tags: try (dto.tags ?? []).map(Tag.init)
         )
@@ -261,10 +262,11 @@ extension UserSummary {
 }
 
 extension FeedNotification {
+    /// Throws for a kind the app has no row for, so the feed leaves it out like the web does.
     init(_ dto: Schemas.NotificationResponse) throws {
         self.init(
             id: try required(dto.id, "NotificationResponse.id"),
-            kind: FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")),
+            kind: try required(dto.kind.flatMap(FeedNotification.Kind.init), "NotificationResponse.kind"),
             createdAt: try required(dto.createdAt, "NotificationResponse.createdAt"),
             read: dto.read ?? false,
             actor: try dto.actor.map(UserSummary.init),
@@ -275,14 +277,17 @@ extension FeedNotification {
 }
 
 extension FeedNotification.Kind {
-    init(_ value: Schemas.NotificationResponse.KindPayload) {
+    /// nil for LIKE: the web shows no row for it yet.
+    init?(_ value: Schemas.NotificationResponse.KindPayload) {
         switch value {
         case .result: self = .result
         case .cancelled: self = .cancelled
         case .invitation: self = .invitation
         case .followed: self = .followed
         case .comment: self = .comment
+        case .mention: self = .mention
         case .closingSoon: self = .closingSoon
+        case .like: return nil
         }
     }
 }
@@ -314,13 +319,13 @@ extension NotificationPreferences {
     init(_ dto: Schemas.NotificationPreferencesResponse) {
         self.init(
             resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
-            comments: dto.comments ?? true, closingSoon: dto.closingSoon ?? false
+            comments: dto.comments ?? true, mentions: dto.mentions ?? true, closingSoon: dto.closingSoon ?? false
         )
     }
 }
 
 extension ReportReason {
-    var request: Schemas.ReportCommentRequest.ReasonPayload {
+    var request: Schemas.ReportRequest.ReasonPayload {
         switch self {
         case .spam: .spam
         case .harassment: .harassment
