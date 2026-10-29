@@ -73,6 +73,7 @@ struct FeedView: View {
     @State private var list: CursorList<Poll>?
     /// Whether the signed-in viewer follows `tag`; nil until known.
     @State private var followingTag: Bool?
+    @State private var togglingTag = false
 
     var body: some View {
         ScrollView {
@@ -110,8 +111,11 @@ struct FeedView: View {
 
     /// Shows the new state at once and puts the old one back when the API refuses.
     private func toggleTagFollow(_ tag: Tag, _ current: Bool) {
+        guard !togglingTag else { return }
+        togglingTag = true
         followingTag = !current
         Task {
+            defer { togglingTag = false }
             do {
                 try await app.service.setTagFollow(tagId: tag.id, following: !current)
             } catch {

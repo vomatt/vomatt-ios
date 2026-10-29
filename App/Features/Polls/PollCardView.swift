@@ -14,6 +14,7 @@ struct PollCardView: View {
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
     @State private var reporting = false
+    @State private var bookmarking = false
 
     init(poll: Poll, isDetail: Bool = false, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
@@ -187,11 +188,14 @@ struct PollCardView: View {
 
     /// Shows the new state at once and puts the old one back when the API refuses.
     private func toggleBookmark() {
+        guard !bookmarking else { return }
         app.requireAuth {
             let wanted = poll.bookmarked != true
             poll.bookmarked = wanted
             app.didUpdate(poll)
+            bookmarking = true
             Task {
+                defer { bookmarking = false }
                 do {
                     try await app.service.setBookmark(pollId: poll.id, bookmarked: wanted)
                 } catch {

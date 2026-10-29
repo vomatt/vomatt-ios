@@ -58,6 +58,10 @@ struct MyPollsView: View {
         }
         .refreshable { await reload() }
         .task(id: app.sessionGeneration) { await reload() }
+        .onChange(of: tab) { _, tab in
+            // Polls bookmarked elsewhere show up when the tab opens
+            if tab == .bookmarks { Task { await bookmarks?.reload() } }
+        }
         .onAppear { drafts = app.drafts.list() }
         .onChange(of: app.creator == nil) { _, closed in if closed { drafts = app.drafts.list() } }
     }
@@ -75,7 +79,8 @@ struct MyPollsView: View {
         } else if let list, list.phase == .failed {
             LoadFailed(message: app.t(failed)) { await list.reload() }
         } else if let list {
-            let polls = app.visible(list.items)
+            // Unbookmarking inside the Bookmarks tab drops the poll at once
+            let polls = app.visible(list.items).filter { list !== bookmarks || $0.bookmarked != false }
             if polls.isEmpty {
                 EmptyState { Text(app.t(empty)).frame(maxWidth: .infinity) }
             } else {
