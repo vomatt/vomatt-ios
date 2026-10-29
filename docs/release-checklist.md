@@ -9,9 +9,9 @@
 - [x] **Site origin**: `https://vomatt.com` (`VOMATT_SITE_URL`): share links and universal links
 - [x] **Support email**: `team@vomatt.com` (`VOMATT_SUPPORT_EMAIL`): content reports and
       "Contact us" go there
-- [x] **Terms and privacy URLs**: the app links `<site>/terms-of-service` and
-      `<site>/privacy-policy` (`AppSettingsSection` in `Features/Profile/AccountView.swift`), the
-      live Sanity page slugs (checked 2026-10-17)
+- [x] **Terms and privacy URLs**: the app links `<site>/terms-of-service`, `<site>/privacy-policy`
+      and the cookies page (`LegalLinks` in `Features/Profile/SettingsView.swift`, also on the
+      signed-out Profile tab), the live Sanity page slugs (checked 2026-10-17)
 
 ## Backend and web
 
@@ -19,9 +19,10 @@
 - [ ] Universal links: vomatt-web serves `/.well-known/apple-app-site-association` once
       `IOS_APP_IDS` is set on Vercel; the entitlement already lists `applinks:vomatt.com`.
       Until then `vomatt://poll/<id>` works.
-- [x] Content moderation (App Review guideline 1.2): people can report a poll or comment (by email)
-      and block a user, which hides their polls and comments on that device (Settings lists them
-      to unblock). Server-side reports and blocks need the API (see "Known gaps").
+- [x] Content moderation (App Review guideline 1.2): people can report a poll or a comment through
+      the API, and block a user from a profile, a poll or a comment (it asks first); the API hides
+      the blocked person's polls and comments, and Settings lists them to unblock.
+- [ ] Someone reads reports within 24 hours (Apple's expectation): name who, and where they look
 
 ## App Store Connect
 
@@ -37,12 +38,16 @@
 
 ## Build and ship
 
-- [ ] Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.yml`
-- [ ] `make test` and `make test-ui` pass; `make sync-check` passes
+- [x] Version: `1.0.0` (build `1`) in `project.yml` for the first upload; raise
+      `CURRENT_PROJECT_VERSION` for every later upload, `MARKETING_VERSION` for every release
+- [ ] `make test` and `make test-ui` pass (the signed-in flow against `scripts/e2e-api.sh`, see
+      docs/e2e.md); `make sync-check` passes
 - [ ] `make archive` (uploads to App Store Connect with `Configs/ExportOptions.plist`)
-- [ ] TestFlight smoke test on a device: sign up, sign out, sign in, vote, change vote, withdraw,
-      comment, reply, like, create a poll (public and invite-only), edit while scheduled, delete,
-      edit profile, change avatar, toggle visibility, delete a throwaway account
+- [ ] TestFlight smoke test on a device: sign up, sign out, sign in (code and passkey), vote, change
+      vote, withdraw, comment, reply, like, report a comment and a poll, save a poll, create a poll
+      (public and invite-only, with an invite list), edit while scheduled, delete, follow and block
+      someone from their profile, read and mark all notifications read, the Asked and Voted filters,
+      edit profile with a hidden field, change avatar, switch the theme, delete a throwaway account
 
 ## Already in place
 
@@ -59,5 +64,4 @@
   show as the dot on the Notifications tab, refreshed when the app becomes active
 - Sign in with Apple: the API has `/api/auth/apple`; wiring it needs the Apple service ID configured
   on the API (`APPLE_CLIENT_ID`) to accept this app's bundle ID
-- Follows: hidden on the web too until the API supports them
-- Reports go by email and blocks stay on the device until the API has endpoints for them
+- Signed-out blocks stay on the device and move to the account at sign-in

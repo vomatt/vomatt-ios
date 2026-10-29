@@ -10,7 +10,7 @@
 #   scripts/sync.sh check                                 fails when anything differs from the web repo
 #
 # WEB_DIR points at the vomatt-web checkout (default: ../vomatt-web). Files are read from its commit
-# WEB_REF (default: main), not its working tree, so work in progress there never reaches the app.
+# WEB_REF (default: origin/main, fetched first), not its working tree, so work in progress there never reaches the app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -20,9 +20,11 @@ LOCALES="$ROOT/App/Resources/Locales"
 COLORS="$ROOT/App/Resources/Colors.xcassets"
 TOKENS_SWIFT="$ROOT/App/DesignSystem/Tokens.generated.swift"
 AVATARS="$ROOT/App/Resources/Avatars.xcassets"
-WEB_REF="${WEB_REF:-main}"
+WEB_REF="${WEB_REF:-origin/main}"
 
 require_web() {
+	# Behind a stale local branch the app would copy strings the web already changed
+	[[ "$WEB_REF" == origin/* ]] && git -C "$WEB_DIR" fetch -q origin
 	git -C "$WEB_DIR" rev-parse --verify --quiet "$WEB_REF^{commit}" >/dev/null \
 		|| { echo "sync.sh: no commit $WEB_REF in vomatt-web at $WEB_DIR (set WEB_DIR, WEB_REF)" >&2; exit 1; }
 }
