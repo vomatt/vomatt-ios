@@ -56,7 +56,7 @@
 ## Known gaps (need the API or a decision; specs in [backend-requests.md](backend-requests.md))
 
 - Push notifications: the API has no device-token registration, so unread Invitations and results
-  show as the dot on My Polls, refreshed when the app becomes active
+  show as the dot on the Notifications tab, refreshed when the app becomes active
 - Sign in with Apple: the API has `/api/auth/apple`; wiring it needs the Apple service ID configured
   on the API (`APPLE_CLIENT_ID`) to accept this app's bundle ID
 - Follows: hidden on the web too until the API supports them

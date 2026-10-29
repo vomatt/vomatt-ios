@@ -323,6 +323,8 @@ struct PollRow<Meta: View, Aside: View>: View {
     var highlighted = false
     /// Bolds the title and puts the unread dot right after it
     var unread = false
+    /// The viewer's Ballot on a Poll still open: the Seal and the Tide surface
+    var sealed = false
     /// Half the title's cap height, so the dot sits mid-line at every text size
     @ScaledMetric(relativeTo: .headline) private var dotLift: CGFloat = 6
     var onOpen: (() -> Void)?
@@ -335,6 +337,7 @@ struct PollRow<Meta: View, Aside: View>: View {
             app.push(.poll(poll.id))
         } label: {
             HStack(spacing: 12) {
+                if sealed { SealMark(size: 32) }
                 VStack(alignment: .leading, spacing: 6) {
                     aside()
                     // The dot trails the title, as it trails a tab's label, so titles keep one left edge read or not.
@@ -355,15 +358,15 @@ struct PollRow<Meta: View, Aside: View>: View {
                     HStack(spacing: 6) { meta() }
                         .font(.vmMeta)
                         .monospacedDigit()
-                        .foregroundStyle(Tokens.mutedForeground)
+                        .foregroundStyle(sealed ? Tokens.tideForeground : Tokens.mutedForeground)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "arrow.right").font(.system(size: 14)).foregroundStyle(Tokens.mutedForeground)
             }
             .padding(16)
-            .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
+            .background(sealed ? Tokens.tideTint : Tokens.card, in: RoundedRectangle(cornerRadius: Radius.xl))
             .overlay(RoundedRectangle(cornerRadius: Radius.xl)
-                .strokeBorder(highlighted ? Tokens.foreground.opacity(0.4) : Tokens.border))
+                .strokeBorder(highlighted ? Tokens.foreground.opacity(0.4) : sealed ? Tokens.tideLine : Tokens.border))
             .contentShape(RoundedRectangle(cornerRadius: Radius.xl))
         }
         .buttonStyle(.plain)
@@ -371,7 +374,10 @@ struct PollRow<Meta: View, Aside: View>: View {
 }
 
 extension PollRow where Aside == EmptyView {
-    init(poll: Poll, highlighted: Bool = false, unread: Bool = false, onOpen: (() -> Void)? = nil, @ViewBuilder meta: @escaping () -> Meta) {
-        self.init(poll: poll, highlighted: highlighted, unread: unread, onOpen: onOpen, meta: meta, aside: { EmptyView() })
+    init(
+        poll: Poll, highlighted: Bool = false, unread: Bool = false, sealed: Bool = false, onOpen: (() -> Void)? = nil,
+        @ViewBuilder meta: @escaping () -> Meta
+    ) {
+        self.init(poll: poll, highlighted: highlighted, unread: unread, sealed: sealed, onOpen: onOpen, meta: meta, aside: { EmptyView() })
     }
 }

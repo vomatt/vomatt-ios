@@ -150,7 +150,7 @@ struct RouteView: View {
         case let .profile(username): ProfileView(username: username)
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)
-        case .myPolls: MyPollsView()
+        case .settings: SettingsView()
         }
     }
 }

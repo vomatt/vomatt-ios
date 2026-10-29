@@ -89,14 +89,11 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Raohe has the best pepper buns."].waitForExistence(timeout: 10))
         snapshot("e2e-5-commented")
 
-        // Account page, whose My Polls lists it as Active, and sign out
+        // Profile, whose Asked tab lists it as Open now, then sign out from Settings
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
-        snapshot("e2e-6-account")
-        app.buttons["My Polls"].tap()
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts[question].waitForExistence(timeout: 10))
-        snapshot("e2e-7-my-polls")
-        app.buttons["Profile"].tap()
+        snapshot("e2e-6-account")
         app.buttons["Settings"].tap()
         app.swipeUp()
         app.buttons["Log out"].firstMatch.tap()
@@ -150,14 +147,14 @@ final class SignedInFlowTests: XCTestCase {
         app.typeText(try code(for: email))
         XCTAssertTrue(app.staticTexts["What should we call you?"].waitForExistence(timeout: 10))
         app.buttons["Skip for now"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
 
         // Past the 60s refresh leeway of a 120s token
         Thread.sleep(forTimeInterval: 70)
-        app.buttons["My Polls"].tap()
-        XCTAssertTrue(app.staticTexts["My Polls"].waitForExistence(timeout: 10))
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.staticTexts["Invite lists"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["Log in or sign up for Vomatt"].exists, "the session should have been refreshed, not ended")
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
     }
 }

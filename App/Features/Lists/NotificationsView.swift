@@ -404,3 +404,20 @@ private struct FollowBackButton: View {
         }
     }
 }
+
+/// What a signed-in-only tab shows to guests.
+struct SignedOutPlaceholder: View {
+    @Environment(AppModel.self) private var app
+    let title: String
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text(title).displayHeading(32)
+                LoginPromptCard()
+            }
+            .pageColumn()
+            .padding(.vertical, 24)
+        }
+    }
+}
