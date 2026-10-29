@@ -84,6 +84,11 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(block.waitForExistence(timeout: 5))
         snapshot("9-block-menu")
         block.tap()
+        // Blocking asks first
+        let confirm = app.alerts.buttons["Block"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        snapshot("9b-block-confirm")
+        confirm.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'is blocked'")).firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier == 'poll-title' AND label == %@", label)).firstMatch.exists)
     }

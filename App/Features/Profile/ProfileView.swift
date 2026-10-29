@@ -26,14 +26,17 @@ struct AccountTab: View {
     }
 }
 
-/// `/<username>`: the viewer's own account page, or someone else's public profile.
+/// `/<username>`: the viewer's own account page, or someone else's public profile (the web's `VisitorProfileView`):
+/// who they are, their public record and the polls they asked. Follow sits where Edit profile sits on your own page.
 struct ProfileView: View {
     @Environment(AppModel.self) private var app
     let username: String
 
     enum Phase { case loading, ready(UserProfile), notFound, failed }
+    enum AskedFilter: Hashable { case all, open, ended }
     @State private var phase = Phase.loading
     @State private var polls: CursorList<Poll>?
+    @State private var filter = AskedFilter.all
 
     var body: some View {
         Group {
@@ -48,7 +51,7 @@ struct ProfileView: View {
 
     private var publicProfile: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 24) {
                 switch phase {
                 case .loading:
                     ProfileSkeleton()
@@ -60,36 +63,7 @@ struct ProfileView: View {
                 case .failed:
                     LoadFailed(message: app.t("profile.cardFailed")) { await load() }
                 case let .ready(profile):
-                    ProfileHeader(profile: profile, onAvatarTap: nil) { ProfileRelationButton(profile: profile) }
-                    VStack(alignment: .leading, spacing: 12) {
-                        FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
-                        if profile.followsYou == true { Chip(text: app.t("ios.followsYou")) }
-                        MutualFollowers(profile: profile)
-                    }
-                    StatsGrid(stats: [
-                        .init(label: app.t("account.votesCast"), value: app.t.number(profile.totalVotes)),
-                        .init(label: app.t("account.pollsCreated"), value: app.t.number(profile.totalPolls)),
-                    ])
-                    .accessibilityLabel(app.t("profile.stats"))
-                    VStack(alignment: .leading, spacing: 16) {
-                        SectionTitle(text: app.t("profile.polls"))
-                        if let polls {
-                            let items = app.visible(polls.items)
-                            if polls.phase == .loaded, items.isEmpty {
-                                EmptyState { Text(app.t("profile.noPollsYet")) }
-                            }
-                            LazyVStack(spacing: 8) {
-                                ForEach(items) { poll in
-                                    PollRow(poll: poll) {
-                                        Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)]))
-                                    } aside: {
-                                        StatusChip(poll: poll)
-                                    }
-                                }
-                            }
-                            LoadMoreFooter(list: polls)
-                        }
-                    }
+                    content(profile)
                 }
             }
             .pageColumn(768)
@@ -97,7 +71,114 @@ struct ProfileView: View {
         }
         .refreshable { await load() }
         .canvas()
-        .task(id: username) { await load() }
+        .toolbar {
+            if let readyProfile {
+                ToolbarItem(placement: .topBarTrailing) { moreMenu(readyProfile) }
+            }
+        }
+        // Signing in or out changes what the profile says about the viewer (follows, blocks)
+        .task(id: "\(username) \(app.sessionGeneration)") { await load() }
+    }
+
+    private var readyProfile: UserProfile? {
+        if case let .ready(profile) = phase { profile } else { nil }
+    }
+
+    @ViewBuilder private func content(_ profile: UserProfile) -> some View {
+        let visible = profile.mutualFollowersPreview.filter { !app.isBlocked($0.username) }
+        let hidden = profile.mutualFollowersPreview.count - visible.count
+        ProfileHeader(profile: profile)
+        VStack(alignment: .leading, spacing: 12) {
+            FollowCounts(username: profile.username, followers: followersCount(profile), following: profile.followingCount)
+            if app.isSignedIn, let line = MutualFollowersLine(count: profile.mutualFollowersCount.map { $0 - hidden }, preview: visible, t: app.t) {
+                MutualFollowersView(line: line) { app.push(.people(username: profile.username, kind: .mutual)) }
+            }
+        }
+        ProfileFollowButton(profile: profile)
+        StatsGrid(stats: [
+            .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.totalPolls)),
+            .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.totalVotes)),
+        ])
+        if let polls { askedList(polls, total: profile.totalPolls) }
+    }
+
+    /// The follower count with the viewer's own follow or unfollow since the profile loaded.
+    private func followersCount(_ profile: UserProfile) -> Int {
+        let delta = (app.isFollowing(profile.id) ? 1 : 0) - (profile.isFollowing == true ? 1 : 0)
+        return profile.followersCount + delta
+    }
+
+    /// Share profile and Copy link for anyone; Block… or Unblock signed in, as the web's ••• menu.
+    private func moreMenu(_ profile: UserProfile) -> some View {
+        let url = app.config.profileURL(profile.username)
+        return Menu {
+            ShareLink(item: url) { Label(app.t("ios.shareProfile"), systemImage: "square.and.arrow.up") }
+            Button {
+                UIPasteboard.general.url = url
+                app.showToast(app.t("comments.linkCopied"))
+            } label: { Label(app.t("comments.copyLink"), systemImage: "link") }
+            if app.isSignedIn, profile.id != nil {
+                Divider()
+                if app.isBlocked(profile.username) {
+                    Button(role: .destructive) {
+                        app.unblock(profile.username)
+                        app.showToast(app.t("blocks.unblocked", ["username": profile.username]))
+                    } label: { Label(app.t("blocks.unblock"), systemImage: "nosign") }
+                } else {
+                    Button(role: .destructive) { app.blockRequest = .init(username: profile.username, userId: profile.id) } label: {
+                        Label(app.t("blocks.blockEllipsis"), systemImage: "nosign")
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .accessibilityLabel(app.t("profile.moreFor", ["username": profile.username]))
+    }
+
+    /// Their polls, Open (and opening soon) first, then Ended; filtered over the pages loaded so far.
+    @ViewBuilder private func askedList(_ polls: CursorList<Poll>, total: Int) -> some View {
+        // A profile still lists the polls of someone you blocked, as the API does; only deletions drop out
+        let split = ProfileLists.splitAsked(polls.items.filter { !app.deletedPollIds.contains($0.id) }.map(app.latest))
+        let open = filter == .ended ? [] : split.open
+        let ended = filter == .open ? [] : split.ended
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                SectionTitle(text: app.t("profile.tabAsked"))
+                TabCount(count: total)
+            }
+            FilterPills(label: app.t("profile.filterLabel"), selection: $filter, options: [
+                (AskedFilter.all, app.t("profile.filterAll"), nil),
+                (AskedFilter.open, app.t("profile.filterOpen"), nil),
+                (AskedFilter.ended, app.t("myPolls.tabEnded"), nil),
+            ])
+            switch polls.phase {
+            case .idle, .loading:
+                VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
+            case .failed:
+                LoadFailed(message: app.t("profile.pollsLoadFailed")) { await polls.reload() }
+            case .loaded:
+                if split.open.isEmpty, split.ended.isEmpty {
+                    EmptyState { Text(app.t("profile.noPollsYet")) }
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        // Counts are exact only once every page is in
+                        if !open.isEmpty {
+                            ProfileSection(label: app.t("profile.sectionOpen"), count: polls.hasMore ? nil : open.count)
+                            ForEach(open) { AskedRow(poll: $0) }
+                        }
+                        if !ended.isEmpty {
+                            ProfileSection(label: app.t("myPolls.tabEnded"), count: polls.hasMore ? nil : ended.count)
+                            ForEach(ended) { AskedRow(poll: $0) }
+                        }
+                        if open.isEmpty, ended.isEmpty, !polls.hasMore {
+                            EmptyState { Text(app.t("myPolls.empty")) }
+                        }
+                    }
+                    LoadMoreFooter(list: polls)
+                }
+            }
+        }
     }
 
     private func load() async {
@@ -128,8 +209,8 @@ struct FollowCounts: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            count(app.t("ios.followersCount", ["count": app.t.number(followers)]), .followers)
-            count(app.t("ios.followingCount", ["count": app.t.number(following)]), .following)
+            count(app.t.count("profile.followersCount", followers), .followers)
+            count(app.t.count("profile.followingCount", following), .following)
         }
     }
 
@@ -142,31 +223,62 @@ struct FollowCounts: View {
     }
 }
 
-/// "Followed by @jtan and 2 more you follow": the followers of this user whom the viewer follows.
-/// Hidden for guests, on your own profile and when there are none.
-struct MutualFollowers: View {
+/// The mutual followers line: up to two small stacked avatars and who they are, a button to the whole list.
+struct MutualFollowersView: View {
+    @Environment(AppModel.self) private var app
+    let line: MutualFollowersLine
+    let onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: 6) {
+                HStack(spacing: -10) {
+                    ForEach(line.shown) { AvatarView(username: $0.username, avatarUrl: $0.avatarUrl, size: 16) }
+                }
+                .accessibilityHidden(true)
+                Text(line.text).multilineTextAlignment(.leading)
+            }
+            .font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(app.t("profile.mutualFollowers"))
+    }
+}
+
+/// Follow, Follow back or Following for someone else's profile, full width under the header (the web's
+/// `FollowButton`). Following unfollows on the tap, no confirm: one tap undoes it. Blocked in its place once
+/// the viewer blocked them, as unblocking lives in the ••• menu and Settings. Nothing signed out.
+struct ProfileFollowButton: View {
     @Environment(AppModel.self) private var app
     let profile: UserProfile
 
     var body: some View {
-        let visible = profile.mutualFollowersPreview.filter { !app.isBlocked($0.username) }
-        let names = visible.map(\.username)
-        let hidden = profile.mutualFollowersPreview.count - visible.count
-        if app.isSignedIn, let count = profile.mutualFollowersCount, case let total = count - hidden, total > 0, let first = names.first {
-            Button { app.push(.people(username: profile.username, kind: .mutual)) } label: {
-                Text(summary(first: first, second: names.count > 1 ? names[1] : nil, total: total))
-                    .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                    .multilineTextAlignment(.leading)
+        if app.isSignedIn, let id = profile.id, id != app.userId {
+            if app.isBlocked(profile.username) {
+                Text(app.t("blocks.blockedBadge"))
+                    .font(.vm(14, .medium)).foregroundStyle(Tokens.mutedForeground)
+                    .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
+                    .background(Tokens.secondary, in: RoundedRectangle(cornerRadius: Radius.lg))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Tokens.border))
+            } else if app.isFollowing(id) {
+                Button { app.unfollow(id) } label: { Label(app.t("follows.following"), systemImage: "checkmark") }
+                    .buttonStyle(.vm(.outline, size: .sm, fullWidth: true))
+                    .accessibilityAddTraits(.isSelected)
+                    .accessibilityHint(app.t("follows.unfollow"))
+            } else {
+                let followBack = profile.followsYou == true
+                Button {
+                    app.follow(UserSummary(id: id, username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl))
+                } label: {
+                    if followBack {
+                        Text(app.t("follows.followBack"))
+                    } else {
+                        Label(app.t("follows.follow"), systemImage: "plus")
+                    }
+                }
+                .buttonStyle(.vm(.default, size: .sm, fullWidth: true))
             }
-            .buttonStyle(.plain)
-            .accessibilityHint(app.t("ios.mutualTitle"))
         }
-    }
-
-    private func summary(first: String, second: String?, total: Int) -> String {
-        guard let second, total > 1 else { return app.t("ios.mutualOne", ["a": first]) }
-        if total == 2 { return app.t("ios.mutualTwo", ["a": first, "b": second]) }
-        return app.t("ios.mutualMore", ["a": first, "b": second, "count": total - 2])
     }
 }
 

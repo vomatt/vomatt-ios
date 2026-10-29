@@ -136,11 +136,11 @@ struct AccountView: View {
             }
             if !open.isEmpty {
                 ProfileSection(label: app.t("profile.sectionOpen"), count: open.count)
-                ForEach(open) { askedRow($0) }
+                ForEach(open) { AskedRow(poll: $0, isOwn: true) }
             }
             if !ended.isEmpty {
                 ProfileSection(label: app.t("myPolls.tabEnded"), count: ended.count)
-                ForEach(ended) { askedRow($0) }
+                ForEach(ended) { AskedRow(poll: $0, isOwn: true) }
             }
         }
     }
@@ -186,30 +186,6 @@ struct AccountView: View {
         .draftCard()
     }
 
-    /// An owner's poll: "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted" once ended.
-    private func askedRow(_ poll: Poll) -> some View {
-        let status = poll.status()
-        let unread = status == .ended && poll.unread == true
-        var parts: [Text] = []
-        if status == .ended {
-            if poll.isCancelled {
-                parts = [Text(app.t("notifications.cancelled"))]
-            } else {
-                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
-            }
-        } else {
-            let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
-            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
-            if let when { parts.append(Text(when)) }
-        }
-        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
-        return PollRow(poll: poll, unread: unread) {
-            joined(parts)
-        } aside: {
-            StatusChip(poll: poll, timeElsewhere: true)
-        }
-    }
-
     /// A Sealed Ballot: the pick and when the results open.
     private func sealedRow(_ poll: Poll) -> some View {
         PollRow(poll: poll, sealed: true) {
@@ -235,6 +211,55 @@ struct AccountView: View {
         }
     }
 
+    private func votedCount(_ poll: Poll) -> String {
+        app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
+    }
+
+    /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
+    private func load() async {
+        do {
+            async let open = app.service.allMyPolls(status: .open)
+            async let ended = app.service.allMyPolls(status: .ended)
+            let (openPolls, endedPolls) = try await (open, ended)
+            polls = openPolls + endedPolls
+            loadFailed = false
+        } catch {
+            loadFailed = polls == nil
+        }
+        await app.refreshAccount()
+    }
+}
+
+/// A poll in an Asked list (the web's `AskedRow`): "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted"
+/// once ended. Only the owner gets the unread dot on results they haven't opened.
+struct AskedRow: View {
+    @Environment(AppModel.self) private var app
+    let poll: Poll
+    var isOwn = false
+
+    var body: some View {
+        let status = poll.status()
+        let unread = isOwn && status == .ended && poll.unread == true
+        var parts: [Text] = []
+        if status == .ended {
+            if poll.isCancelled {
+                parts = [Text(app.t("notifications.cancelled"))]
+            } else {
+                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
+            }
+        } else {
+            let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
+            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
+            if let when { parts.append(Text(when)) }
+        }
+        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
+        return PollRow(poll: poll, unread: unread) {
+            joined(parts)
+        } aside: {
+            StatusChip(poll: poll, timeElsewhere: true)
+        }
+    }
+
     /// "**Yes** won" or "Tie between **A** and **B**"; nil when there is no winner to name.
     private func decided(_ poll: Poll) -> Text? {
         switch ProfileLists.endedSummary(poll) {
@@ -254,32 +279,19 @@ struct AccountView: View {
     private func votedCount(_ poll: Poll) -> String {
         app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
     }
+}
 
-    private func strong(_ text: String) -> Text {
-        Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
-    }
+private func strong(_ text: String) -> Text {
+    Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
+}
 
-    private func joined(_ parts: [Text]) -> Text {
-        parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
-    }
-
-    /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
-    private func load() async {
-        do {
-            async let open = app.service.allMyPolls(status: .open)
-            async let ended = app.service.allMyPolls(status: .ended)
-            let (openPolls, endedPolls) = try await (open, ended)
-            polls = openPolls + endedPolls
-            loadFailed = false
-        } catch {
-            loadFailed = polls == nil
-        }
-        await app.refreshAccount()
-    }
+/// Meta parts set apart by " · ".
+private func joined(_ parts: [Text]) -> Text {
+    parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
 }
 
 /// A tab's count, in mono beside its label.
-private struct TabCount: View {
+struct TabCount: View {
     @Environment(AppModel.self) private var app
     let count: Int
 
@@ -289,17 +301,18 @@ private struct TabCount: View {
 }
 
 /// A small heading over a run of rows: "Open now · 2", with the lock on what only the owner sees.
-private struct ProfileSection: View {
+struct ProfileSection: View {
     @Environment(AppModel.self) private var app
     let label: String
-    let count: Int
+    /// Left out while more pages remain, when the number would be wrong.
+    let count: Int?
     var note: String?
     var onlyYou = false
 
     var body: some View {
         HStack(spacing: 6) {
             if onlyYou { OnlyYouMarker() }
-            Text([label, app.t.number(count), note].compactMap { $0 }.joined(separator: " · "))
+            Text([label, count.map { app.t.number($0) }, note].compactMap { $0 }.joined(separator: " · "))
         }
         .font(.vm(12, .medium))
         .foregroundStyle(Tokens.mutedForeground)

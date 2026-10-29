@@ -37,8 +37,10 @@ header's locks on hidden fields (Stage 5, with Edit profile).
 **Goal**: Visitor profile to the design: full-width Follow / Follow back, ••• menu with Share profile,
 Copy link and Block with a confirm step. Counts, mutuals, comment reports and share tracking already
 landed on main (#21–#23).
-**Success Criteria**: Blocking asks first; the menu works from a visitor profile.
-**Status**: Not Started
+**Success Criteria**: Blocking asks first, from every entry point (profile, poll card, comment); the menu
+works from a visitor profile.
+**Tests**: `MutualFollowersTests` (port of `MutualFollowers.test.tsx`); the smoke test confirms the block.
+**Status**: Complete
 
 ## Stage 5: Settings parity
 **Goal**: The design's grouped Settings and Edit profile; `common.conflict` shown as busy. Notification

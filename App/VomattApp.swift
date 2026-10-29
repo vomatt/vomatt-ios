@@ -38,6 +38,16 @@ struct RootView: View {
         .fullScreenCover(item: $app.creator) { request in
             PollCreatorView(request: request)
         }
+        .alert(
+            app.t("blocks.confirmTitle", ["username": app.blockRequest?.username ?? ""]),
+            isPresented: Binding(get: { app.blockRequest != nil }, set: { if !$0 { app.blockRequest = nil } }),
+            presenting: app.blockRequest
+        ) { request in
+            Button(app.t("blocks.block"), role: .destructive) { app.block(request.username, userId: request.userId) }
+            Button(app.t("common.cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(app.t("blocks.confirmBody"))
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await app.refreshUnread() } }
         }

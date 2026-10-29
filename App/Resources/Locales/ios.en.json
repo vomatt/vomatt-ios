@@ -5,6 +5,7 @@
 		"reportSubject": "Report on vomatt",
 		"more": "More",
 		"copyText": "Copy text",
+		"shareProfile": "Share profile",
 		"copied": "Copied.",
 		"replyingTo": "Replying to {name}",
 		"replying": "Replying",
@@ -58,14 +59,9 @@
 		"setBirthday": "Add birthday",
 		"birthdayHint": "Once set, a birthday can be changed but not removed.",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:",
-		"followersCount": "{count} followers",
-		"followingCount": "{count} following",
 		"followsYou": "Follows you",
 		"followBack": "Follow back",
 		"mutualTitle": "Followers you follow",
-		"mutualOne": "Followed by {a}",
-		"mutualTwo": "Followed by {a} and {b}",
-		"mutualMore": "Followed by {a}, {b} and {count} more you follow",
 		"mutualEmpty": "None of their followers are people you follow.",
 		"reportCommentTitle": "Report this comment",
 		"reportCommentBody": "Tell us what's wrong. The author isn't told, and the comment stays until a moderator looks at it.",
@@ -175,10 +171,6 @@
 		"field.firstName": "First name",
 		"field.lastName": "Last name"
 	},
-	"account": {
-		"pollsCreated": "Polls created",
-		"votesCast": "Votes cast"
-	},
 	"explore": {
 		"topics": "Browse by topic"
 	},
@@ -208,7 +200,6 @@
 		"revealsIn": "Results reveal {distance}"
 	},
 	"profile": {
-		"stats": "Numbers",
 		"field.lastName": "Last name",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"
 	},

@@ -5,6 +5,7 @@
 		"reportSubject": "檢舉 vomatt 內容",
 		"more": "更多",
 		"copyText": "複製文字",
+		"shareProfile": "分享個人頁",
 		"copied": "已複製。",
 		"replyingTo": "回覆 {name}",
 		"replying": "回覆中",
@@ -58,14 +59,9 @@
 		"setBirthday": "新增生日",
 		"birthdayHint": "設定後可以修改，但無法移除。",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
-		"followersCount": "{count} 位追蹤者",
-		"followingCount": "追蹤中 {count} 位",
 		"followsYou": "追蹤了你",
 		"followBack": "回追蹤",
 		"mutualTitle": "你也追蹤的追蹤者",
-		"mutualOne": "{a} 也在追蹤",
-		"mutualTwo": "{a}、{b} 也在追蹤",
-		"mutualMore": "{a}、{b} 和其他 {count} 位你追蹤的人也在追蹤",
 		"mutualEmpty": "他的追蹤者中沒有你追蹤的人。",
 		"reportCommentTitle": "檢舉此留言",
 		"reportCommentBody": "告訴我們哪裡有問題。作者不會收到通知，留言會保留到管理員處理為止。",
@@ -175,10 +171,6 @@
 		"field.firstName": "名字",
 		"field.lastName": "姓氏"
 	},
-	"account": {
-		"pollsCreated": "發起的投票",
-		"votesCast": "已投票數"
-	},
 	"explore": {
 		"topics": "依主題瀏覽"
 	},
@@ -208,7 +200,6 @@
 		"revealsIn": "結果將於{distance}揭曉"
 	},
 	"profile": {
-		"stats": "數據",
 		"field.lastName": "姓氏",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
 	},

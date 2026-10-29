@@ -310,7 +310,7 @@ struct BlockButton: View {
     let userId: String?
 
     var body: some View {
-        Button(role: .destructive) { app.block(username, userId: userId) } label: {
+        Button(role: .destructive) { app.blockRequest = .init(username: username, userId: userId) } label: {
             Label(app.t("ios.block", ["name": username]), systemImage: "hand.raised")
         }
     }
