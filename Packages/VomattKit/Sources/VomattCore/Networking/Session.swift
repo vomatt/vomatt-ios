@@ -71,6 +71,9 @@ public actor Session {
         return await refresh(current)
     }
 
+    /// The stored access token as is, without refreshing. nil when signed out.
+    public func currentAccessToken() -> String? { tokens?.accessToken }
+
     /// The API refused `failedToken` (401). Refreshes unless another request already did;
     /// returns the token to retry with, or nil when the session is over.
     public func accessTokenAfterRejection(of failedToken: String) async -> String? {

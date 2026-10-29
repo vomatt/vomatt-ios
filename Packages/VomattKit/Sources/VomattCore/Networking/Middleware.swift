@@ -52,10 +52,18 @@ struct AuthMiddleware: ClientMiddleware {
         guard response.status == .unauthorized else { return (response, responseBody) }
 
         // The sign-in was ended on the server: a refresh would only be refused (and the token spent)
-        if let responseBody, let data = try? await Data(collecting: responseBody, upTo: 1 << 20),
-           Self.errorCode(in: data) == "auth.session_revoked" {
-            await session.signOut(expired: true, revoked: true)
-            return (response, HTTPBody(data))
+        var rejection = responseBody
+        if let responseBody {
+            // Buffer the body so it can be read here and still returned; a failed read is the caller's error
+            let data = try await Data(collecting: responseBody, upTo: 1 << 20)
+            rejection = HTTPBody(data)
+            // Only when this token is still the session's: a late answer for an earlier sign-in must not end the new one
+            if Self.errorCode(in: data) == "auth.session_revoked" {
+                if await session.currentAccessToken() == token {
+                    await session.signOut(expired: true, revoked: true)
+                }
+                return (response, rejection)
+            }
         }
 
         if let retryToken = await session.accessTokenAfterRejection(of: token) {
