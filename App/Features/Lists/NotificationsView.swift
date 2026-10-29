@@ -223,7 +223,7 @@ private struct NotificationRow: View {
             disc("nosign")
         case .closingSoon:
             disc("clock", tint: Tokens.foreground)
-        case .invitation, .followed, .comment:
+        case .invitation, .followed, .comment, .mention:
             if let actor = item.actor {
                 AvatarView(username: actor.username, avatarUrl: actor.avatarUrl, size: 36).accessibilityHidden(true)
             } else {
@@ -272,14 +272,17 @@ private struct NotificationRow: View {
                 return Text.rich(app.t("notifications.invitedYou"), ["name": strong(actorName)]) + Text(" · ") + titled(title)
             case .followed:
                 return Text.rich(app.t("notifications.followedYou"), ["name": strong(actorName)])
-            case .comment:
-                return Text.rich(app.t("notifications.commented"), ["name": strong(actorName), "title": titled(title)])
+            case .comment, .mention:
+                return Text.rich(app.t(commentLineKey), ["name": strong(actorName), "title": titled(title)])
             case .closingSoon:
                 guard let end = item.poll?.endTime, end > .now else { return titled(title) }
                 return Text.rich(app.t("notifications.endsIn"), ["title": titled(title), "duration": Text(app.dates.duration(end.timeIntervalSinceNow))])
             }
         }
     }
+
+    /// A comment on the viewer's poll or reply, or a mention of them, read alike but for the verb.
+    private var commentLineKey: String { item.kind == .mention ? "notifications.mentioned" : "notifications.commented" }
 
     /// The same line as plain words, for VoiceOver.
     private var lineAccessibility: String {
@@ -291,7 +294,7 @@ private struct NotificationRow: View {
             case .cancelled: app.t("notifications.cancelledBy", ["title": title, "name": actorName])
             case .invitation: "\(app.t("notifications.invitedYou", ["name": actorName])) · \(title)"
             case .followed: app.t("notifications.followedYou", ["name": actorName])
-            case .comment: app.t("notifications.commented", ["name": actorName, "title": title])
+            case .comment, .mention: app.t(commentLineKey, ["name": actorName, "title": title])
             case .closingSoon:
                 if let end = item.poll?.endTime, end > .now {
                     app.t("notifications.endsIn", ["title": title, "duration": app.dates.duration(end.timeIntervalSinceNow)])
@@ -316,7 +319,7 @@ private struct NotificationRow: View {
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
         case .followed:
             return [age, item.actor?.displayName].compactMap { $0 }
-        case .comment:
+        case .comment, .mention:
             return [item.comment.map { app.t("notifications.excerpt", ["text": $0.excerpt]) }, age].compactMap { $0 }
         case .closingSoon:
             return [
@@ -364,7 +367,7 @@ private struct NotificationRow: View {
                     .buttonStyle(.vm(canVote ? .default : .outline, size: .sm))
             case .followed:
                 if let actor = item.actor { FollowBackButton(user: actor, onFollow: read) }
-            case .comment:
+            case .comment, .mention:
                 Button(app.t("comments.reply"), action: open).buttonStyle(.vm(.outline, size: .sm))
             case .closingSoon:
                 if let end = item.poll?.endTime, end > .now {

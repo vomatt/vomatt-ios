@@ -202,7 +202,6 @@ private struct AccountSettings: View {
                     BlockedPeople().padding(16)
                 }
                 .card(padding: nil)
-                FollowedPeople()
             }
 
             SettingsSection(title: app.t("settings.account")) {
@@ -266,6 +265,7 @@ private struct NotificationSwitches: View {
         (\.resultsIn, "settings.notifyResultsIn", "settings.notifyResultsInBody"),
         (\.invitations, "settings.notifyInvitations", "settings.notifyInvitationsBody"),
         (\.comments, "settings.notifyComments", "settings.notifyCommentsBody"),
+        (\.mentions, "settings.notifyMentions", "settings.notifyMentionsBody"),
         (\.closingSoon, "settings.notifyClosingSoon", "settings.notifyClosingSoonBody"),
     ]
 
@@ -301,7 +301,7 @@ private struct NotificationSwitches: View {
                 .settingsRow()
                 .card(padding: nil)
             } else {
-                Skeleton(height: 280, radius: Radius.card)
+                Skeleton(height: 350, radius: Radius.card)
             }
         }
         .task(id: app.sessionGeneration) { await load() }
@@ -323,7 +323,8 @@ private struct NotificationSwitches: View {
         do {
             let saved = try await app.service.updateNotificationPreferences(
                 resultsIn: key == \.resultsIn ? value : nil, invitations: key == \.invitations ? value : nil,
-                comments: key == \.comments ? value : nil, closingSoon: key == \.closingSoon ? value : nil
+                comments: key == \.comments ? value : nil, mentions: key == \.mentions ? value : nil,
+                closingSoon: key == \.closingSoon ? value : nil
             )
             // Only this switch: another one may still be saving
             preferences?[keyPath: key] = saved[keyPath: key]
@@ -370,57 +371,6 @@ private struct BlockedPeople: View {
                 .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
             }
         }
-    }
-}
-
-/// People the user follows, each with Unfollow (the web's `FollowedUsersPanel`).
-private struct FollowedPeople: View {
-    @Environment(AppModel.self) private var app
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("follows.title")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
-                Text(app.t("follows.intro")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            if app.following.isEmpty {
-                EmptyState { Text(app.t("follows.empty")) }
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(app.following.enumerated()), id: \.element.id) { index, user in
-                        if index > 0 { RowDivider() }
-                        row(user)
-                    }
-                }
-                .card(padding: nil)
-            }
-        }
-    }
-
-    private func row(_ user: UserSummary) -> some View {
-        HStack(spacing: 12) {
-            Button { app.push(.profile(user.username)) } label: {
-                HStack(spacing: 12) {
-                    AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 40)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(user.displayName ?? user.username).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
-                        Text("@\(user.username)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
-                    }
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(app.t("ios.openProfile"))
-            Button(app.t("follows.unfollow")) {
-                app.unfollow(user.id)
-                app.showToast(app.t("follows.unfollowed", ["username": user.username]))
-            }
-            .buttonStyle(.vm(.outline, size: .sm))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
     }
 }
 

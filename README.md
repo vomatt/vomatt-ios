@@ -37,12 +37,12 @@ If `xcode-select -p` points at the Command Line Tools, the Makefile still finds 
 
 | Command | What it does |
 |---|---|
-| `make test-core` | Domain, networking and contract tests in `Packages/VomattKit` (seconds, no simulator) |
+| `make test-core` | `scripts/check-strings.py`, then the domain, networking and contract tests in `Packages/VomattKit` (seconds, no simulator) |
 | `make build` | Builds the app for a simulator (`SIMULATOR="iPhone 17"` by default) |
 | `make test-ui` | UI smoke tests against the configured API |
 | `make test` | What CI runs: `test-core` and `build` |
-| `make sync` | Pulls the API contract, strings, color tokens and avatars from `../vomatt-web` |
-| `make sync-check` | Fails when any of those differ from `../vomatt-web` |
+| `make sync` | Pulls the API contract, strings, color tokens and avatars from `../vomatt-web`'s `origin/main` (`WEB_REF`) |
+| `make sync-check` | Fails when any of those differ from it |
 | `make api-diff API_URL=https://…` | Compares `openapi.json` with what a deployed API serves |
 | `make archive` | Release archive and App Store Connect upload (needs signing) |
 
@@ -77,8 +77,8 @@ Packages/VomattKit/
   Sources/VomattAPI/      openapi.json + generator config; the client is generated at build time
   Sources/VomattCore/     domain models, poll rules, service, session/refresh, i18n, formatting
   Tests/VomattCoreTests/  ports of the web's tests, plus contract and session tests
-scripts/                  sync.sh, api-diff.py, tokens.py
-UITests/                  smoke tests
+scripts/                  sync.sh, api-diff.py, tokens.py, svg_oklch.py, check-strings.py, e2e-api.sh, e2e-otp.py
+UITests/                  smoke tests, and the signed-in E2E flow (docs/e2e.md)
 ```
 
 The layers mirror the web:
@@ -91,6 +91,19 @@ The layers mirror the web:
 | `lib/api/tokens.ts` + `proxy.tsx` (single refresh) | `VomattCore/Networking/Session.swift` + `AuthMiddleware` |
 | `contexts/LanguageContext.tsx` + `locales/*.json` | `VomattCore/I18n/Localizer.swift` reading the same JSON |
 | `components/ui/*`, `DESIGN.md` | `App/DesignSystem/*` |
+
+Each screen ports a web feature; port behavior (and its tests) from the web file on the left:
+
+| Screen | Web (`src/…`) | iOS |
+|---|---|---|
+| Home, Explore | `app/(frontend)/page.tsx`, `explore/_components/ExploreView.tsx` | `Features/Lists/HomeView.swift`, `ExploreView.swift` |
+| Poll card, poll page | `features/polls/components/PollCard.tsx`, `Ballot.tsx`, `Results.tsx`, `app/(frontend)/poll/[id]` | `Features/Polls/*` |
+| Create | `features/polls/components/PollCreator` | `Features/Creator/*` |
+| Notifications tab | `features/notifications/NotificationList.tsx`, `NotificationRows.tsx` | `Features/Lists/NotificationsView.swift` |
+| Your profile (Asked, Voted) | `app/(frontend)/[slug]/_components/OwnProfileView.tsx` | `Features/Profile/AccountView.swift` |
+| Someone's profile | `…/VisitorProfileView.tsx` | `Features/Profile/ProfileView.swift` |
+| Settings | `app/(frontend)/settings` | `Features/Profile/SettingsView.swift` |
+| Sign in | `app/(frontend)/login` | `Features/Auth/*` |
 
 Tokens live in the Keychain (this device only). The backend rotates the refresh token and revokes
 every session when a used one comes back, so `Session` refreshes single-flight and saves the new pair

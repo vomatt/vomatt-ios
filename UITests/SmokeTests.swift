@@ -71,7 +71,8 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Log in or sign up for Vomatt"].waitForExistence(timeout: 5))
 
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Language'")).firstMatch.waitForExistence(timeout: 5))
+        // Signed out, Profile offers sign-in and the legal links
+        XCTAssertTrue(app.buttons["Terms"].firstMatch.waitForExistence(timeout: 5))
         snapshot("8-profile-signed-out")
     }
 

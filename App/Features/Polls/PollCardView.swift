@@ -11,6 +11,7 @@ struct PollCardView: View {
     @State private var poll: Poll
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
+    @State private var reporting = false
 
     init(poll: Poll, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
@@ -29,6 +30,7 @@ struct PollCardView: View {
             if let fresh, fresh != poll { apply(fresh) }
         }
         .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
+        .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
     }
 
     private func card(status: PollStatus, now: Date) -> some View {
@@ -80,8 +82,8 @@ struct PollCardView: View {
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
-            ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
             if app.userId != poll.creatorId {
+                ReportPollButton { reporting = true }
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
                 BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
             }
@@ -130,7 +132,7 @@ struct PollCardView: View {
         }
     }
 
-    /// Turnout (and a non-Public Audience), comments and share. Turnout shows in every state.
+    /// Turnout (and a non-Public Audience), comments, save and share. Turnout shows in every state.
     private var footer: some View {
         HStack(spacing: 20) {
             if !footerMeta.isEmpty {
@@ -141,11 +143,7 @@ struct PollCardView: View {
             }
             .frame(minHeight: Metrics.minTarget)
             Spacer()
-            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
-                Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
-            }
-            .frame(minHeight: Metrics.minTarget)
-            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            PollFooterActions(poll: $poll)
         }
         .font(.vm(14))
         .foregroundStyle(Tokens.mutedForeground)
@@ -258,31 +256,77 @@ struct OwnerActionsView: View {
     }
 }
 
-/// Opens a prefilled email to the team about a Poll or Comment (App Review 1.2: a way to report content).
-struct ReportButton: View {
+/// "Report poll" in a poll's menus, for anyone but its owner; signed out, it asks to sign in first.
+struct ReportPollButton: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.openURL) private var openURL
-    let subject: String
-    let url: URL?
+    let action: () -> Void
 
     var body: some View {
-        if let mail = mailURL {
-            Button(role: .destructive) { openURL(mail) } label: {
-                Label(app.t("ios.report"), systemImage: "flag")
-            }
+        Button(role: .destructive) { app.requireAuth(action) } label: {
+            Label(app.t("poll.report"), systemImage: "flag")
+        }
+    }
+}
+
+/// Save and Share at the end of a poll's footer (the web's `PollFooter`); on a narrow card they keep
+/// only their icons, which still carry their names for VoiceOver.
+struct PollFooterActions: View {
+    @Environment(AppModel.self) private var app
+    @Binding var poll: Poll
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            actions.labelStyle(.titleAndIcon)
+            actions.labelStyle(.iconOnly)
         }
     }
 
-    private var mailURL: URL? {
-        guard !app.config.supportEmail.isEmpty else { return nil }
-        var components = URLComponents()
-        components.scheme = "mailto"
-        components.path = app.config.supportEmail
-        components.queryItems = [
-            URLQueryItem(name: "subject", value: "\(app.t("ios.reportSubject")): \(subject)"),
-            URLQueryItem(name: "body", value: url?.absoluteString ?? ""),
-        ]
-        return components.url
+    private var actions: some View {
+        HStack(spacing: 20) {
+            BookmarkButton(poll: $poll)
+            ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
+                Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
+            }
+            .frame(minHeight: Metrics.minTarget)
+            .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+        }
+    }
+}
+
+/// Saves the poll to the Saved feed, or takes it out: it flips at once and goes back if the request fails.
+/// Signed out, it asks to sign in first.
+private struct BookmarkButton: View {
+    @Environment(AppModel.self) private var app
+    @Binding var poll: Poll
+    @State private var isSaving = false
+
+    var body: some View {
+        let saved = poll.bookmarked == true
+        Button { app.requireAuth { Task { await toggle() } } } label: {
+            Label(app.t(saved ? "poll.bookmarked" : "poll.bookmark"), systemImage: saved ? "bookmark.fill" : "bookmark")
+        }
+        .foregroundStyle(saved ? Tokens.foreground : Tokens.mutedForeground)
+        .accessibilityAddTraits(saved ? .isSelected : [])
+        .frame(minHeight: Metrics.minTarget)
+    }
+
+    private func toggle() async {
+        guard !isSaving else { return }
+        let next = poll.bookmarked != true
+        set(next)
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await app.service.setBookmark(pollId: poll.id, bookmarked: next)
+        } catch {
+            set(!next)
+            app.showToast(app.t.message(for: error, fallback: next ? "poll.bookmarkFailed" : "poll.unbookmarkFailed"), isError: true)
+        }
+    }
+
+    private func set(_ bookmarked: Bool) {
+        poll.bookmarked = bookmarked
+        app.didUpdate(poll)
     }
 }
 

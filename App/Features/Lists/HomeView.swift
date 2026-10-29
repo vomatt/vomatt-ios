@@ -6,14 +6,14 @@ struct HomeView: View {
     @Environment(AppModel.self) private var app
     @State private var tags: [Tag] = []
     @State private var activeTag: Tag?
-    @State private var showFollowing = false
+    @State private var picked = FeedView.Source.all
 
-    /// Signing out leaves the Following tab, which is only offered while signed in.
-    private var followingActive: Bool { showFollowing && app.isSignedIn }
+    /// Signing out leaves Following and Saved, which are only offered while signed in.
+    private var source: FeedView.Source { app.isSignedIn ? picked : .all }
 
     var body: some View {
-        FeedView(tag: followingActive ? nil : activeTag, following: followingActive, header: AnyView(topicPills))
-            .id(followingActive ? "following" : activeTag?.id)
+        FeedView(tag: source == .all ? activeTag : nil, source: source, header: AnyView(topicPills))
+            .id(source == .all ? activeTag?.id : "\(source)")
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Image("brand-logo").renderingMode(.template).resizable().scaledToFit()
@@ -24,23 +24,27 @@ struct HomeView: View {
             .task { if tags.isEmpty { tags = await app.service.popularTags() } }
     }
 
-    /// The web's `HomepageHeader`: For you, Following when signed in, then the popular topics.
+    /// The web's `HomepageHeader`: For you, Following and Saved when signed in, then the popular topics.
     private var topicPills: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                PillButton(title: app.t("homePage.allTopics"), isOn: !followingActive && activeTag == nil) {
-                    showFollowing = false
+                PillButton(title: app.t("homePage.allTopics"), isOn: source == .all && activeTag == nil) {
+                    picked = .all
                     activeTag = nil
                 }
                 if app.isSignedIn {
-                    PillButton(title: app.t("homePage.following"), isOn: followingActive) {
-                        showFollowing = true
+                    PillButton(title: app.t("homePage.following"), isOn: source == .following) {
+                        picked = .following
+                        activeTag = nil
+                    }
+                    PillButton(title: app.t("homePage.bookmarks"), isOn: source == .saved) {
+                        picked = .saved
                         activeTag = nil
                     }
                 }
                 ForEach(tags) { tag in
-                    PillButton(title: tag.name, isOn: !followingActive && tag.id == activeTag?.id) {
-                        showFollowing = false
+                    PillButton(title: tag.name, isOn: source == .all && tag.id == activeTag?.id) {
+                        picked = .all
                         activeTag = tag
                     }
                 }
@@ -55,10 +59,12 @@ struct HomeView: View {
 
 /// Open Public Polls, most recently opened first, optionally under one topic.
 struct FeedView: View {
+    /// The whole feed; Open Public Polls by followed people and topics; or the viewer's saved Polls in any state.
+    enum Source: Hashable { case all, following, saved }
+
     @Environment(AppModel.self) private var app
     let tag: Tag?
-    /// Open Public Polls by followed people instead of the whole feed.
-    var following = false
+    var source = Source.all
     var header: AnyView?
     @State private var list: CursorList<Poll>?
     @State private var resultsIn: [Poll] = []
@@ -104,9 +110,14 @@ struct FeedView: View {
                 LoadFailed(message: app.t("homePage.feedFailed")) { await list.reload() }
             case .loaded:
                 let polls = app.visible(list.items)
+                if let tag, app.isSignedIn { TopicFollowButton(tag: tag).padding(.top, 4) }
                 if !resultsIn.isEmpty { ResultsInCard(polls: resultsIn).padding(.top, 4) }
                 if polls.isEmpty {
-                    if following { followingEmpty } else { empty }
+                    switch source {
+                    case .all: empty
+                    case .following: followingEmpty
+                    case .saved: savedEmpty
+                    }
                 } else {
                     ForEach(polls) { poll in
                         PollCardView(poll: poll) {
@@ -133,9 +144,16 @@ struct FeedView: View {
         }
     }
 
+    private var savedEmpty: some View {
+        EmptyCard(title: app.t("homePage.bookmarksEmpty"), body: app.t("homePage.bookmarksEmptyHint")) {
+            Button(app.t("homePage.followingEmptyCta")) { app.select(.explore) }
+                .buttonStyle(.vm(.outline))
+        }
+    }
+
     /// The whole feed leads, for a signed-in viewer, with Ended Polls they voted in (the web's rail).
     private func loadResultsIn() async {
-        guard app.isSignedIn, tag == nil, !following else {
+        guard app.isSignedIn, tag == nil, source == .all else {
             resultsIn = []
             return
         }
@@ -145,9 +163,52 @@ struct FeedView: View {
 
     private func makeList() -> CursorList<Poll> {
         let service = app.service
-        if following { return CursorList { cursor in try await service.followingPolls(cursor: cursor, limit: 10) } }
-        let slug = tag?.slug
-        return CursorList { cursor in try await service.polls(tag: slug, cursor: cursor, limit: 10) }
+        switch source {
+        case .following: return CursorList { cursor in try await service.followingPolls(cursor: cursor, limit: 10) }
+        case .saved: return CursorList { cursor in try await service.bookmarkedPolls(cursor: cursor, limit: 10) }
+        case .all:
+            let slug = tag?.slug
+            return CursorList { cursor in try await service.polls(tag: slug, cursor: cursor, limit: 10) }
+        }
+    }
+}
+
+/// On a topic's feed: following the topic adds its Open Public Polls to the Following feed; one tap undoes it
+/// (the web's `TopicFollowButton`). Shown once the followed topics are known.
+private struct TopicFollowButton: View {
+    @Environment(AppModel.self) private var app
+    let tag: Tag
+    @State private var following: Bool?
+    @State private var isSaving = false
+
+    var body: some View {
+        Group {
+            if let following {
+                Button { Task { await toggle(to: !following) } } label: {
+                    Label(app.t(following ? "homePage.followingTopic" : "homePage.followTopic"), systemImage: following ? "checkmark" : "plus")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.vm(following ? .outline : .default, size: .sm))
+                .disabled(isSaving)
+                .accessibilityAddTraits(following ? .isSelected : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: tag.id) {
+            if let followed = try? await app.service.followedTags() { following = followed.contains { $0.id == tag.id } }
+        }
+    }
+
+    private func toggle(to next: Bool) async {
+        following = next
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await app.service.setTagFollow(tagId: tag.id, following: next)
+        } catch {
+            following = !next
+            app.showToast(app.t.message(for: error, fallback: next ? "homePage.followTopicFailed" : "homePage.unfollowTopicFailed"), isError: true)
+        }
     }
 }
 
