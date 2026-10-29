@@ -116,7 +116,7 @@ struct AccountView: View {
 /// Which kinds of notification show in the feed and the unread count.
 private struct NotificationPreferencesSection: View {
     @Environment(AppModel.self) private var app
-    private enum Switch: CaseIterable { case resultsIn, invitations, comments, mentions, closingSoon }
+    private enum Switch: CaseIterable { case resultsIn, invitations, comments, mentions, likes, closingSoon }
 
     @State private var preferences: NotificationPreferences?
     @State private var failed = false
@@ -148,7 +148,7 @@ private struct NotificationPreferencesSection: View {
             } else if failed {
                 LoadFailed(message: app.t("ios.notifPrefFailed")) { await load() }
             } else {
-                Skeleton(height: 260, radius: Radius.xl)
+                Skeleton(height: 312, radius: Radius.xl)
             }
         }
         .task(id: app.sessionGeneration) { await load() }
@@ -160,6 +160,7 @@ private struct NotificationPreferencesSection: View {
         case .invitations: app.t("ios.notifPrefInvitations")
         case .comments: app.t("ios.notifPrefComments")
         case .mentions: app.t("ios.notifPrefMentions")
+        case .likes: app.t("ios.notifPrefLikes")
         case .closingSoon: app.t("ios.notifPrefClosingSoon")
         }
     }
@@ -170,6 +171,7 @@ private struct NotificationPreferencesSection: View {
         case .invitations: preferences.invitations
         case .comments: preferences.comments
         case .mentions: preferences.mentions
+        case .likes: preferences.likes
         case .closingSoon: preferences.closingSoon
         }
     }
@@ -193,7 +195,7 @@ private struct NotificationPreferencesSection: View {
         do {
             let saved = try await app.service.updateNotificationPreferences(
                 resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
-                comments: item == .comments ? newValue : nil, mentions: item == .mentions ? newValue : nil,
+                comments: item == .comments ? newValue : nil, mentions: item == .mentions ? newValue : nil, likes: item == .likes ? newValue : nil,
                 closingSoon: item == .closingSoon ? newValue : nil
             )
             // Another toggle still in flight: its answer carries the final state.
@@ -211,6 +213,7 @@ private struct NotificationPreferencesSection: View {
         case .invitations: preferences?.invitations = newValue
         case .comments: preferences?.comments = newValue
         case .mentions: preferences?.mentions = newValue
+        case .likes: preferences?.likes = newValue
         case .closingSoon: preferences?.closingSoon = newValue
         }
     }

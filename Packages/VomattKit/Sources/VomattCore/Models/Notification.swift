@@ -13,6 +13,24 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         /// Someone wrote `@<your username>` in a Comment or Reply.
         case mention
         case closingSoon
+        /// Someone liked your Comment or Reply.
+        case like
+
+        /// The tab the API files this kind under.
+        public var category: Category {
+            switch self {
+            case .comment, .mention: .conversation
+            case .like: .like
+            case .result, .cancelled, .closingSoon: .pollEnd
+            case .invitation: .invitation
+            case .followed: .follow
+            }
+        }
+    }
+
+    /// The feed's tabs: `category` of GET /notifications and /notifications/unread-count.
+    public enum Category: String, CaseIterable, Sendable {
+        case conversation, like, pollEnd, invitation, follow
     }
 
     public struct PollInfo: Hashable, Sendable {
@@ -95,15 +113,18 @@ public struct NotificationPreferences: Hashable, Sendable {
     public var invitations: Bool
     public var comments: Bool
     public var mentions: Bool
+    public var likes: Bool
     public var closingSoon: Bool
 
     public init(
-        resultsIn: Bool = true, invitations: Bool = true, comments: Bool = true, mentions: Bool = true, closingSoon: Bool = false
+        resultsIn: Bool = true, invitations: Bool = true, comments: Bool = true, mentions: Bool = true, likes: Bool = true,
+        closingSoon: Bool = false
     ) {
         self.resultsIn = resultsIn
         self.invitations = invitations
         self.comments = comments
         self.mentions = mentions
+        self.likes = likes
         self.closingSoon = closingSoon
     }
 }

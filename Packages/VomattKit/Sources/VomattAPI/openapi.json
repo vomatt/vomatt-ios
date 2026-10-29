@@ -3529,6 +3529,11 @@
             "example": true,
             "type": "boolean"
           },
+          "likes": {
+            "description": "LIKE; default true",
+            "example": true,
+            "type": "boolean"
+          },
           "mentions": {
             "description": "MENTION; default true",
             "example": true,
@@ -3543,16 +3548,28 @@
         "type": "object"
       },
       "NotificationResponse": {
-        "description": "One notification of the feed. Which of `actor`, `poll` and `comment` are set depends on `kind`: RESULT has `poll`; CANCELLED, INVITATION and CLOSING_SOON have `actor` (the Poll's owner) and `poll`; FOLLOWED has `actor` (the new follower); COMMENT and MENTION have `actor` (the author), `poll` and `comment`",
+        "description": "One notification of the feed. Which of `actor`, `poll` and `comment` are set depends on `kind`: RESULT has `poll`; CANCELLED, INVITATION and CLOSING_SOON have `actor` (the Poll's owner) and `poll`; FOLLOWED has `actor` (the new follower); COMMENT and MENTION have `actor` (the author), `poll` and `comment`; LIKE has `actor` (who liked), `poll` and `comment` (your liked Comment)",
         "properties": {
           "actor": {
             "$ref": "#/components/schemas/FollowUserDto"
+          },
+          "category": {
+            "description": "The tab it is filed under, fixed by `kind`: CONVERSATION (COMMENT, MENTION), LIKE (LIKE), POLL_END (RESULT, CANCELLED, CLOSING_SOON), INVITATION (INVITATION), FOLLOW (FOLLOWED). Filter the feed with `GET /api/notifications?category=`",
+            "enum": [
+              "CONVERSATION",
+              "LIKE",
+              "POLL_END",
+              "INVITATION",
+              "FOLLOW"
+            ],
+            "example": "CONVERSATION",
+            "type": "string"
           },
           "comment": {
             "$ref": "#/components/schemas/CommentSummary"
           },
           "createdAt": {
-            "description": "When it happened: the Poll's end (RESULT, CANCELLED), the Invitation, the follow, the Comment (COMMENT, MENTION), or 24 hours before the Poll's end (CLOSING_SOON; the Poll's start if later). The feed is ordered by it, newest first",
+            "description": "When it happened: the Poll's end (RESULT, CANCELLED), the Invitation, the follow, the Comment (COMMENT, MENTION), the like, or 24 hours before the Poll's end (CLOSING_SOON; the Poll's start if later). The feed is ordered by it, newest first",
             "example": "2026-10-26T09:30:00+08:00",
             "format": "date-time",
             "type": "string"
@@ -3563,7 +3580,7 @@
             "type": "string"
           },
           "kind": {
-            "description": "RESULT: a Poll you own, hold a Ballot in or are invited to has Ended. CANCELLED: an Invite-only Poll you are invited to was Cancelled before it opened. INVITATION: you are invited to a Scheduled or Open Invite-only Poll (replaced by RESULT once it Ends). FOLLOWED: someone followed you. COMMENT: someone commented on your Poll or replied to your Comment. MENTION: someone @mentioned you in a Comment or Reply that is not already your COMMENT. CLOSING_SOON: a Poll you are invited to, or a Public Poll of someone you follow, ends within 24 hours and you hold no Ballot in it",
+            "description": "RESULT: a Poll you own, hold a Ballot in or are invited to has Ended. CANCELLED: an Invite-only Poll you are invited to was Cancelled before it opened. INVITATION: you are invited to a Scheduled or Open Invite-only Poll (replaced by RESULT once it Ends). FOLLOWED: someone followed you. COMMENT: someone commented on your Poll or replied to your Comment. MENTION: someone @mentioned you in a Comment or Reply that is not already your COMMENT. CLOSING_SOON: a Poll you are invited to, or a Public Poll of someone you follow, ends within 24 hours and you hold no Ballot in it. LIKE: someone liked your Comment or Reply",
             "enum": [
               "RESULT",
               "CANCELLED",
@@ -3571,7 +3588,8 @@
               "FOLLOWED",
               "COMMENT",
               "MENTION",
-              "CLOSING_SOON"
+              "CLOSING_SOON",
+              "LIKE"
             ],
             "example": "COMMENT",
             "type": "string"
@@ -4695,7 +4713,7 @@
         "nullable": true,
         "properties": {
           "count": {
-            "description": "Unread notifications of the kinds the caller's preferences leave on, as listed by GET /api/notifications; capped at 100 (100 means 100 or more)",
+            "description": "Unread notifications of the kinds the caller's preferences leave on (only the requested `category`'s when given), as listed by GET /api/notifications; capped at 100 (100 means 100 or more)",
             "example": 3,
             "format": "int64",
             "type": "integer"
@@ -4803,6 +4821,12 @@
           },
           "invitations": {
             "description": "INVITATION",
+            "example": true,
+            "nullable": true,
+            "type": "boolean"
+          },
+          "likes": {
+            "description": "LIKE",
             "example": true,
             "nullable": true,
             "type": "boolean"
@@ -13340,9 +13364,26 @@
     },
     "/api/notifications": {
       "get": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: the caller's notifications, newest `createdAt` first, cursor-paged. They are not stored but derived from Polls, Invitations, follows and Comments when read, so an item disappears when what it is about goes away (a Comment deleted, a follow undone, a Poll Deleted). Kinds:\n- RESULT: a Poll the caller owns, holds a Ballot in, is an Invitee of or bookmarked has Ended (end time passed, Closed, or every Invitee voted); one item per Poll whatever the reasons. A Participant who made a Retraction and is neither an Invitee nor bookmarked it gets none\n- CANCELLED: an Invite-only Poll the caller is an Invitee of was Cancelled before it opened (only Polls Cancelled before 2026-10-14; a Scheduled Poll is now Deleted, which notifies nobody)\n- INVITATION: the caller is an Invitee of a Scheduled or Open Invite-only Poll; listed until the Poll Ends, when its RESULT takes over. Being removed and invited again is a new, unread INVITATION\n- FOLLOWED: someone followed the caller (one item per follower; group them in the UI)\n- COMMENT: someone else commented on or replied under the caller's Poll, or replied to the caller's Comment, on a Poll the caller can see; not a Reply in a thread started by a user the caller blocked (the Comment lists hide that thread)\n- MENTION: someone else @mentioned the caller (`@<username>`) in a Comment or Reply on a Poll the caller can see, unless that Comment is the caller's COMMENT (one Comment, one notification) and COMMENT is switched on; same thread-starter block rule as COMMENT\n- CLOSING_SOON: an Open Poll ends within 24 hours and the caller holds no Ballot in it, if the caller is its Invitee, or it is a Public Poll of a user the caller follows. Gone once the caller casts a Ballot or the Poll Ends. Off by default\nKinds switched off in the caller's preferences are left out (FOLLOWED cannot be switched off). Nothing from a suspended user, a user the caller blocked or a user who blocked the caller is listed, nor anything about a Poll whose owner blocked the caller. `poll` never carries per-option counts, its outcome (`winningOptionIds`, `winningOptionLabels`, `tie`) stays null until the Poll has Ended, and `actor` is never a voter, so Sealed results and Anonymous Ballots stay hidden. Each item carries what a row needs: the caller's Selection (`poll.myOptionId`), the caller's follows with the actor both ways (`actor.isFollowing`, `actor.followsYou`), and for a Reply the Comment it is under (`comment.parentId`). An item can appear or vanish behind a cursor (a follow, a block); de-duplicate by `id`.\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` came from another list",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: the caller's notifications, newest `createdAt` first, cursor-paged. They are not stored but derived from Polls, Invitations, follows and Comments when read, so an item disappears when what it is about goes away (a Comment deleted, a follow undone, a Poll Deleted). Kinds:\n- RESULT: a Poll the caller owns, holds a Ballot in, is an Invitee of or bookmarked has Ended (end time passed, Closed, or every Invitee voted); one item per Poll whatever the reasons. A Participant who made a Retraction and is neither an Invitee nor bookmarked it gets none\n- CANCELLED: an Invite-only Poll the caller is an Invitee of was Cancelled before it opened (only Polls Cancelled before 2026-10-14; a Scheduled Poll is now Deleted, which notifies nobody)\n- INVITATION: the caller is an Invitee of a Scheduled or Open Invite-only Poll; listed until the Poll Ends, when its RESULT takes over. Being removed and invited again is a new, unread INVITATION\n- FOLLOWED: someone followed the caller (one item per follower; group them in the UI)\n- COMMENT: someone else commented on or replied under the caller's Poll, or replied to the caller's Comment, on a Poll the caller can see; not a Reply in a thread started by a user the caller blocked (the Comment lists hide that thread)\n- MENTION: someone else @mentioned the caller (`@<username>`) in a Comment or Reply on a Poll the caller can see, unless that Comment is the caller's COMMENT (one Comment, one notification) and COMMENT is switched on; same thread-starter block rule as COMMENT\n- CLOSING_SOON: an Open Poll ends within 24 hours and the caller holds no Ballot in it, if the caller is its Invitee, or it is a Public Poll of a user the caller follows. Gone once the caller casts a Ballot or the Poll Ends. Off by default\n- LIKE: someone else liked the caller's Comment or Reply, on a Poll the caller can see and not in a thread started by a user the caller blocked (as COMMENT). Gone if the like is taken back; liking again is a new, unread LIKE\nEach kind falls in one `category`: CONVERSATION (COMMENT, MENTION), LIKE (LIKE), POLL_END (RESULT, CANCELLED, CLOSING_SOON), INVITATION (INVITATION), FOLLOW (FOLLOWED). With `category`, only that category is listed; pass the same `category` with every page.\nKinds switched off in the caller's preferences are left out (FOLLOWED cannot be switched off). Nothing from a suspended user, a user the caller blocked or a user who blocked the caller is listed, nor anything about a Poll whose owner blocked the caller. `poll` never carries per-option counts, its outcome (`winningOptionIds`, `winningOptionLabels`, `tie`) stays null until the Poll has Ended, and `actor` is never a voter, so Sealed results and Anonymous Ballots stay hidden. Each item carries what a row needs: the caller's Selection (`poll.myOptionId`), the caller's follows with the actor both ways (`actor.isFollowing`, `actor.followsYou`), and for a Reply the Comment it is under (`comment.parentId`). An item can appear or vanish behind a cursor (a follow, a block); de-duplicate by `id`.\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` came from another list\n- 400 `common.type_mismatch`: `category` is not one of the categories",
         "operationId": "list",
         "parameters": [
+          {
+            "description": "Only this category's notifications; omit for all",
+            "example": "CONVERSATION",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "enum": [
+                "CONVERSATION",
+                "LIKE",
+                "POLL_END",
+                "INVITATION",
+                "FOLLOW"
+              ],
+              "type": "string"
+            }
+          },
           {
             "description": "`nextCursor` of the previous page; omit for the first page",
             "in": "query",
@@ -13373,6 +13414,38 @@
                     "items": [
                       {
                         "actor": {
+                          "avatarUrl": "bot:mochi",
+                          "displayName": "Rosa",
+                          "followsYou": false,
+                          "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                          "isFollowing": false,
+                          "username": "rosa"
+                        },
+                        "category": "LIKE",
+                        "comment": {
+                          "excerpt": "Spaces, so it looks the same everywhere",
+                          "id": "0199f2a4-ff01-7a2b-9c3d-4e5f6a7b8c9d",
+                          "parentId": null
+                        },
+                        "createdAt": "2026-10-26T12:30:00+08:00",
+                        "id": "like_0199f2a7-3e4f-7a51-8c6d-7e8f9a0b1c2d",
+                        "kind": "LIKE",
+                        "poll": {
+                          "endTime": "2026-10-30T12:00:00+08:00",
+                          "id": "0199f2a3-8c1d-7e2f-9a3b-4c5d6e7f8a9b",
+                          "myOptionId": "0199f2a4-8d11-7c3e-b0a4-5e29c7d6f813",
+                          "startTime": "2026-10-23T12:00:00+08:00",
+                          "status": "OPEN",
+                          "tie": null,
+                          "title": "Tabs or spaces?",
+                          "turnout": 57,
+                          "winningOptionIds": null,
+                          "winningOptionLabels": null
+                        },
+                        "read": false
+                      },
+                      {
+                        "actor": {
                           "avatarUrl": "bot:boba",
                           "displayName": "J. Tan",
                           "followsYou": false,
@@ -13380,6 +13453,7 @@
                           "isFollowing": true,
                           "username": "jtan"
                         },
+                        "category": "POLL_END",
                         "comment": null,
                         "createdAt": "2026-10-26T12:00:00+08:00",
                         "id": "closing_soon_0199f2a3-5b7e-7d40-a1c8-9e3b2f6d4c05",
@@ -13407,6 +13481,7 @@
                           "isFollowing": false,
                           "username": "rosa"
                         },
+                        "category": "CONVERSATION",
                         "comment": {
                           "excerpt": "Tabs, because the reader picks the width",
                           "id": "0199f2a5-1c2d-7e3f-8a4b-5c6d7e8f9a0b",
@@ -13438,6 +13513,7 @@
                           "isFollowing": true,
                           "username": "bkim"
                         },
+                        "category": "FOLLOW",
                         "comment": null,
                         "createdAt": "2026-10-25T20:00:00+08:00",
                         "id": "followed_0199f2a6-2d3e-7f40-9b5c-6d7e8f9a0b1c",
@@ -13447,6 +13523,7 @@
                       },
                       {
                         "actor": null,
+                        "category": "POLL_END",
                         "comment": null,
                         "createdAt": "2026-10-25T18:00:00+08:00",
                         "id": "result_0199f2a3-1a2b-7c3d-8e4f-9a0b1c2d3e4f",
@@ -13617,8 +13694,27 @@
     },
     "/api/notifications/unread-count": {
       "get": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: counts the notifications `GET /api/notifications` lists with `read` false: every kind the caller's preferences leave on. The count stops at 100: `100` means 100 or more (show it as \"99+\"). Poll this endpoint (for example on app focus and about once a minute) to drive a badge; there is no push.\n**Side effects**: none\n**Errors**: none specific to this endpoint",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: counts the notifications `GET /api/notifications` lists with `read` false: every kind the caller's preferences leave on, or with `category` only that category's (one call per tab badge). The count stops at 100: `100` means 100 or more (show it as \"99+\"). Poll this endpoint (for example on app focus and about once a minute) to drive a badge; there is no push.\n**Side effects**: none\n**Errors**:\n- 400 `common.type_mismatch`: `category` is not one of the categories",
         "operationId": "unreadCount",
+        "parameters": [
+          {
+            "description": "Only this category's notifications; omit for all",
+            "example": "LIKE",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "enum": [
+                "CONVERSATION",
+                "LIKE",
+                "POLL_END",
+                "INVITATION",
+                "FOLLOW"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -15268,7 +15364,7 @@
     },
     "/api/users/me/notification-preferences": {
       "get": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: which notification kinds the feed and the unread count include. Defaults: `resultsIn`, `invitations` and `comments` and `mentions` on, `closingSoon` off. FOLLOWED has no switch. There is no push or email channel; these switches only filter the in-app feed.\n**Side effects**: none\n**Errors**: none specific to this endpoint",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: which notification kinds the feed and the unread count include. Defaults: `resultsIn`, `invitations`, `comments`, `mentions` and `likes` on, `closingSoon` off. FOLLOWED has no switch. There is no push or email channel; these switches only filter the in-app feed.\n**Side effects**: none\n**Errors**: none specific to this endpoint",
         "operationId": "get",
         "responses": {
           "200": {
@@ -15279,6 +15375,7 @@
                     "closingSoon": false,
                     "comments": true,
                     "invitations": true,
+                    "likes": true,
                     "mentions": true,
                     "resultsIn": true
                   },
@@ -15371,6 +15468,7 @@
                     "closingSoon": true,
                     "comments": false,
                     "invitations": true,
+                    "likes": true,
                     "mentions": true,
                     "resultsIn": true
                   },
@@ -21211,6 +21309,10 @@
       "name": "Admin - User"
     },
     {
+      "description": "The notification feed: Poll results, Invitations, follows, Comments, mentions, likes and closing-soon reminders, derived when read (no push, no email). Each falls in one category (tab) the feed and the unread count can be filtered by. Kinds can be switched off with `/api/users/me/notification-preferences`",
+      "name": "Notification"
+    },
+    {
       "description": "Comments and Replies on a Poll (path segment `votes` = Poll)",
       "name": "Vote Comment"
     },
@@ -21221,10 +21323,6 @@
     {
       "description": "Reading users' reports of Comments (Admin)",
       "name": "Admin - Comment Report"
-    },
-    {
-      "description": "The notification feed: Poll results, Invitations, follows, Comments, mentions and closing-soon reminders, derived when read (no push, no email). Kinds can be switched off with `/api/users/me/notification-preferences`",
-      "name": "Notification"
     },
     {
       "description": "Poll moderation APIs (Admin)",

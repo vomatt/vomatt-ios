@@ -6,6 +6,8 @@ import VomattCore
 struct NotificationsView: View {
     @Environment(AppModel.self) private var app
     @State private var list: CursorList<FeedNotification>?
+    /// The tab; nil is every category.
+    @State private var category: FeedNotification.Category?
 
     var body: some View {
         ScrollView {
@@ -14,6 +16,10 @@ struct NotificationsView: View {
                     Text(app.t("notifications.title")).displayHeading(32).accessibilityAddTraits(.isHeader)
                     Text(app.t("ios.notificationsIntro")).font(.vmBody).foregroundStyle(Tokens.mutedForeground)
                 }
+                LineTabs(
+                    items: [(nil, app.t("ios.notifTabAll"))] + FeedNotification.Category.allCases.map { ($0, tabLabel($0)) },
+                    selection: $category
+                )
                 content
             }
             .pageColumn()
@@ -29,7 +35,22 @@ struct NotificationsView: View {
                 }
             }
         }
-        .task(id: app.sessionGeneration) { await load() }
+        .task(id: TabKey(generation: app.sessionGeneration, category: category)) { await load() }
+    }
+
+    private struct TabKey: Equatable {
+        var generation: Int
+        var category: FeedNotification.Category?
+    }
+
+    private func tabLabel(_ category: FeedNotification.Category) -> String {
+        switch category {
+        case .conversation: app.t("ios.notifTabConversation")
+        case .like: app.t("ios.notifTabLikes")
+        case .pollEnd: app.t("ios.notifTabPolls")
+        case .invitation: app.t("ios.notifTabInvitations")
+        case .follow: app.t("ios.notifTabFollows")
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -63,7 +84,9 @@ struct NotificationsView: View {
     private func load() async {
         guard app.isSignedIn else { return }
         let service = app.service
-        let list = list ?? CursorList { try await service.notifications(cursor: $0) }
+        let category = category
+        // A tab switch starts a fresh list: a cursor belongs to one category
+        let list = CursorList { try await service.notifications(category: category, cursor: $0) }
         self.list = list
         await list.reload()
         await app.refreshUnread()
@@ -159,6 +182,7 @@ private struct NotificationRow: View {
         case .followed: app.t("ios.notifFollowed", ["name": name])
         case .comment: app.t(item.comment?.parentId == nil ? "ios.notifCommented" : "ios.notifReplied", ["name": name, "title": title])
         case .mention: app.t("ios.notifMentioned", ["name": name, "title": title])
+        case .like: app.t(item.comment?.parentId == nil ? "ios.notifLikedComment" : "ios.notifLikedReply", ["name": name, "title": title])
         case .closingSoon: app.t("ios.notifClosingSoon", ["title": title])
         }
     }
@@ -166,7 +190,7 @@ private struct NotificationRow: View {
     /// Never a live count while a Poll is open: Turnout only, and the outcome once it Ended.
     private var detail: String? {
         switch item.kind {
-        case .comment, .mention:
+        case .comment, .mention, .like:
             return item.comment?.excerpt
         case .closingSoon:
             return item.poll.map { app.t("poll.voted", ["count": app.t.number($0.turnout)]) }

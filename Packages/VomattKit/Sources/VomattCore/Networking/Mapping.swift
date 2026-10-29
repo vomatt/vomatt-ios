@@ -285,6 +285,20 @@ extension FeedNotification.Kind {
         case .comment: self = .comment
         case .mention: self = .mention
         case .closingSoon: self = .closingSoon
+        case .like: self = .like
+        }
+    }
+}
+
+extension FeedNotification.Category {
+    /// The `category` query value (the generated payload enums of the two endpoints share it).
+    var apiValue: String {
+        switch self {
+        case .conversation: "CONVERSATION"
+        case .like: "LIKE"
+        case .pollEnd: "POLL_END"
+        case .invitation: "INVITATION"
+        case .follow: "FOLLOW"
         }
     }
 }
@@ -316,7 +330,7 @@ extension NotificationPreferences {
     init(_ dto: Schemas.NotificationPreferencesResponse) {
         self.init(
             resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
-            comments: dto.comments ?? true, mentions: dto.mentions ?? true, closingSoon: dto.closingSoon ?? false
+            comments: dto.comments ?? true, mentions: dto.mentions ?? true, likes: dto.likes ?? true, closingSoon: dto.closingSoon ?? false
         )
     }
 }

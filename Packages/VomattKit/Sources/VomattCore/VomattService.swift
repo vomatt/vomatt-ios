@@ -645,15 +645,22 @@ public final class VomattService: Sendable {
 
     // MARK: Notifications
 
-    /// Unread feed items of the kinds switched on.
-    public func unreadCount() async throws -> Int {
-        try await call { Int(try await client.unreadCount().ok.body.json.data?.count ?? 0) }
+    /// Unread feed items of the kinds switched on; with `category`, that tab's only.
+    public func unreadCount(category: FeedNotification.Category? = nil) async throws -> Int {
+        try await call {
+            Int(try await client.unreadCount(query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) })).ok.body.json.data?.count ?? 0)
+        }
     }
 
-    /// The feed, newest first. Items can vanish or appear behind the cursor: de-duplicate by `id`.
-    public func notifications(cursor: String? = nil, limit: Int = 20) async throws -> CursorPage<FeedNotification> {
+    /// The feed, newest first; with `category`, one tab (pass the same one with every cursor).
+    /// Items can vanish or appear behind the cursor: de-duplicate by `id`.
+    public func notifications(
+        category: FeedNotification.Category? = nil, cursor: String? = nil, limit: Int = 20
+    ) async throws -> CursorPage<FeedNotification> {
         try await call {
-            let data = try await client.list(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            let data = try await client.list(
+                query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) }, cursor: cursor, limit: clampedPageSize(limit))
+            ).ok.body.json.data
             return try page(data.map { ($0.items, $0.nextCursor) }, FeedNotification.init)
         }
     }
@@ -680,14 +687,14 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted switches keep their value. Resolves to all five.
+    /// Omitted switches keep their value. Resolves to all six.
     public func updateNotificationPreferences(
         resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, mentions: Bool? = nil,
-        closingSoon: Bool? = nil
+        likes: Bool? = nil, closingSoon: Bool? = nil
     ) async throws -> NotificationPreferences {
         try await call {
             try await NotificationPreferences(required(client.update1(body: .json(.init(
-                closingSoon: closingSoon, comments: comments, invitations: invitations, mentions: mentions, resultsIn: resultsIn
+                closingSoon: closingSoon, comments: comments, invitations: invitations, likes: likes, mentions: mentions, resultsIn: resultsIn
             ))).ok.body.json.data, "updateNotificationPreferences.data"))
         }
     }
