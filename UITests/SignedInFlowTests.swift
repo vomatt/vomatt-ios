@@ -26,7 +26,10 @@ final class SignedInFlowTests: XCTestCase {
     }
 
     private func code(for email: String) throws -> String {
-        let path = "\(ProcessInfo.processInfo.environment["E2E_OTP_DIR"]!)/\(email).txt"
+        let folder = ProcessInfo.processInfo.environment["E2E_OTP_DIR"]!
+        // scripts/e2e-otp.py answers each `.want` with the code
+        FileManager.default.createFile(atPath: "\(folder)/\(email).want", contents: nil)
+        let path = "\(folder)/\(email).txt"
         for _ in 0..<40 {
             if let code = try? String(contentsOfFile: path, encoding: .utf8), code.count == 6 { return code }
             Thread.sleep(forTimeInterval: 0.5)
@@ -86,15 +89,14 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Raohe has the best pepper buns."].waitForExistence(timeout: 10))
         snapshot("e2e-5-commented")
 
-        // My Polls lists it as Active
-        app.buttons["My Polls"].tap()
-        XCTAssertTrue(app.staticTexts[question].waitForExistence(timeout: 10))
-        snapshot("e2e-6-my-polls")
-
-        // Account page and sign out
+        // Account page, whose My Polls lists it as Active, and sign out
         app.buttons["Profile"].tap()
         XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
-        snapshot("e2e-7-account")
+        snapshot("e2e-6-account")
+        app.buttons["My Polls"].tap()
+        XCTAssertTrue(app.staticTexts[question].waitForExistence(timeout: 10))
+        snapshot("e2e-7-my-polls")
+        app.buttons["Profile"].tap()
         app.buttons["Settings"].tap()
         app.swipeUp()
         app.buttons["Log out"].firstMatch.tap()
