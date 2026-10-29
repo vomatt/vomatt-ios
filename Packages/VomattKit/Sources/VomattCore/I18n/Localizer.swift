@@ -98,6 +98,11 @@ public struct Localizer: Sendable {
     public func number(_ value: Int) -> String {
         value.formatted(.number.locale(Locale(identifier: language.localeIdentifier)))
     }
+
+    /// Sentences as one paragraph: a space between them in English, none after Chinese 。 (the web's `joinSentences`).
+    public func sentences(_ sentences: String...) -> String {
+        sentences.joined(separator: language == .zh ? "" : " ")
+    }
 }
 
 public extension Localizer {

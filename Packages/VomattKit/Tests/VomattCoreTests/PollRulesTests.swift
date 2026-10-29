@@ -241,6 +241,82 @@ struct PollFormTests {
         #expect(!PollForm(options: (0..<10).map(String.init), endTime: nil).canAddOption)
     }
 
+    // Cases ported from vomatt-web's src/__tests__/features/polls/PollCreator.test.tsx
+
+    @Test func rejectsA201CharacterTitle() {
+        let form = PollForm(title: String(repeating: "a", count: 201), options: ["A", "B"], endTime: hours(5))
+        #expect(form.errors(now: now)[.title] == "pollCreator.errors.titleTooLong")
+    }
+
+    @Test func rejectsTwoOptionsWithTheSameText() {
+        let form = PollForm(title: "Q", options: ["Option A", " option a "], endTime: hours(5))
+        let errors = form.errors(now: now)
+        #expect(errors[.option(0)] == nil)
+        #expect(errors[.option(1)] == "pollCreator.errors.optionDuplicate")
+    }
+
+    @Test func saysEachOptionProblemOnce() {
+        let form = PollForm(title: "Q", options: ["", "A", "", "a"], endTime: hours(5))
+        #expect(PollForm.optionMessages(form.errors(now: now), count: 4)
+            == ["pollCreator.errors.optionRequired", "pollCreator.errors.optionDuplicate"])
+    }
+
+    @Test func publishesAPastedMultiLineQuestionAsOneLine() {
+        let form = PollForm(title: "Market night\n  Friday or Saturday?", options: ["A", "B"], endTime: hours(5))
+        #expect(form.input(now: now).title == "Market night Friday or Saturday?")
+    }
+
+    @Test func rejectsAnEndBeforeTheStart() {
+        let form = PollForm(title: "Q", options: ["A", "B"], startTime: hours(48), endTime: hours(24))
+        #expect(form.errors(now: now)[.endTime] == "pollCreator.errors.endBeforeStart")
+    }
+
+    @Test func requiresAnEndTime() {
+        let form = PollForm(title: "Q", options: ["A", "B"], endTime: nil)
+        #expect(form.errors(now: now)[.endTime] == "pollCreator.errors.endRequired")
+    }
+
+    @Test func presetsCountFromTheOpeningTime() {
+        var form = PollForm(endTime: nil)
+        form.apply(.week, now: now)
+        #expect(form.endTime == hours(168))
+        form.startTime = hours(24)
+        form.apply(.week, now: now)
+        #expect(form.endTime == hours(24 + 168))
+    }
+
+    @Test func addOptionTakesYouToAnEmptyOne() {
+        #expect(PollForm(options: ["A", "", "C"], endTime: nil).firstEmptyOption == 1)
+        #expect(PollForm(options: ["A", "B"], endTime: nil).firstEmptyOption == nil)
+    }
+
+    @Test func namesTheVisibleToAllChoiceByWhoCanSeeAnInviteOnlyPoll() {
+        #expect(PollForm.visibilityLevel(.signedIn, audience: .public) == .signedIn)
+        #expect(PollForm.visibilityLevel(.signedIn, audience: .inviteOnly) == .invited)
+        #expect(PollForm.empty(now: now).voterVisibility == .owner)
+    }
+
+    @Test func publishesAnUnlistedPollWithoutInvitees() {
+        let form = PollForm(title: "Q", options: ["A", "B"], endTime: hours(5), audience: .unlisted,
+                            invitees: InviteeSelection(emails: ["a@b.co"]))
+        let input = form.input(now: now)
+        #expect(input.audience == .unlisted)
+        #expect(input.invitees == nil)
+    }
+
+    @Test func editingAnInviteOnlyPollLeavesItsInviteesAlone() {
+        var poll = Poll(id: "p", title: "Q", active: true, votingActive: false, audience: .inviteOnly, creatorId: "o",
+                        creatorUsername: "o", createdAt: now, startTime: hours(5), endTime: hours(50),
+                        options: [PollOption(id: "a", text: "A"), PollOption(id: "b", text: "B")])
+        var form = PollForm(poll: poll)
+        #expect(form.invitees == nil)
+        #expect(form.errors(now: now).isEmpty)
+        #expect(form.input(now: now).invitees == nil)
+        poll.audience = .public
+        form = PollForm(poll: poll)
+        #expect(form.invitees == InviteeSelection())
+    }
+
     @Test func draftsRoundTrip() {
         let store = DraftStore(key: "test-drafts-\(UUID().uuidString)")
         let first = store.save(PollForm(title: "One", endTime: now))

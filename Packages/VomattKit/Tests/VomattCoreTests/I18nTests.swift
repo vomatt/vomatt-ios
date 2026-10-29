@@ -30,6 +30,16 @@ struct LocalizerTests {
         #expect(flat == ["poll.vote": "Vote", "poll.audience.public": "Public", "top": "T"])
     }
 
+    // From vomatt-web's format.test.ts `joinSentences`
+    @Test func separatesEnglishSentencesWithASpace() {
+        #expect(Localizer(language: .en, strings: [:]).sentences("Anyone can vote.", "Only you will see.")
+            == "Anyone can vote. Only you will see.")
+    }
+
+    @Test func runsChineseSentencesTogether() {
+        #expect(Localizer(language: .zh, strings: [:]).sentences("任何人都能投票。", "只有你會看到。") == "任何人都能投票。只有你會看到。")
+    }
+
     @Test func preferredLanguage() {
         #expect(Language.preferred(["zh-Hant-TW", "en"]) == .zh)
         #expect(Language.preferred(["fr", "en-GB"]) == .en)

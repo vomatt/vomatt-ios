@@ -1,139 +1,180 @@
 import SwiftUI
 import VomattCore
 
-/// Picks people by username or email, and Groups whose members are copied in (the web's `InviteePicker`).
+/// Picks people by username (search) or email, and Groups whose members are copied in (the web's `InviteePicker`).
 struct InviteePicker: View {
     @Environment(AppModel.self) private var app
     @Binding var selection: InviteeSelection
     var withGroups = false
     var isInvalid = false
 
+    /// Search results, tagged with the term they answer so stale ones never show.
+    private struct Results { var term = ""; var users: [UserSummary] = []; var failed = false }
+
     @State private var query = ""
-    @State private var suggestions: [UserSummary] = []
-    @State private var searchFailed = false
+    @State private var results = Results()
     @State private var groups: [UserGroup] = []
 
-    private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var queryIsEmail: Bool { Email.isValid(trimmed) }
+    private static let maxSuggestions = 5
+
+    private var term: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var email: String { Email.normalize(term) }
+    private var isEmail: Bool { Email.isValid(email) }
+    private var isSearching: Bool { !term.isEmpty && !term.contains("@") }
+    private var isLoading: Bool { isSearching && results.term != term }
+    private var suggestions: [UserSummary] {
+        guard isSearching, results.term == term else { return [] }
+        return Array(results.users.filter { user in !selection.users.contains { $0.id == user.id } && user.id != app.userId }
+            .prefix(Self.maxSuggestions))
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !selection.isEmpty { picked }
-            SearchField(placeholder: app.t("invitees.placeholder"), text: $query)
-                .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(isInvalid ? Tokens.destructive : .clear))
-            if queryIsEmail {
-                Button { addEmail(Email.normalize(trimmed)) } label: {
-                    Label(app.t("invitees.inviteEmail", ["email": Email.normalize(trimmed)]), systemImage: "envelope")
-                }
-                .buttonStyle(.vm(.outline, size: .sm))
-            } else if trimmed.count >= 2 {
-                suggestionList
-            }
-            if withGroups, !groups.isEmpty {
-                Text(app.t("invitees.groups")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
-                FlowLayout(spacing: 6) {
-                    ForEach(groups) { group in
-                        let isOn = selection.groups.contains { $0.id == group.id }
-                        PillButton(title: app.t("invitees.groupPill", ["name": group.name, "count": group.memberCount]), isOn: isOn) {
-                            if isOn { selection.groups.removeAll { $0.id == group.id } }
-                            else { selection.groups.append(.init(id: group.id, name: group.name, memberCount: group.memberCount)) }
-                        }
+        VStack(alignment: .leading, spacing: 12) {
+            if withGroups, !groups.isEmpty { groupPills }
+            VStack(alignment: .leading, spacing: 4) {
+                SearchField(placeholder: app.t("invitees.placeholder"), text: $query)
+                    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(isInvalid ? Tokens.destructive : .clear))
+                    .onSubmit {
+                        // Return picks the email, or the first person found
+                        if isEmail { addEmail() } else if let first = suggestions.first { add(first) }
                     }
+                if isEmail {
+                    Button(action: addEmail) {
+                        Label(app.t("invitees.inviteEmail", ["email": email]), systemImage: "envelope")
+                            .frame(maxWidth: .infinity, minHeight: Metrics.minTarget, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .font(.vm(14))
+                }
+                if isLoading {
+                    ProgressView().frame(maxWidth: .infinity).padding(.vertical, 8)
+                } else if !suggestions.isEmpty {
+                    suggestionList
+                } else if isSearching {
+                    Text(app.t(results.failed ? "invitees.searchFailed" : "invitees.noUsers"))
+                        .font(.vm(12)).foregroundStyle(Tokens.mutedForeground).padding(.vertical, 8)
                 }
             }
+            if !chips.isEmpty { picked }
         }
-        .task(id: trimmed) { await search() }
+        .task(id: isSearching ? term : "") { await search() }
         .task { if withGroups { groups = (try? await app.service.groups()) ?? [] } }
     }
 
-    private var picked: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(app.t("invitees.picked")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
-            FlowLayout(spacing: 6) {
-                ForEach(selection.users) { user in
-                    removable(user.username, avatar: AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 20)) {
-                        selection.users.removeAll { $0.id == user.id }
-                    }
-                }
-                ForEach(selection.emails, id: \.self) { email in
-                    removable(email, avatar: Image(systemName: "envelope").font(.system(size: 12))) {
-                        selection.emails.removeAll { $0 == email }
-                    }
-                }
-                ForEach(selection.groups) { group in
-                    removable(app.t("invitees.groupPill", ["name": group.name, "count": group.memberCount]),
-                              avatar: Image(systemName: "person.2").font(.system(size: 12))) {
-                        selection.groups.removeAll { $0.id == group.id }
-                    }
-                }
-            }
-        }
-    }
-
-    private func removable(_ name: String, avatar: some View, remove: @escaping () -> Void) -> some View {
-        Button(action: remove) {
-            HStack(spacing: 6) {
-                avatar
-                Text(name).font(.vm(14)).lineLimit(1)
-                Image(systemName: "xmark").font(.system(size: 10, weight: .semibold)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .foregroundStyle(Tokens.foreground)
-            .padding(.leading, 6).padding(.trailing, 10)
-            .frame(minHeight: 32)
-            .background(Tokens.secondary, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(app.t("invitees.remove", ["name": name]))
-    }
-
-    @ViewBuilder private var suggestionList: some View {
-        if searchFailed {
-            Text(app.t("invitees.searchFailed")).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-        } else if suggestions.isEmpty {
-            Text(app.t("invitees.noUsers")).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(app.t("invitees.suggestions")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground).padding(.bottom, 4)
-                ForEach(suggestions.filter { user in !selection.users.contains { $0.id == user.id } && user.id != app.userId }) { user in
+    private var groupPills: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(app.t("invitees.groups")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
+            FlowLayout(spacing: 8) {
+                ForEach(groups) { group in
+                    let isOn = selection.groups.contains { $0.id == group.id }
                     Button {
-                        selection.users.append(.init(id: user.id, username: user.username, avatarUrl: user.avatarUrl))
-                        query = ""
+                        if isOn { selection.groups.removeAll { $0.id == group.id } }
+                        else { selection.groups.append(.init(id: group.id, name: group.name, memberCount: group.memberCount)) }
                     } label: {
-                        HStack {
-                            UserChip(username: user.username, avatarUrl: user.avatarUrl, label: user.displayName.map { "\($0) · @\(user.username)" },
-                                     avatarSize: 28, link: false)
-                                .font(.vm(15))
-                                .foregroundStyle(Tokens.foreground)
-                            Spacer()
-                            Image(systemName: "plus").foregroundStyle(Tokens.mutedForeground)
+                        HStack(spacing: 4) {
+                            Text(group.name)
+                            Text("\(group.memberCount)").font(.vmMono(13)).monospacedDigit()
                         }
-                        .frame(minHeight: Metrics.minTarget)
-                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.vm(isOn ? .default : .outline, size: .sm, pill: true))
+                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                    // The count is set apart visually; the label says what it counts
+                    .accessibilityLabel(app.t("invitees.groupPill", ["name": group.name, "count": group.memberCount]))
+                }
+            }
+        }
+    }
+
+    private struct PickedChip: Identifiable {
+        let id: String
+        let label: String
+        var user: InviteeSelection.User?
+        let remove: () -> Void
+    }
+
+    private var chips: [PickedChip] {
+        selection.users.map { user in
+            PickedChip(id: "user:\(user.id)", label: user.username, user: user) { selection.users.removeAll { $0.id == user.id } }
+        }
+        + selection.emails.map { address in
+            PickedChip(id: "email:\(address)", label: address) { selection.emails.removeAll { $0 == address } }
+        }
+        // A picked Group without a pill: deleted since a draft was saved, or Groups didn't load
+        + selection.groups.filter { picked in !groups.contains { $0.id == picked.id } }.map { group in
+            PickedChip(id: "group:\(group.id)", label: group.name) { selection.groups.removeAll { $0.id == group.id } }
+        }
+    }
+
+    private var picked: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(chips) { chip in
+                HStack(spacing: 4) {
+                    if let user = chip.user {
+                        AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 24).padding(.leading, -6)
+                    }
+                    Text(chip.label).font(.vm(12)).lineLimit(1)
+                    Button(action: chip.remove) {
+                        Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Tokens.mutedForeground)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(app.t("invitees.remove", ["name": chip.label]))
                 }
+                .foregroundStyle(Tokens.foreground)
+                .padding(.leading, 12)
+                .frame(minHeight: 32)
+                .background(Tokens.secondary, in: Capsule())
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(app.t("invitees.picked"))
     }
 
-    private func addEmail(_ email: String) {
+    private var suggestionList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(suggestions) { user in
+                Button { add(user) } label: {
+                    HStack(spacing: 12) {
+                        AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 28)
+                        Text(user.username).font(.vm(14)).lineLimit(1)
+                        if let name = user.displayName {
+                            Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(Tokens.foreground)
+                    .frame(minHeight: Metrics.minTarget)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(app.t("invitees.suggestions"))
+    }
+
+    private func add(_ user: UserSummary) {
+        selection.users.append(.init(id: user.id, username: user.username, avatarUrl: user.avatarUrl))
+        query = ""
+    }
+
+    private func addEmail() {
         if !selection.emails.contains(email) { selection.emails.append(email) }
         query = ""
     }
 
     private func search() async {
-        let q = trimmed
-        guard q.count >= 2, !Email.isValid(q) else {
-            suggestions = []
-            return
-        }
+        let term = term
+        guard isSearching else { return }
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
         do {
-            suggestions = try await app.service.searchUsers(q.hasPrefix("@") ? String(q.dropFirst()) : q, limit: 8).items
-            searchFailed = false
+            let users = try await app.service.searchUsers(term, limit: 8).items
+            results = Results(term: term, users: users)
         } catch {
-            searchFailed = !(error is CancellationError)
+            if !(error is CancellationError) { results = Results(term: term, failed: true) }
         }
     }
 }

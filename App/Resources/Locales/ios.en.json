@@ -17,6 +17,9 @@
 		"saveDraftTitle": "Save to drafts?",
 		"saveDraftBody": "You have unsaved changes. Save this poll as a draft before leaving?",
 		"scheduleStart": "Choose a start time",
+		"rulesTitle": "Rules voters will see",
+		"rulesChange": "Change",
+		"rulesDone": "Done",
 		"contact": "Contact us",
 		"languageBody": "Follows your iPhone. Opens iOS Settings.",
 		"block": "Block {name}",
@@ -41,7 +44,6 @@
 		"followingListEmpty": "Not following anyone yet.",
 		"followFailed": "Couldn't follow this person. Try again.",
 		"unfollowFailed": "Couldn't unfollow this person. Try again.",
-		"followingEmpty": "Nothing here yet. Follow people from a poll's menu to see their open polls here.",
 		"invitedBy": "{name} invited you",
 		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",
 		"sealedTitle": "Sealed. Thank you.",
@@ -169,8 +171,7 @@
 	"pollCreator": {
 		"summaryNoEnd": "Choose when it closes",
 		"summaryOpensLater": "Opens {start}, closes {end}",
-		"summaryOpensNow": "Opens now, closes {end}",
-		"summaryVisibility": "After it ends: {level}"
+		"summaryOpensNow": "Opens now, closes {end}"
 	},
 	"pollDetail": {
 		"askedBy": "Asked by",

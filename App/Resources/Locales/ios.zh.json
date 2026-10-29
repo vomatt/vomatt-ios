@@ -17,6 +17,9 @@
 		"saveDraftTitle": "要存成草稿嗎？",
 		"saveDraftBody": "你有尚未儲存的變更。離開前要把這則投票存成草稿嗎？",
 		"scheduleStart": "選擇開始時間",
+		"rulesTitle": "投票者會看到的規則",
+		"rulesChange": "更改",
+		"rulesDone": "完成",
 		"contact": "聯絡我們",
 		"languageBody": "跟隨 iPhone 的語言，在 iOS 設定中更改。",
 		"block": "封鎖 {name}",
@@ -41,7 +44,6 @@
 		"followingListEmpty": "還沒有追蹤任何人。",
 		"followFailed": "無法追蹤，請再試一次。",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
-		"followingEmpty": "還沒有內容。從投票的選單追蹤其他人，就能在這裡看到他們進行中的投票。",
 		"invitedBy": "{name} 邀請了你",
 		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
 		"sealedTitle": "已封存，謝謝你。",
@@ -169,8 +171,7 @@
 	"pollCreator": {
 		"summaryNoEnd": "選擇結束時間",
 		"summaryOpensLater": "{start} 開始，{end} 結束",
-		"summaryOpensNow": "現在開始，{end} 結束",
-		"summaryVisibility": "結束後：{level}"
+		"summaryOpensNow": "現在開始，{end} 結束"
 	},
 	"pollDetail": {
 		"askedBy": "發起人",

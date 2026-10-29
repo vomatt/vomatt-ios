@@ -1,7 +1,7 @@
 import SwiftUI
 import VomattCore
 
-/// Topics, search and filters over Open or Ended Public Polls (the web's `ExploreView`).
+/// Search and filters over Open or Ended Public Polls, plus the popular topics (the web's `ExploreView`).
 struct ExploreView: View {
     @Environment(AppModel.self) private var app
     @State private var query = ""
@@ -9,6 +9,8 @@ struct ExploreView: View {
     @State private var sort = VomattService.ListSort.newest
     @State private var tags: [Tag] = []
     @State private var list: CursorList<Poll>?
+    /// A new query's first page is loading; the previous results stay, dimmed, until it arrives
+    @State private var isSearching = false
 
     /// The query sent to the API; ended Polls take no sort, and a 1-character search is no search.
     private var apiKey: String {
@@ -18,28 +20,25 @@ struct ExploreView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text(app.t("explore.title")).displayHeading(32).accessibilityAddTraits(.isHeader)
 
-                if !tags.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(app.t("explore.topics")).font(.vm(14, .semibold))
-                        FlowLayout(spacing: 8) { ForEach(tags) { TopicChip(tag: $0) } }
-                    }
+                VStack(alignment: .leading, spacing: 12) {
+                    SearchField(placeholder: app.t("explore.searchPlaceholder"), text: $query)
+                        .accessibilityLabel(app.t("explore.searchLabel"))
+                    filters
                 }
 
-                VStack(alignment: .leading, spacing: 16) {
-                    SearchField(placeholder: app.t("explore.searchPlaceholder"), text: $query)
-                    filters
-                    results
-                    let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !q.isEmpty, q.count < searchMinLength {
-                        Text(app.t("explore.searchTooShort")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
-                            .frame(maxWidth: .infinity)
-                    }
+                if !tags.isEmpty { topics }
+
+                results
+                let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !q.isEmpty, q.count < searchMinLength {
+                    Text(app.t("explore.searchTooShort")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .pageColumn()
+            .pageColumn(560)
             .padding(.vertical, 24)
         }
         .scrollDismissesKeyboard(.immediately)
@@ -50,76 +49,102 @@ struct ExploreView: View {
             // Typing waits for a pause
             if list != nil { try? await Task.sleep(for: .milliseconds(300)) }
             guard !Task.isCancelled else { return }
-            let list = makeList()
-            self.list = list
-            await list.reload()
+            let next = makeList()
+            guard list != nil else {
+                list = next
+                await next.reload()
+                return
+            }
+            isSearching = true
+            defer { isSearching = false }
+            await next.reload()
+            guard !Task.isCancelled else { return }
+            list = next
         }
     }
 
     private var filters: some View {
         ViewThatFits(in: .horizontal) {
-            HStack { statusPills; Spacer(); sortPills }
+            HStack(spacing: 16) { statusPills; sortPills }
             VStack(alignment: .leading, spacing: 8) { statusPills; sortPills }
         }
     }
 
+    private func filterRow(_ label: String, @ViewBuilder pills: () -> some View) -> some View {
+        HStack(spacing: 12) {
+            Text(label).font(.vm(13)).foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
+            HStack(spacing: 8) { pills() }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(label)
+        }
+    }
+
     private var statusPills: some View {
-        HStack(spacing: 6) {
+        filterRow(app.t("explore.status")) {
             PillButton(title: app.t("explore.filterActive"), isOn: status == .open) { status = .open }
             PillButton(title: app.t("explore.filterEnded"), isOn: status == .ended) { status = .ended }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(app.t("explore.status"))
     }
 
     private var sortPills: some View {
-        HStack(spacing: 6) {
+        filterRow(app.t("explore.sort")) {
             PillButton(title: app.t("explore.sortNewest"), isOn: sort == .newest) { sort = .newest }
             PillButton(title: app.t("explore.sortEnding"), isOn: sort == .closing) { sort = .closing }
             PillButton(title: app.t("explore.sortTop"), isOn: sort == .top) { sort = .top }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(app.t("explore.sort"))
-        // Ended Polls take no sort; hide it but keep its space so the list doesn't jump
+        // Ended Polls take no sort; hidden, not removed, so the list doesn't jump
         .opacity(status == .open ? 1 : 0)
         .disabled(status != .open)
         .accessibilityHidden(status != .open)
     }
 
+    private var topics: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(app.t("explore.topics")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) { ForEach(tags) { TopicChip(tag: $0, compact: true) } }
+                    .padding(.horizontal, Metrics.gutter)
+            }
+            .padding(.horizontal, -Metrics.gutter)
+        }
+    }
+
     @ViewBuilder private var results: some View {
         if let list {
-            switch list.phase {
-            case .idle, .loading:
-                placeholder
-            case .failed:
-                LoadFailed(message: app.t("explore.loadFailed")) { await list.reload() }
-            case .loaded:
-                let polls = app.visible(list.items)
-                if polls.isEmpty {
-                    Text(app.t("explore.noResults")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                        .frame(maxWidth: .infinity).padding(.vertical, 48)
-                } else {
-                    LazyVStack(spacing: 8) {
-                        ForEach(polls) { poll in
-                            PollRow(poll: poll) {
-                                Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)]))
-                                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, avatarSize: 16, link: false)
-                            } aside: {
-                                StatusChip(poll: poll)
+            Group {
+                switch list.phase {
+                case .idle, .loading:
+                    placeholder
+                case .failed:
+                    LoadFailed(message: app.t("explore.loadFailed")) { await list.reload() }
+                case .loaded:
+                    let polls = app.visible(list.items)
+                    if polls.isEmpty {
+                        EmptyCard(title: app.t("explore.noResults"),
+                                  body: app.t(status == .open ? "explore.noResultsHint" : "explore.noResultsHintEnded"))
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            ForEach(polls) { poll in
+                                PollCardView(poll: poll) {
+                                    list.update { $0.removeAll { $0.id == poll.id } }
+                                }
                             }
                         }
+                        if !isSearching { LoadMoreFooter(list: list) }
                     }
-                    LoadMoreFooter(list: list)
                 }
             }
+            .opacity(isSearching ? 0.5 : 1)
+            .allowsHitTesting(!isSearching)
+            .animation(.easeOut(duration: 0.15), value: isSearching)
         } else {
-            // Before the first list exists is loading too, like My Polls
+            // Before the first list exists is loading too
             placeholder
         }
     }
 
     private var placeholder: some View {
-        VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
+        VStack(spacing: 16) { ForEach(0..<3, id: \.self) { index in PollCardSkeleton(options: 3 + index % 2) } }
     }
 
     private func makeList() -> CursorList<Poll> {
