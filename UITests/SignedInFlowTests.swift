@@ -152,7 +152,8 @@ final class SignedInFlowTests: XCTestCase {
         // Past the 60s refresh leeway of a 120s token
         Thread.sleep(forTimeInterval: 70)
         app.buttons["Settings"].tap()
-        XCTAssertTrue(app.staticTexts["Invite lists"].waitForExistence(timeout: 10))
+        // The Invite lists row is one button whose label starts with its title
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Invite lists")).firstMatch.waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["Log in or sign up for Vomatt"].exists, "the session should have been refreshed, not ended")
         app.buttons["Profile"].tap()
         XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))

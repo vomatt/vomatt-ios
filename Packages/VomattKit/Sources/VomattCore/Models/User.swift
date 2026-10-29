@@ -104,25 +104,6 @@ public struct MyProfile: Hashable, Sendable {
         self.visibilitySettings = visibilitySettings
         self.anonymousBallotByDefault = anonymousBallotByDefault
     }
-
-    /// The profile as visitors see it, honoring the owner's visibility switches.
-    public var asPublicProfile: UserProfile {
-        UserProfile(
-            id: id,
-            username: username,
-            displayName: displayName,
-            bio: bio,
-            avatarUrl: avatarUrl,
-            joinedAt: joinedAt,
-            totalPolls: totalPolls,
-            totalVotes: totalVotes,
-            location: visibilitySettings["location"] == true ? location : nil,
-            points: visibilitySettings["points"] == true ? points : nil,
-            membershipLevel: visibilitySettings["membershipLevel"] == true ? membershipLevel : nil,
-            followersCount: followersCount,
-            followingCount: followingCount
-        )
-    }
 }
 
 /// A `/users/search` item: public fields only. Follower and following lists (and a notification's

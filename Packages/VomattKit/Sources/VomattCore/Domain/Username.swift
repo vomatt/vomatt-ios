@@ -5,7 +5,7 @@ public enum Username {
     public static let maxLength = 50
 
     public static let reserved: Set<String> = [
-        "search", "account", "explore", "login", "notifications", "poll", "sanity",
+        "search", "account", "explore", "following", "login", "notifications", "poll", "sanity",
         "api", "me", "my", "admin", "settings",
     ]
 

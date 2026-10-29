@@ -48,6 +48,7 @@ enum Route: Hashable {
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
     case settings
+    case inviteLists
 }
 
 struct Toast: Equatable, Identifiable {

@@ -17,17 +17,13 @@
 		"saveDraftTitle": "要存成草稿嗎？",
 		"saveDraftBody": "你有尚未儲存的變更。離開前要把這則投票存成草稿嗎？",
 		"scheduleStart": "選擇開始時間",
-		"terms": "服務條款",
-		"privacy": "隱私權政策",
 		"contact": "聯絡我們",
+		"languageBody": "跟隨 iPhone 的語言，在 iOS 設定中更改。",
 		"block": "封鎖 {name}",
 		"blockedToast": "已封鎖 {name}，你不會再看到對方的投票或留言。",
-		"blockedTitle": "已封鎖的人",
 		"blockFailed": "無法封鎖對方，請再試一次。",
 		"unblockFailed": "無法解除封鎖，請再試一次。",
 		"create": "建立",
-		"exportTitle": "匯出我的資料",
-		"exportBody": "將你的個人檔案、投票、留言、選票與回饋下載為一個 JSON 檔。每天可匯出一次。",
 		"feedbackTitle": "意見回饋",
 		"feedbackBody": "告訴我們該修正或新增什麼，我們會閱讀每一則。",
 		"feedbackCta": "撰寫回饋",
@@ -36,8 +32,6 @@
 		"feedbackSent": "謝謝，我們收到你的回饋了。",
 		"feedbackFailed": "無法送出回饋，請再試一次。",
 		"feedbackLimited": "你今天送出的回饋已達上限，請明天（UTC）再試。",
-		"exportCta": "匯出",
-		"exportFailed": "無法匯出你的資料，請再試一次。",
 		"exportLimited": "你今天已經匯出過了，請明天（UTC）再試。",
 		"follow": "追蹤 {name}",
 		"unfollow": "取消追蹤 {name}",
@@ -48,16 +42,11 @@
 		"followFailed": "無法追蹤，請再試一次。",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
 		"followingEmpty": "還沒有內容。從投票的選單追蹤其他人，就能在這裡看到他們進行中的投票。",
-		"unblock": "解除封鎖",
 		"invitedBy": "{name} 邀請了你",
 		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
 		"sealedTitle": "已封存，謝謝你。",
 		"sealedTurnout": "{count} 人已投票，包括你",
-		"firstName": "名字",
-		"lastName": "姓氏",
-		"birthday": "生日",
 		"setBirthday": "新增生日",
-		"birthdayHint": "設定後可以修改，但無法移除。",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followsYou": "追蹤了你",
 		"followBack": "回追蹤",
@@ -73,14 +62,7 @@
 		"reportNote": "補充說明（選填）",
 		"reportSend": "送出檢舉",
 		"reportSent": "謝謝，我們已收到你的檢舉。",
-		"reportFailed": "無法送出檢舉，請再試一次。",
-		"notifPrefsTitle": "通知",
-		"notifPrefsBody": "選擇要在通知和未讀數中顯示的內容。新的追蹤者一律顯示。",
-		"notifPrefResults": "投票結果",
-		"notifPrefInvitations": "邀請",
-		"notifPrefComments": "留言與回覆",
-		"notifPrefClosingSoon": "即將截止的投票",
-		"notifPrefFailed": "無法儲存此設定，請再試一次。"
+		"reportFailed": "無法送出檢舉，請再試一次。"
 	},
 	"apiError": {
 		"common.bad_request": "請求格式錯誤",
@@ -89,7 +71,6 @@
 		"common.unauthorized": "未授權的請求",
 		"common.forbidden": "沒有權限執行此操作",
 		"common.rate_limited": "請求過於頻繁，請稍後再試",
-		"common.conflict": "資源衝突，請重試",
 		"common.validation_failed": "輸入資料驗證失敗",
 		"common.missing_param": "缺少必要參數：{0}",
 		"common.type_mismatch": "參數格式錯誤：{0}",
@@ -167,9 +148,7 @@
 		"tag.in_use": "標籤仍被投票使用，無法刪除",
 		"tag.ids.invalid": "部分標籤 ID 不存在",
 		"lookup.not_found": "找不到字典資料",
-		"lookup.exists": "字典資料已存在：{0}/{1}",
-		"field.firstName": "名字",
-		"field.lastName": "姓氏"
+		"lookup.exists": "字典資料已存在：{0}/{1}"
 	},
 	"explore": {
 		"topics": "依主題瀏覽"
@@ -200,7 +179,6 @@
 		"revealsIn": "結果將於{distance}揭曉"
 	},
 	"profile": {
-		"field.lastName": "姓氏",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
 	},
 	"auth": {

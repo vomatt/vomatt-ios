@@ -16,7 +16,7 @@ struct AccountTab: View {
                 VStack(alignment: .leading, spacing: 24) {
                     Text(app.t("navigation.profile")).displayHeading(32)
                     LoginPromptCard()
-                    AppSettingsSection()
+                    LegalLinks()
                 }
                 .pageColumn()
                 .padding(.vertical, 24)
@@ -300,6 +300,8 @@ struct ProfileHeader<Action: View>: View {
     @Environment(AppModel.self) private var app
     let profile: UserProfile
     var onAvatarTap: (() -> Void)?
+    /// Fields visitors don't see; only the owner's header passes them, and each gets a lock.
+    var hiddenFields: Set<String> = []
     @ViewBuilder var action: () -> Action
 
     var body: some View {
@@ -322,15 +324,22 @@ struct ProfileHeader<Action: View>: View {
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(profile.displayName ?? profile.username).displayHeading(28).lineLimit(1)
+                let name = profile.displayName ?? profile.username
+                marked(name, "displayName", lockSize: 14).displayHeading(28).lineLimit(1)
+                    .accessibilityLabel(spoken(name, "displayName"))
                     .accessibilityAddTraits(.isHeader)
                 if profile.displayName != nil {
                     Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
                 }
                 if let bio = profile.bio, !bio.isEmpty {
-                    Text(bio).font(.vm(14)).foregroundStyle(Tokens.foreground)
+                    marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
+                        .accessibilityLabel(spoken(bio, "bio"))
                 }
-                Text(details.joined(separator: " · ")).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                details.dropFirst().reduce(details.first.map { marked($0.text, $0.field, lockSize: 9) } ?? Text(verbatim: "")) {
+                    $0 + Text(verbatim: " · ") + marked($1.text, $1.field, lockSize: 9)
+                }
+                .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                .accessibilityLabel(details.map { spoken($0.text, $0.field) }.joined(separator: ", "))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             action()
@@ -338,13 +347,23 @@ struct ProfileHeader<Action: View>: View {
     }
 
     /// "location · points · membership · joined"; fields the owner hid come back nil and drop out.
-    private var details: [String] {
+    private var details: [(field: String, text: String)] {
         [
-            profile.location,
-            profile.points.map { app.t("profile.points", ["count": app.t.number($0)]) },
-            profile.membershipLevel.map { app.t("profile.membership", ["level": $0]) },
-            profile.joinedAt.map { app.t("profile.joined", ["date": app.dates.monthYear($0)]) },
-        ].compactMap { $0 }
+            profile.location.map { ("location", $0) },
+            profile.points.map { ("points", app.t("profile.points", ["count": app.t.number($0)])) },
+            profile.membershipLevel.map { ("membershipLevel", app.t("profile.membership", ["level": $0])) },
+            profile.joinedAt.map { ("joinedAt", app.t("profile.joined", ["date": app.dates.monthYear($0)])) },
+        ].compactMap { $0 }.filter { !$0.text.isEmpty }
+    }
+
+    /// `text`, then a lock when only the owner sees `field`.
+    private func marked(_ text: String, _ field: String, lockSize: CGFloat) -> Text {
+        guard hiddenFields.contains(field) else { return Text(text) }
+        return Text(text) + Text(verbatim: " ") + Text(Image(systemName: "lock.fill")).font(.system(size: lockSize)).foregroundStyle(Tokens.mutedForeground)
+    }
+
+    private func spoken(_ text: String, _ field: String) -> String {
+        hiddenFields.contains(field) ? "\(text) (\(app.t("profile.onlyYou")))" : text
     }
 }
 
