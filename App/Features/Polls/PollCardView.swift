@@ -5,8 +5,6 @@ import VomattCore
 struct PollCardView: View {
     @Environment(AppModel.self) private var app
     let initialPoll: Poll
-    /// The detail page: the title isn't a link and the discussion sits below.
-    var isDetail = false
     /// Called once the owner Deletes it.
     var onDeleted: (() -> Void)?
 
@@ -14,9 +12,8 @@ struct PollCardView: View {
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
 
-    init(poll: Poll, isDetail: Bool = false, onDeleted: (() -> Void)? = nil) {
+    init(poll: Poll, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
-        self.isDetail = isDetail
         self.onDeleted = onDeleted
         _poll = State(initialValue: poll)
         _ballot = State(initialValue: BallotModel(poll: poll))
@@ -25,7 +22,7 @@ struct PollCardView: View {
     var body: some View {
         // Re-evaluated every minute so the chip and Ballot follow the clock
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            card(status: poll.status(at: context.date))
+            card(status: poll.status(at: context.date), now: context.date)
         }
         .onChange(of: initialPoll) { _, fresh in apply(fresh) }
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
@@ -34,10 +31,10 @@ struct PollCardView: View {
         .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
     }
 
-    private func card(status: PollStatus) -> some View {
+    private func card(status: PollStatus, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
-                header(status: status)
+                header(status: status, now: now)
                 titleBlock
                 Group {
                     if status == .ended {
@@ -74,7 +71,7 @@ struct PollCardView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(20)
 
             footer
         }
@@ -91,58 +88,58 @@ struct PollCardView: View {
         }
     }
 
-    private func header(status: PollStatus) -> some View {
+    private func header(status: PollStatus, now: Date) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            HStack(spacing: 6) {
-                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl)
-                    .font(.vm(13, .medium))
+            HStack(spacing: 10) {
+                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                    .font(.vm(14, .medium))
+                    .foregroundStyle(Tokens.foreground)
                     .layoutPriority(1)
-                Text(app.dates.fromNow(poll.createdAt)).lineLimit(1).fixedSize()
-                if let audience = poll.audience, audience != .public {
-                    Text("· " + app.t("poll.audience.\(audience.rawValue)")).lineLimit(1).fixedSize()
-                }
+                Text("· " + app.dates.age(poll.createdAt, now: now)).lineLimit(1).fixedSize()
+                    .font(.vm(14))
+                    .foregroundStyle(Tokens.mutedForeground)
             }
-            .font(.vmMeta)
-            .foregroundStyle(Tokens.mutedForeground)
+            // The handle says whose poll it is; the chip may shorten before it does
+            .layoutPriority(1)
             Spacer(minLength: 0)
-            StatusChip(poll: poll)
+            HStack(spacing: 8) {
+                if status != .ended, ballot.myOptionId != nil {
+                    VotedPill().transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+                CardStatusChip(poll: poll, status: status, now: now)
+            }
+            .animation(.easeOut(duration: 0.2), value: ballot.myOptionId != nil)
         }
     }
 
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if isDetail {
-                Text(poll.title).pollTitle().accessibilityAddTraits(.isHeader)
-            } else {
-                Button { app.push(.poll(poll.id)) } label: {
-                    Text(poll.title).pollTitle().multilineTextAlignment(.leading)
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("poll-title")
+            Button { app.push(.poll(poll.id)) } label: {
+                Text(poll.title).pollTitle().multilineTextAlignment(.leading)
             }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("poll-title")
             if let description = poll.description, !description.isEmpty {
                 Text(description)
-                    .font(.vmBody)
+                    .font(.vm(16))
                     .foregroundStyle(Tokens.mutedForeground)
                     .lineSpacing(3)
-                    .lineLimit(isDetail ? nil : 4)
+                    .lineLimit(4)
             }
         }
     }
 
-    /// Turnout, comments and share. Turnout shows in every state.
+    /// Turnout (and a non-Public Audience), comments and share. Turnout shows in every state.
     private var footer: some View {
-        HStack(spacing: 16) {
-            if let turnout = ballot.turnout {
-                Text(app.t("poll.voted", ["count": app.t.number(turnout)])).font(.vmMono(13))
+        HStack(spacing: 20) {
+            if !footerMeta.isEmpty {
+                Text(footerMeta).font(.vmMono(13)).lineLimit(1)
             }
-            if !isDetail {
-                Button { app.push(.poll(poll.id)) } label: {
-                    Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
-                }
-                .frame(minHeight: Metrics.minTarget)
+            Button { app.push(.poll(poll.id)) } label: {
+                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
             }
+            .frame(minHeight: Metrics.minTarget)
             Spacer()
             ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
@@ -150,18 +147,24 @@ struct PollCardView: View {
             .frame(minHeight: Metrics.minTarget)
             .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
-        .font(.vmMeta)
+        .font(.vm(14))
         .foregroundStyle(Tokens.mutedForeground)
         .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.vertical, isDetail ? 4 : 0)
+        .padding(.horizontal, 20)
         .frame(minHeight: Metrics.minTarget)
         .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
     }
 
+    /// "18 voted · invite only"; a Public Poll says nothing about its Audience.
+    private var footerMeta: String {
+        [
+            ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
+            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
+        ].compactMap { $0 }.joined(separator: " · ")
+    }
+
     private var commentLabel: String {
         guard let count = poll.commentCount else { return app.t("poll.discuss") }
-        if count == 0 { return app.t("poll.discuss") }
         return count == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": count])
     }
 

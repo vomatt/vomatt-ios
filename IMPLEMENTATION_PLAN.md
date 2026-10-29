@@ -52,7 +52,10 @@ username tests). Push settings wait for a device-registration API.
 ## Stage 6: Poll, create, home, explore to the design
 **Goal**: Poll action footer and Seal, results summary, Discussion "See all", create sheet (duration chips,
 rules card, "Review as a voter"), Home and Explore layouts.
-**Status**: Not Started
+**Tests**: `PollPageTests` (ballot anonymity from `useBallot.test.ts`, More from the author), the creator rules
+from `PollCreator.test.tsx`, `joinSentences`.
+Left for Stage 7: web main's newer Save toggle and Report poll on the footer (they need the contract sync).
+**Status**: Complete
 
 ## Stage 7: Release
 **Goal**: Docs current (`release-checklist.md`, `backend-requests.md`), version bump, end-to-end run of the

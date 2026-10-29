@@ -41,7 +41,6 @@
 		"followingListEmpty": "Not following anyone yet.",
 		"followFailed": "Couldn't follow this person. Try again.",
 		"unfollowFailed": "Couldn't unfollow this person. Try again.",
-		"followingEmpty": "Nothing here yet. Follow people from a poll's menu to see their open polls here.",
 		"setBirthday": "Add birthday",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:",
 		"followsYou": "Follows you",
@@ -59,7 +58,10 @@
 		"reportSend": "Send report",
 		"reportSent": "Thanks, we got your report.",
 		"reportFailed": "Couldn't send your report. Try again.",
-		"seeAll": "See all"
+		"seeAll": "See all",
+		"rulesTitle": "Rules voters will see",
+		"rulesChange": "Change",
+		"rulesDone": "Done"
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
@@ -164,8 +166,7 @@
 	"pollCreator": {
 		"summaryNoEnd": "Choose when it closes",
 		"summaryOpensLater": "Opens {start}, closes {end}",
-		"summaryOpensNow": "Opens now, closes {end}",
-		"summaryVisibility": "After it ends: {level}"
+		"summaryOpensNow": "Opens now, closes {end}"
 	},
 	"profile": {
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"

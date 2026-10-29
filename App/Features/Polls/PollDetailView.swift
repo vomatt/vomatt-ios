@@ -162,7 +162,7 @@ private struct PollDetailCard: View {
                     Text("· " + app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
                         .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                     Spacer(minLength: 0)
-                    StatusChip(poll: poll)
+                    CardStatusChip(poll: poll, status: status)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text(poll.title).pollTitle().textSelection(.enabled).accessibilityAddTraits(.isHeader)

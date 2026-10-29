@@ -41,7 +41,6 @@
 		"followingListEmpty": "還沒有追蹤任何人。",
 		"followFailed": "無法追蹤，請再試一次。",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
-		"followingEmpty": "還沒有內容。從投票的選單追蹤其他人，就能在這裡看到他們進行中的投票。",
 		"setBirthday": "新增生日",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followsYou": "追蹤了你",
@@ -59,7 +58,10 @@
 		"reportSend": "送出檢舉",
 		"reportSent": "謝謝，我們已收到你的檢舉。",
 		"reportFailed": "無法送出檢舉，請再試一次。",
-		"seeAll": "查看全部"
+		"seeAll": "查看全部",
+		"rulesTitle": "投票者會看到的規則",
+		"rulesChange": "更改",
+		"rulesDone": "完成"
 	},
 	"apiError": {
 		"common.bad_request": "請求格式錯誤",
@@ -164,8 +166,7 @@
 	"pollCreator": {
 		"summaryNoEnd": "選擇結束時間",
 		"summaryOpensLater": "{start} 開始，{end} 結束",
-		"summaryOpensNow": "現在開始，{end} 結束",
-		"summaryVisibility": "結束後：{level}"
+		"summaryOpensNow": "現在開始，{end} 結束"
 	},
 	"profile": {
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："

@@ -99,9 +99,15 @@ public struct PollForm: Codable, Hashable, Sendable {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.isEmpty { errors[.title] = "pollCreator.errors.titleRequired" }
         else if title.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
-        for (index, option) in options.enumerated()
-        where option.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            errors[.option(index)] = "pollCreator.errors.optionRequired"
+        // Two options with the same text split one opinion into two counts
+        var seen = Set<String>()
+        for (index, option) in options.enumerated() {
+            let key = option.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if key.isEmpty {
+                errors[.option(index)] = "pollCreator.errors.optionRequired"
+            } else if !seen.insert(key).inserted {
+                errors[.option(index)] = "pollCreator.errors.optionDuplicate"
+            }
         }
         if let endTime {
             if endTime <= (startTime ?? now) { errors[.endTime] = "pollCreator.errors.endBeforeStart" }
@@ -114,14 +120,54 @@ public struct PollForm: Codable, Hashable, Sendable {
         return errors
     }
 
+    /// Each distinct problem with the options once, in the order they first appear: one line under the list.
+    public static func optionMessages(_ errors: [Field: String], count: Int) -> [String] {
+        var messages: [String] = []
+        for index in 0..<count {
+            if let message = errors[.option(index)], !messages.contains(message) { messages.append(message) }
+        }
+        return messages
+    }
+
     public var canAddOption: Bool {
         options.count < pollOptionsLimit && options.allSatisfy { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    /// The first blank option: Add option goes there instead of adding another.
+    public var firstEmptyOption: Int? {
+        options.firstIndex { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    /// The end-time presets. Each counts from the opening time, or from now when it opens now.
+    public enum EndPreset: String, CaseIterable, Sendable {
+        case hour = "1h", day = "24h", threeDays = "3d", week = "1w"
+
+        public var duration: TimeInterval {
+            switch self {
+            case .hour: 3600
+            case .day: 24 * 3600
+            case .threeDays: 3 * 24 * 3600
+            case .week: 7 * 24 * 3600
+            }
+        }
+
+        public var labelKey: String { "pollCreator.preset\(rawValue)" }
+    }
+
+    public mutating func apply(_ preset: EndPreset, now: Date = .now) {
+        endTime = (startTime ?? now).addingTimeInterval(preset.duration)
+    }
+
+    /// The question as one line: pasted line breaks become spaces.
+    public static func singleLine(_ text: String) -> String {
+        text.replacingOccurrences(of: #"\s*\n\s*"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     public func input(now: Date = .now) -> PollInput {
         let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         return PollInput(
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            title: Self.singleLine(title),
             description: description.isEmpty ? nil : description,
             options: options.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
             startTime: startTime ?? now,
@@ -132,11 +178,14 @@ public struct PollForm: Codable, Hashable, Sendable {
         )
     }
 
-    public var visibilityLevel: VisibilityLevel {
-        switch voterVisibility {
-        case .nobody: return .nobody
-        case .owner: return .owner
-        case .signedIn: return audience == .inviteOnly ? .invited : .signedIn
+    public var visibilityLevel: VisibilityLevel { Self.visibilityLevel(voterVisibility, audience: audience) }
+
+    /// How a choice reads for this Audience: on an Invite-only Poll "signed in" is everyone invited.
+    public static func visibilityLevel(_ visibility: VoterVisibility, audience: Audience) -> VisibilityLevel {
+        switch visibility {
+        case .nobody: .nobody
+        case .owner: .owner
+        case .signedIn: audience == .inviteOnly ? .invited : .signedIn
         }
     }
 }
