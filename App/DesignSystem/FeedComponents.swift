@@ -4,13 +4,11 @@ import VomattCore
 /// A screen's empty or missing state (the web's `EmptyCard`, drawn flat as on iOS): an icon disc,
 /// a title, one line of body and an optional action.
 struct EmptyCard<Action: View>: View {
-    var systemImage = "minus.circle"
     let title: String
     var message: String?
     @ViewBuilder var action: () -> Action
 
-    init(systemImage: String = "minus.circle", title: String, body: String? = nil, @ViewBuilder action: @escaping () -> Action) {
-        self.systemImage = systemImage
+    init(title: String, body: String? = nil, @ViewBuilder action: @escaping () -> Action) {
         self.title = title
         self.message = body
         self.action = action
@@ -18,7 +16,7 @@ struct EmptyCard<Action: View>: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: systemImage)
+            Image(systemName: "minus.circle")
                 .font(.system(size: 26))
                 .foregroundStyle(Tokens.foreground)
                 .frame(width: 64, height: 64)
@@ -42,8 +40,8 @@ struct EmptyCard<Action: View>: View {
 }
 
 extension EmptyCard where Action == EmptyView {
-    init(systemImage: String = "minus.circle", title: String, body: String? = nil) {
-        self.init(systemImage: systemImage, title: title, body: body) { EmptyView() }
+    init(title: String, body: String? = nil) {
+        self.init(title: title, body: body) { EmptyView() }
     }
 }
 
@@ -123,10 +121,8 @@ struct TideRules<Header: View>: View {
         }
         .font(.vm(14))
         .lineSpacing(3)
-        .foregroundStyle(Tokens.tideForeground)
         .padding(16)
-        .background(Tokens.tideTint, in: RoundedRectangle(cornerRadius: Radius.xl))
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.tideLine))
+        .tidePanel()
     }
 }
 

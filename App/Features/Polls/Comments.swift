@@ -696,7 +696,7 @@ struct ReportSheet: View {
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(reason == option ? .isSelected : [])
                         .overlay(alignment: .bottom) {
-                            if option != ReportReason.allCases.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                            if option != ReportReason.allCases.last { Hairline() }
                         }
                     }
                 }
@@ -852,7 +852,7 @@ private struct ReplyDockBody: View {
             .padding(.leading, 20).padding(.trailing, 12).padding(.vertical, 8)
         }
         .background(Tokens.card)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     private func submit() {

@@ -81,10 +81,6 @@ private struct RowText: View {
 }
 
 /// The hairline between rows of a settings card.
-private struct RowDivider: View {
-    var body: some View { Rectangle().fill(Tokens.border).frame(height: 1) }
-}
-
 private extension View {
     /// A settings card row's inset and height.
     func settingsRow() -> some View {
@@ -149,7 +145,7 @@ private struct AccountSettings: View {
                     }
                     .tint(Tokens.primary)
                     .settingsRow()
-                    RowDivider()
+                    Hairline()
                     NavigationRow(
                         title: app.t("account.tabGroups"),
                         detail: app.t("settings.inviteListsBody"),
@@ -177,7 +173,7 @@ private struct AccountSettings: View {
                         .fixedSize()
                     }
                     .settingsRow()
-                    RowDivider()
+                    Hairline()
                     // The app's language follows the device; iOS Settings can set one for vomatt alone
                     NavigationRow(
                         title: app.t("settings.language"),
@@ -198,7 +194,7 @@ private struct AccountSettings: View {
                         detail: app.t("settings.whatOthersSeeBody"),
                         value: app.t("settings.shownCount", ["shown": profile.shownFieldCount, "total": ProfileVisibility.fields.count])
                     ) { editingProfile = true }
-                    RowDivider()
+                    Hairline()
                     BlockedPeople().padding(16)
                 }
                 .card(padding: nil)
@@ -214,9 +210,9 @@ private struct AccountSettings: View {
                     .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
                         Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
                     }
-                    RowDivider()
+                    Hairline()
                     PasskeysSection(service: app.service).padding(16)
-                    RowDivider()
+                    Hairline()
                     ExportDataRow()
                 }
                 .card(padding: nil)
@@ -279,7 +275,7 @@ private struct NotificationSwitches: View {
             if let preferences {
                 VStack(spacing: 0) {
                     ForEach(Array(Self.switches.enumerated()), id: \.offset) { index, item in
-                        if index > 0 { RowDivider() }
+                        if index > 0 { Hairline() }
                         Toggle(isOn: Binding(
                             get: { preferences[keyPath: item.key] },
                             set: { value in Task { await set(item.key, value) } }
@@ -431,7 +427,7 @@ private struct PasskeysSection: View {
                 .accessibilityLabel(app.t("passkey.deleteLabel", ["name": name(passkey)]))
         }
         .padding(.top, 12)
-        .overlay(alignment: .top) { RowDivider() }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     private func name(_ passkey: Passkey) -> String { passkey.name ?? app.t("passkey.unnamed") }

@@ -189,7 +189,7 @@ struct VMTabBar: View {
         }
         .frame(height: 64)
         .background(Tokens.card.ignoresSafeArea(edges: .bottom))
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     private func item(_ tab: AppTab, badge: String? = nil) -> some View {

@@ -99,6 +99,11 @@ public struct Localizer: Sendable {
         value.formatted(.number.locale(Locale(identifier: language.localeIdentifier)))
     }
 
+    /// Items as this language's list: "A, B and C", "A、B和C".
+    public func list(_ items: [String]) -> String {
+        items.formatted(.list(type: .and).locale(Locale(identifier: language.localeIdentifier)))
+    }
+
     /// Sentences as one paragraph: a space between them in English, none after Chinese 。 (the web's `joinSentences`).
     public func sentences(_ sentences: String...) -> String {
         sentences.joined(separator: language == .zh ? "" : " ")

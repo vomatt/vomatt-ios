@@ -77,8 +77,7 @@ struct PollCardView: View {
 
             footer
         }
-        .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
+        .card(padding: nil)
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
@@ -150,7 +149,7 @@ struct PollCardView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 20)
         .frame(minHeight: Metrics.minTarget)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     /// "18 voted · invite only"; a Public Poll says nothing about its Audience.
@@ -187,22 +186,20 @@ struct OwnerActionsView: View {
     let onInviteeCount: (Int) -> Void
     let onDeleted: () -> Void
 
-    enum Confirm: Identifiable { case delete, end; var id: Self { self } }
-    @State private var confirming: Confirm?
-    @State private var showInvitees = false
+    @State private var pending: OwnerAction?
 
     var body: some View {
         let actions = poll.ownerActions()
         HStack(spacing: 6) {
             if actions.canDelete {
-                Button(app.t("poll.deletePoll")) { confirming = .delete }
+                Button(app.t("poll.deletePoll")) { pending = .delete }
                     .buttonStyle(.vm(.ghost, size: .sm)).foregroundStyle(Tokens.destructive)
             }
             if actions.canEnd {
-                Button(app.t("poll.endNow")) { confirming = .end }.buttonStyle(.vm(.outline, size: .sm))
+                Button(app.t("poll.endNow")) { pending = .end }.buttonStyle(.vm(.outline, size: .sm))
             }
             if actions.canInvite {
-                Button(app.t("invitees.title")) { showInvitees = true }.buttonStyle(.vm(.outline, size: .sm))
+                Button(app.t("invitees.title")) { pending = .invitees }.buttonStyle(.vm(.outline, size: .sm))
             }
             if actions.canEdit {
                 Button(app.t("poll.edit")) {
@@ -211,28 +208,56 @@ struct OwnerActionsView: View {
                 .buttonStyle(.vm(.outline, size: .sm))
             }
         }
-        .alert(
-            app.t(confirming == .end ? "poll.endNowTitle" : "poll.deletePollTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { action in
-            Button(app.t("poll.keepPoll"), role: .cancel) {}
-            Button(app.t(action == .end ? "poll.endNow" : "poll.deletePoll"), role: action == .delete ? .destructive : nil) {
-                Task { action == .delete ? await remove() : await end() }
+        .ownerActionFlows($pending, poll: poll, onChanged: onChanged, onInviteeCount: onInviteeCount, onDeleted: onDeleted)
+    }
+}
+
+/// An owner action that asks first: End and Delete confirm, Invitees opens the manager.
+enum OwnerAction: Identifiable { case delete, end, invitees; var id: Self { self } }
+
+extension View {
+    /// Runs the owner action `pending` names, for the card's buttons and the poll page's menu alike.
+    func ownerActionFlows(
+        _ pending: Binding<OwnerAction?>, poll: Poll, onChanged: @escaping () async -> Void,
+        onInviteeCount: @escaping (Int) -> Void, onDeleted: @escaping () -> Void
+    ) -> some View {
+        modifier(OwnerActionFlows(pending: pending, poll: poll, onChanged: onChanged, onInviteeCount: onInviteeCount, onDeleted: onDeleted))
+    }
+}
+
+private struct OwnerActionFlows: ViewModifier {
+    @Environment(AppModel.self) private var app
+    @Binding var pending: OwnerAction?
+    let poll: Poll
+    let onChanged: () async -> Void
+    let onInviteeCount: (Int) -> Void
+    let onDeleted: () -> Void
+
+    func body(content: Content) -> some View {
+        let confirming = pending == .invitees ? nil : pending
+        content
+            .alert(
+                app.t(confirming == .end ? "poll.endNowTitle" : "poll.deletePollTitle"),
+                isPresented: Binding(get: { confirming != nil }, set: { if !$0 { pending = nil } }),
+                presenting: confirming
+            ) { action in
+                Button(app.t("poll.keepPoll"), role: .cancel) {}
+                Button(app.t(action == .end ? "poll.endNow" : "poll.deletePoll"), role: action == .delete ? .destructive : nil) {
+                    Task { action == .delete ? await remove() : await end() }
+                }
+            } message: { action in
+                Text(app.t(action == .end ? "poll.endNowBody" : "poll.deletePollBody"))
             }
-        } message: { action in
-            Text(app.t(action == .end ? "poll.endNowBody" : "poll.deletePollBody"))
-        }
-        .sheet(isPresented: $showInvitees) {
-            InviteeManagerView(pollId: poll.id) { invitees in
-                // The Poll Ends once every Invitee holds a Ballot; only then refetch it
-                if !invitees.isEmpty, invitees.allSatisfy(\.hasBallot) {
-                    Task { await onChanged() }
-                } else {
-                    onInviteeCount(invitees.count)
+            .sheet(isPresented: Binding(get: { pending == .invitees }, set: { if !$0 { pending = nil } })) {
+                InviteeManagerView(pollId: poll.id) { invitees in
+                    // The Poll Ends once every Invitee holds a Ballot; only then refetch it
+                    if !invitees.isEmpty, invitees.allSatisfy(\.hasBallot) {
+                        Task { await onChanged() }
+                    } else {
+                        onInviteeCount(invitees.count)
+                    }
                 }
             }
-        }
     }
 
     private func remove() async {

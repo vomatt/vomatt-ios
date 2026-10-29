@@ -51,7 +51,7 @@ struct FollowListView: View {
                                     .padding(.horizontal, 16)
                                     .frame(minHeight: 56)
                                     .overlay(alignment: .bottom) {
-                                        if user.id != items.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
+                                        if user.id != items.last?.id { Hairline() }
                                     }
                                 }
                             }
