@@ -52,6 +52,12 @@
 		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
 		"sealedTitle": "已封存，謝謝你。",
 		"sealedTurnout": "{count} 人已投票，包括你",
+		"firstName": "名字",
+		"lastName": "姓氏",
+		"birthday": "生日",
+		"setBirthday": "新增生日",
+		"birthdayHint": "設定後可以修改，但無法移除。",
+		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followersCount": "{count} 位追蹤者",
 		"followingCount": "追蹤中 {count} 位",
 		"followsYou": "追蹤了你",
@@ -181,12 +187,54 @@
 		"tag.ids.invalid": "部分標籤 ID 不存在",
 		"lookup.not_found": "找不到字典資料",
 		"lookup.exists": "字典資料已存在：{0}/{1}",
-		"firstName": "名字",
-		"lastName": "姓氏",
-		"birthday": "生日",
-		"setBirthday": "新增生日",
-		"birthdayHint": "設定後可以修改，但無法移除。",
 		"field.firstName": "名字",
+		"field.lastName": "姓氏"
+	},
+	"account": {
+		"findPolls": "找個投票",
+		"majorityNone": "尚無",
+		"majorityRate": "與多數一致",
+		"noPolls": "你還沒有發起投票。",
+		"noVotes": "你還沒有在最近的投票中投票。",
+		"peopleReached": "觸及人數",
+		"pollsCreated": "發起的投票",
+		"stats": "你的數據",
+		"tabActivity": "你的投票",
+		"tabPolls": "你發起的",
+		"tabSettings": "設定",
+		"votesCast": "已投票數",
+		"youChose": "你選擇了"
+	},
+	"explore": {
+		"topics": "依主題瀏覽"
+	},
+	"groups": {
+		"memberCountOne": "1 位成員"
+	},
+	"notifications": {
+		"invitations": "投票邀請",
+		"invitedBy": "{name} 邀請了你",
+		"results": "結果"
+	},
+	"poll": {
+		"stamp": "已投票",
+		"withdrawConfirm": "要撤回你的投票嗎？撤回後不會被計入，也不會收到通知。",
+		"yourVote": "你的選擇"
+	},
+	"pollCreator": {
+		"summaryNoEnd": "選擇結束時間",
+		"summaryOpensLater": "{start} 開始，{end} 結束",
+		"summaryOpensNow": "現在開始，{end} 結束",
+		"summaryVisibility": "結束後：{level}"
+	},
+	"pollDetail": {
+		"askedBy": "發起人",
+		"invited": "{count} 人受邀",
+		"participants": "人已投票",
+		"revealsIn": "結果將於{distance}揭曉"
+	},
+	"profile": {
+		"stats": "數據",
 		"field.lastName": "姓氏",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："
 	},
