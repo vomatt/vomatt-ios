@@ -27,11 +27,14 @@ struct StatusChip: View {
     let status: PollStatus
     let startTime: Date
     let endTime: Date?
+    /// The status word alone ("Open"), for a row whose meta line already says when (`time="elsewhere"`).
+    var timeElsewhere = false
 
-    init(poll: Poll, now: Date = .now) {
+    init(poll: Poll, now: Date = .now, timeElsewhere: Bool = false) {
         self.status = poll.status(at: now)
         self.startTime = poll.startTime
         self.endTime = poll.endTime
+        self.timeElsewhere = timeElsewhere
     }
 
     init(status: PollStatus, startTime: Date, endTime: Date?) {
@@ -56,7 +59,8 @@ struct StatusChip: View {
     }
 
     private var label: String? {
-        PollTiming(startTime: startTime, endTime: endTime, status: status, t: app.t, dates: app.dates).chip
+        if timeElsewhere { return PollTiming.statusWord(status, app.t) }
+        return PollTiming(startTime: startTime, endTime: endTime, status: status, t: app.t, dates: app.dates).chip
     }
 }
 
@@ -327,10 +331,11 @@ struct UserChip: View {
     }
 }
 
-/// Underlined tabs (`TabsList variant="line"`).
-struct LineTabs<Value: Hashable>: View {
+/// Underlined tabs (`TabsList variant="line"`); `accessory` follows a tab's label, e.g. its count.
+struct LineTabs<Value: Hashable, Accessory: View>: View {
     let items: [(value: Value, label: String)]
     @Binding var selection: Value
+    @ViewBuilder var accessory: (Value) -> Accessory
 
     var body: some View {
         HStack(spacing: 0) {
@@ -338,15 +343,18 @@ struct LineTabs<Value: Hashable>: View {
                 let isActive = item.value == selection
                 // Instant: tab switches are too frequent to animate
                 Button { selection = item.value } label: {
-                    Text(item.label)
-                        .font(.vm(15, .medium))
-                        .foregroundStyle(isActive ? Tokens.foreground : Tokens.foreground.opacity(0.6))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
-                        .overlay(alignment: .bottom) {
-                            if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
-                        }
+                    HStack(spacing: 6) {
+                        Text(item.label)
+                            .font(.vm(15, .medium))
+                            .foregroundStyle(isActive ? Tokens.foreground : Tokens.foreground.opacity(0.6))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        accessory(item.value)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
+                    .overlay(alignment: .bottom) {
+                        if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
@@ -354,6 +362,12 @@ struct LineTabs<Value: Hashable>: View {
         }
         // Behind the tabs, so the active underline covers it
         .background(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+}
+
+extension LineTabs where Accessory == EmptyView {
+    init(items: [(value: Value, label: String)], selection: Binding<Value>) {
+        self.init(items: items, selection: selection, accessory: { _ in EmptyView() })
     }
 }
 

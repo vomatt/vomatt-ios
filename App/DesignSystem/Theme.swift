@@ -81,6 +81,13 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(border, lineWidth: 1))
     }
 
+    /// The quieter card of something only its author sees, such as a draft: dashed on `surface-soft`.
+    func draftCard() -> some View {
+        padding(16)
+            .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.borderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+    }
+
     /// `px-contain mx-auto max-w-2xl`: a centered column that fills phones.
     func pageColumn(_ maxWidth: CGFloat = Metrics.listWidth) -> some View {
         frame(maxWidth: maxWidth, alignment: .leading)

@@ -176,19 +176,8 @@
 		"field.lastName": "Last name"
 	},
 	"account": {
-		"findPolls": "Find a poll",
-		"majorityNone": "n/a",
-		"majorityRate": "With the majority",
-		"noPolls": "You haven't started a poll yet.",
-		"noVotes": "You haven't voted on any recent polls yet.",
-		"peopleReached": "People reached",
 		"pollsCreated": "Polls created",
-		"stats": "Your numbers",
-		"tabActivity": "Your votes",
-		"tabPolls": "Your polls",
-		"tabSettings": "Settings",
-		"votesCast": "Votes cast",
-		"youChose": "You chose"
+		"votesCast": "Votes cast"
 	},
 	"explore": {
 		"topics": "Browse by topic"

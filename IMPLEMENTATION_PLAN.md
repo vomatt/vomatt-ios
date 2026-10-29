@@ -27,9 +27,11 @@ Profile until Stage 3 folds it in.
 ## Stage 3: Profile and Settings
 **Goal**: Own profile with Asked/Voted tabs and filters (drafts under Asked, "only you"), stats,
 follower/following counts; Settings as its own screen. The My Polls tab goes away (Activity replaces it).
-**Success Criteria**: Everything My Polls showed is reachable from Profile or Activity.
-**Tests**: Ports of the web's profile filter logic into `VomattCoreTests`.
-**Status**: Not Started
+**Success Criteria**: Everything My Polls showed is reachable from Profile or Notifications.
+**Tests**: `ProfileListsTests` (port of `lists.test.ts` and the draft meta), `InsightsTests` (`ballotOutcome`).
+Left for later: the owner ••• menu on Asked rows (edit, end, delete live on the poll screen) and the
+header's locks on hidden fields (Stage 5, with Edit profile).
+**Status**: Complete
 
 ## Stage 4: People and safety
 **Goal**: Visitor profile to the design: full-width Follow / Follow back, ••• menu with Share profile,

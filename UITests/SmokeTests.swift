@@ -67,7 +67,7 @@ final class SmokeTests: XCTestCase {
         sleep(3)
         snapshot("7-explore-ended")
 
-        app.buttons["My Polls"].tap()
+        app.buttons["Notifications"].tap()
         XCTAssertTrue(app.staticTexts["Log in or sign up for Vomatt"].waitForExistence(timeout: 5))
 
         app.buttons["Profile"].tap()
