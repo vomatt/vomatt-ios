@@ -287,6 +287,26 @@
 		"deleted": "已移除通行密鑰",
 		"deleteFailed": "無法移除通行密鑰，請再試一次。"
 	},
+	"devices": {
+		"title": "已登入的裝置",
+		"body": "你目前登入的地方。不認得的裝置可以登出。",
+		"current": "這個裝置",
+		"admin": "管理後台",
+		"unknown": "未知裝置",
+		"signedInOn": "{date} 登入",
+		"lastActive": "最近使用 {date}",
+		"loadFailed": "無法載入你的裝置。",
+		"signOut": "登出",
+		"signOutLabel": "登出 {name}",
+		"signOutTitle": "登出這個裝置？",
+		"signOutBody": "{name} 需要重新登入。",
+		"signedOut": "已登出該裝置",
+		"signOutFailed": "無法登出該裝置，請再試一次。",
+		"signOutOthers": "登出其他所有裝置",
+		"signOutOthersTitle": "登出其他所有裝置？",
+		"signOutOthersBody": "除了這個裝置，其他裝置都需要重新登入。",
+		"othersSignedOut": "已登出其他裝置"
+	},
 	"common": {
 		"tryAgain": "再試一次"
 	}

@@ -141,7 +141,7 @@ final class AppModel {
                 userId = id
                 sessionGeneration += 1
                 await refreshAccount()
-            case let .signedOut(expired):
+            case let .signedOut(expired, revoked):
                 userId = nil
                 me = nil
                 // The account's blocks stay with the account; only those made signed out remain
@@ -151,7 +151,11 @@ final class AppModel {
                 following = []
                 unreadCount = 0
                 sessionGeneration += 1
-                if expired { showToast(t("login.sessionExpired")) }
+                if revoked {
+                    showToast(t("login.sessionRevoked"))
+                } else if expired {
+                    showToast(t("login.sessionExpired"))
+                }
             }
         }
     }

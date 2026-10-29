@@ -440,3 +440,16 @@ extension Passkey {
         )
     }
 }
+
+extension DeviceSession {
+    init(_ dto: Schemas.SessionResponse) throws {
+        self.init(
+            id: try required(dto.sessionId, "SessionResponse.sessionId"),
+            userAgent: dto.userAgent,
+            createdAt: dto.createdAt,
+            lastSeenAt: dto.lastSeenAt,
+            isCurrent: dto.current ?? false,
+            isAdminScope: dto.adminScope ?? false
+        )
+    }
+}

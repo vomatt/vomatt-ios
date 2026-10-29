@@ -643,6 +643,24 @@ public final class VomattService: Sendable {
         _ = try await call { try await client.deleteMyPasskey(path: .init(passkeyId: id)).ok }
     }
 
+    // MARK: Devices
+
+    /// Every session that can still refresh, most recently active first.
+    public func deviceSessions() async throws -> [DeviceSession] {
+        try await call { try (try await client.listMySessions().ok.body.json.data ?? []).map(DeviceSession.init) }
+    }
+
+    /// Signs out one session; 404 when it isn't the caller's or is gone. Signing out the
+    /// calling session is a sign-out here too.
+    public func signOutDevice(id: String) async throws {
+        _ = try await call { try await client.revokeMySession(path: .init(sessionId: id)).ok }
+    }
+
+    /// Signs out every session but this one.
+    public func signOutOtherDevices() async throws {
+        _ = try await call { try await client.revokeMyOtherSessions(query: .init(scope: .others)).ok }
+    }
+
     // MARK: Notifications
 
     /// Unread feed items of the kinds switched on; with `category`, that tab's only.

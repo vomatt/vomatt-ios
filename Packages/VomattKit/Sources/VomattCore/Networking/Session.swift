@@ -12,7 +12,8 @@ public enum RefreshResult: Equatable, Sendable {
 public enum SessionEvent: Equatable, Sendable {
     case signedIn(userId: String?)
     /// `expired`: the API ended the session (not the user signing out).
-    case signedOut(expired: Bool)
+    /// `revoked`: it was signed out from another device, suspended or reused (`auth.session_revoked`).
+    case signedOut(expired: Bool, revoked: Bool = false)
 }
 
 /// Owns the tokens. The backend rotates the refresh token on every refresh and
@@ -53,12 +54,12 @@ public actor Session {
         continuation.yield(.signedIn(userId: userId))
     }
 
-    public func signOut(expired: Bool = false) {
+    public func signOut(expired: Bool = false, revoked: Bool = false) {
         guard tokens != nil else { return }
         tokens = nil
         inFlight = nil
         store.clear()
-        continuation.yield(.signedOut(expired: expired))
+        continuation.yield(.signedOut(expired: expired, revoked: revoked))
     }
 
     /// An access token to send now, refreshed first when it's about to expire. nil when signed out.

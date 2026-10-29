@@ -51,11 +51,22 @@ struct AuthMiddleware: ClientMiddleware {
         let (response, responseBody) = try await next(authed, body, baseURL)
         guard response.status == .unauthorized else { return (response, responseBody) }
 
+        // The sign-in was ended on the server: a refresh would only be refused (and the token spent)
+        if let responseBody, let data = try? await Data(collecting: responseBody, upTo: 1 << 20),
+           Self.errorCode(in: data) == "auth.session_revoked" {
+            await session.signOut(expired: true, revoked: true)
+            return (response, HTTPBody(data))
+        }
+
         if let retryToken = await session.accessTokenAfterRejection(of: token) {
             authed.headerFields[.authorization] = "Bearer \(retryToken)"
             return try await next(authed, body, baseURL)
         }
         return try await next(request, body, baseURL)
+    }
+
+    private static func errorCode(in data: Data) -> String? {
+        (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["errorCode"] as? String
     }
 }
 
