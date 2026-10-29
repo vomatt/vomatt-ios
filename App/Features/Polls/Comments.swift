@@ -477,7 +477,10 @@ private struct CommentRow: View {
         .opacity(comment.isPending ? 0.6 : 1)
         .animation(.easeOut(duration: 0.15), value: isTarget)
         .sheet(isPresented: $confirmingDelete) { DeleteCommentSheet(comment: comment, model: model) }
-        .sheet(isPresented: $reporting) { ReportCommentSheet(comment: comment, pollId: model.pollId) }
+        .sheet(isPresented: $reporting) { ReportSheet(title: app.t("ios.reportCommentTitle"), message: app.t("ios.reportCommentBody")) { reason, note in
+                try await app.service.reportComment(pollId: model.pollId, commentId: comment.id, reason: reason, note: note)
+            }
+        }
     }
 
     private var actions: some View {
@@ -629,12 +632,13 @@ private struct DeleteCommentSheet: View {
     }
 }
 
-/// "Report this comment": a reason, an optional note. The API keeps the first report of a repeat.
-private struct ReportCommentSheet: View {
+/// "Report this poll/comment": a reason, an optional note. The API keeps the first report of a repeat.
+struct ReportSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
-    let comment: Comment
-    let pollId: String
+    let title: String
+    let message: String
+    let submit: (ReportReason, String) async throws -> Void
     @State private var reason: ReportReason?
     @State private var note = ""
 
@@ -642,8 +646,8 @@ private struct ReportCommentSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(app.t("ios.reportCommentTitle")).displayHeading(20)
-                    Text(app.t("ios.reportCommentBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                    Text(title).displayHeading(20)
+                    Text(message).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
                 }
                 VStack(spacing: 0) {
                     ForEach(ReportReason.allCases, id: \.self) { option in
@@ -685,7 +689,7 @@ private struct ReportCommentSheet: View {
     private func send() async {
         guard let reason else { return }
         do {
-            try await app.service.reportComment(pollId: pollId, commentId: comment.id, reason: reason, note: note)
+            try await submit(reason, note)
             app.showToast(app.t("ios.reportSent"))
             dismiss()
         } catch {

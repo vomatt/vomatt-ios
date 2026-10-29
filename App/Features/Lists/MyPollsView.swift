@@ -4,10 +4,11 @@ import VomattCore
 /// Active (Scheduled and Open), Drafts and Ended: Polls the user created, voted in or was invited to.
 struct MyPollsView: View {
     @Environment(AppModel.self) private var app
-    enum Tab: Hashable { case active, drafts, ended }
+    enum Tab: Hashable { case active, drafts, ended, bookmarks }
     @State private var tab = Tab.active
     @State private var open: CursorList<Poll>?
     @State private var ended: CursorList<Poll>?
+    @State private var bookmarks: CursorList<Poll>?
     @State private var drafts: [PollDraft] = []
 
     var body: some View {
@@ -43,11 +44,13 @@ struct MyPollsView: View {
                     (Tab.active, "\(app.t("myPolls.tabActive")) (\(countLabel(open)))"),
                     (Tab.drafts, app.t("myPolls.tabDrafts")),
                     (Tab.ended, "\(app.t("myPolls.tabEnded")) (\(countLabel(ended)))"),
+                    (Tab.bookmarks, app.t("ios.bookmarksTitle")),
                 ], selection: $tab)
                 switch tab {
                 case .active: pollList(open)
                 case .ended: pollList(ended)
                 case .drafts: draftList
+                case .bookmarks: pollList(bookmarks, empty: "ios.bookmarksEmpty", failed: "ios.bookmarksFailed")
                 }
             }
             .pageColumn()
@@ -65,16 +68,16 @@ struct MyPollsView: View {
         return "\(list.items.count)\(list.hasMore ? "+" : "")"
     }
 
-    @ViewBuilder private func pollList(_ list: CursorList<Poll>?) -> some View {
+    @ViewBuilder private func pollList(_ list: CursorList<Poll>?, empty: String = "myPolls.empty", failed: String = "explore.loadFailed") -> some View {
         // Before the first page (no list yet, or `.idle`) is loading too, not empty
         if list == nil || list?.phase == .idle || list?.phase == .loading {
             VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
         } else if let list, list.phase == .failed {
-            LoadFailed(message: app.t("explore.loadFailed")) { await list.reload() }
+            LoadFailed(message: app.t(failed)) { await list.reload() }
         } else if let list {
             let polls = app.visible(list.items)
             if polls.isEmpty {
-                EmptyState { Text(app.t("myPolls.empty")).frame(maxWidth: .infinity) }
+                EmptyState { Text(app.t(empty)).frame(maxWidth: .infinity) }
             } else {
                 LazyVStack(spacing: 8) {
                     ForEach(polls) { poll in
@@ -120,10 +123,13 @@ struct MyPollsView: View {
         let open = open ?? CursorList { try await service.myPolls(status: .open, cursor: $0) }
         let ended = ended ?? CursorList { try await service.myPolls(status: .ended, cursor: $0) }
         self.open = open
+        let bookmarks = bookmarks ?? CursorList { try await service.bookmarkedPolls(cursor: $0) }
         self.ended = ended
+        self.bookmarks = bookmarks
         async let a: Void = open.reload()
         async let b: Void = ended.reload()
-        _ = await (a, b)
+        async let c: Void = bookmarks.reload()
+        _ = await (a, b, c)
         await app.refreshUnread()
     }
 }

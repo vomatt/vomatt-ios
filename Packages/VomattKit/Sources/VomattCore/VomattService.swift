@@ -361,6 +361,17 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Signed-in only; not your own Poll (`vote.report.self`). Idempotent: a repeat keeps the first report.
+    public func reportPoll(id: String, reason: ReportReason, note: String? = nil) async throws {
+        let note = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = try await call {
+            try await client.report(
+                path: .init(voteId: id),
+                body: .json(.init(note: note?.isEmpty == false ? note : nil, reason: reason.request))
+            ).ok
+        }
+    }
+
     public func setLike(pollId: String, commentId: String, liked: Bool) async throws {
         _ = try await call {
             if liked {
@@ -552,11 +563,30 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 20) { try await self.followedUsers(cursor: $0) }.page.items
     }
 
-    /// Signed-in only. Open Public Polls by followed people, most recently opened first.
+    /// Signed-in only. Open Public Polls by followed people or carrying a followed tag, most recently opened first.
     public func followingPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
         try await call {
             let data = try await client.getFollowingVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
             return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
+        }
+    }
+
+    /// Signed-in only. Polls the caller bookmarked in any state, most recently bookmarked first.
+    public func bookmarkedPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await call {
+            let data = try await client.getBookmarkedVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
+        }
+    }
+
+    /// Idempotent. Bookmarking before a Poll Ends also gives a `RESULT` notification when it does.
+    public func setBookmark(pollId: String, bookmarked: Bool) async throws {
+        _ = try await call {
+            if bookmarked {
+                _ = try await client.bookmark(path: .init(voteId: pollId)).ok
+            } else {
+                _ = try await client.unbookmark(path: .init(voteId: pollId)).ok
+            }
         }
     }
 
@@ -650,18 +680,35 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted switches keep their value. Resolves to all four.
+    /// Omitted switches keep their value. Resolves to all five.
     public func updateNotificationPreferences(
-        resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, closingSoon: Bool? = nil
+        resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, mentions: Bool? = nil,
+        closingSoon: Bool? = nil
     ) async throws -> NotificationPreferences {
         try await call {
             try await NotificationPreferences(required(client.update1(body: .json(.init(
-                closingSoon: closingSoon, comments: comments, invitations: invitations, resultsIn: resultsIn
+                closingSoon: closingSoon, comments: comments, invitations: invitations, mentions: mentions, resultsIn: resultsIn
             ))).ok.body.json.data, "updateNotificationPreferences.data"))
         }
     }
 
     // MARK: Tags
+
+    /// Signed-in only. The tags the caller follows, most recently followed first.
+    public func followedTags() async throws -> [Tag] {
+        try await call { try (try await client.getFollowedTags().ok.body.json.data ?? []).map(Tag.init) }
+    }
+
+    /// Idempotent. Followed tags add their Open Public Polls to `followingPolls`.
+    public func setTagFollow(tagId: String, following: Bool) async throws {
+        _ = try await call {
+            if following {
+                _ = try await client.followTag(path: .init(tagId: tagId)).ok
+            } else {
+                _ = try await client.unfollowTag(path: .init(tagId: tagId)).ok
+            }
+        }
+    }
 
     /// Most-used topics first; empty when the API is down.
     public func popularTags(limit: Int = 12) async -> [Tag] {

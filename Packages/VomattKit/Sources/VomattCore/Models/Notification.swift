@@ -10,6 +10,8 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         case invitation
         case followed
         case comment
+        /// Someone wrote `@<your username>` in a Comment or Reply.
+        case mention
         case closingSoon
     }
 
@@ -92,17 +94,21 @@ public struct NotificationPreferences: Hashable, Sendable {
     public var resultsIn: Bool
     public var invitations: Bool
     public var comments: Bool
+    public var mentions: Bool
     public var closingSoon: Bool
 
-    public init(resultsIn: Bool = true, invitations: Bool = true, comments: Bool = true, closingSoon: Bool = false) {
+    public init(
+        resultsIn: Bool = true, invitations: Bool = true, comments: Bool = true, mentions: Bool = true, closingSoon: Bool = false
+    ) {
         self.resultsIn = resultsIn
         self.invitations = invitations
         self.comments = comments
+        self.mentions = mentions
         self.closingSoon = closingSoon
     }
 }
 
-/// Why a Comment is reported (`POST …/comments/{commentId}/report`).
+/// Why a Poll or Comment is reported (`POST …/report`, `POST …/comments/{commentId}/report`).
 public enum ReportReason: String, CaseIterable, Sendable {
     case spam, harassment, hate, misinformation, other
 }

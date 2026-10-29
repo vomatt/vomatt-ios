@@ -39,6 +39,7 @@ extension Poll {
             myOptionId: dto.myOptionId,
             myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,
+            bookmarked: dto.bookmarked,
             options: try (dto.options ?? []).map(PollOption.init).sorted { $0.displayOrder < $1.displayOrder },
             tags: try (dto.tags ?? []).map(Tag.init)
         )
@@ -282,6 +283,7 @@ extension FeedNotification.Kind {
         case .invitation: self = .invitation
         case .followed: self = .followed
         case .comment: self = .comment
+        case .mention: self = .mention
         case .closingSoon: self = .closingSoon
         }
     }
@@ -314,13 +316,13 @@ extension NotificationPreferences {
     init(_ dto: Schemas.NotificationPreferencesResponse) {
         self.init(
             resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
-            comments: dto.comments ?? true, closingSoon: dto.closingSoon ?? false
+            comments: dto.comments ?? true, mentions: dto.mentions ?? true, closingSoon: dto.closingSoon ?? false
         )
     }
 }
 
 extension ReportReason {
-    var request: Schemas.ReportCommentRequest.ReasonPayload {
+    var request: Schemas.ReportRequest.ReasonPayload {
         switch self {
         case .spam: .spam
         case .harassment: .harassment

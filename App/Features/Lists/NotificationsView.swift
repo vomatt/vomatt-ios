@@ -158,6 +158,7 @@ private struct NotificationRow: View {
         case .invitation: app.t("ios.notifInvitation", ["name": name, "title": title])
         case .followed: app.t("ios.notifFollowed", ["name": name])
         case .comment: app.t(item.comment?.parentId == nil ? "ios.notifCommented" : "ios.notifReplied", ["name": name, "title": title])
+        case .mention: app.t("ios.notifMentioned", ["name": name, "title": title])
         case .closingSoon: app.t("ios.notifClosingSoon", ["title": title])
         }
     }
@@ -165,7 +166,7 @@ private struct NotificationRow: View {
     /// Never a live count while a Poll is open: Turnout only, and the outcome once it Ended.
     private var detail: String? {
         switch item.kind {
-        case .comment:
+        case .comment, .mention:
             return item.comment?.excerpt
         case .closingSoon:
             return item.poll.map { app.t("poll.voted", ["count": app.t.number($0.turnout)]) }

@@ -13,6 +13,7 @@ struct PollCardView: View {
     @State private var poll: Poll
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
+    @State private var reporting = false
 
     init(poll: Poll, isDetail: Bool = false, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
@@ -28,6 +29,11 @@ struct PollCardView: View {
             card(status: poll.status(at: context.date))
         }
         .onChange(of: initialPoll) { _, fresh in apply(fresh) }
+        .sheet(isPresented: $reporting) {
+            ReportSheet(title: app.t("ios.reportPollTitle"), message: app.t("ios.reportPollBody")) { reason, note in
+                try await app.service.reportPoll(id: poll.id, reason: reason, note: note)
+            }
+        }
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
             if let fresh, fresh != poll { apply(fresh) }
         }
@@ -83,7 +89,14 @@ struct PollCardView: View {
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
-            ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
+            Button { toggleBookmark() } label: {
+                Label(app.t(poll.bookmarked == true ? "ios.bookmarked" : "ios.bookmark"), systemImage: poll.bookmarked == true ? "bookmark.fill" : "bookmark")
+            }
+            if app.userId == nil {
+                ReportButton(subject: "Poll \(poll.id)", url: app.shareURL(for: poll))
+            } else if app.userId != poll.creatorId {
+                Button(role: .destructive) { reporting = true } label: { Label(app.t("ios.report"), systemImage: "flag") }
+            }
             if app.userId != poll.creatorId {
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))
                 BlockButton(username: poll.creatorUsername, userId: poll.creatorId)
@@ -144,6 +157,13 @@ struct PollCardView: View {
                 .frame(minHeight: Metrics.minTarget)
             }
             Spacer()
+            Button { toggleBookmark() } label: {
+                Image(systemName: poll.bookmarked == true ? "bookmark.fill" : "bookmark")
+                    .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(app.t(poll.bookmarked == true ? "ios.bookmarked" : "ios.bookmark"))
+            .accessibilityAddTraits(poll.bookmarked == true ? .isSelected : [])
             ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
             }
@@ -163,6 +183,24 @@ struct PollCardView: View {
         guard let count = poll.commentCount else { return app.t("poll.discuss") }
         if count == 0 { return app.t("poll.discuss") }
         return count == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": count])
+    }
+
+    /// Shows the new state at once and puts the old one back when the API refuses.
+    private func toggleBookmark() {
+        app.requireAuth {
+            let wanted = poll.bookmarked != true
+            poll.bookmarked = wanted
+            app.didUpdate(poll)
+            Task {
+                do {
+                    try await app.service.setBookmark(pollId: poll.id, bookmarked: wanted)
+                } catch {
+                    poll.bookmarked = !wanted
+                    app.didUpdate(poll)
+                    app.showToast(app.t.message(for: error, fallback: "ios.bookmarkFailed"), isError: true)
+                }
+            }
+        }
     }
 
     private func apply(_ fresh: Poll) {
