@@ -1281,6 +1281,43 @@
         },
         "type": "object"
       },
+      "ApiResponseListSessionResponse": {
+        "description": "Envelope of every API response, success or error",
+        "properties": {
+          "data": {
+            "description": "Response payload; null on errors (a few business errors carry structured data) and on operations without a result",
+            "items": {
+              "$ref": "#/components/schemas/SessionResponse"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "error": {
+            "description": "Legacy duplicate of `message` on errors; null on success. Use `message` instead",
+            "example": "Poll not found",
+            "nullable": true,
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable machine-readable error code (lowercase, dot-separated); branch on this, not on `message`. Null on success",
+            "example": "vote.not_found",
+            "nullable": true,
+            "type": "string"
+          },
+          "message": {
+            "description": "Localized text following Accept-Language. On success it is usually null, except operations that attach a toast-ready text; on error it is the error message",
+            "example": "Operation completed",
+            "nullable": true,
+            "type": "string"
+          },
+          "success": {
+            "description": "true on success, false on error",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "ApiResponseListTagDto": {
         "description": "Envelope of every API response, success or error",
         "properties": {
@@ -4520,6 +4557,44 @@
             "description": "Email address; the server lower-cases and trims it, and stores a Gmail address in canonical form (no +tag or dots, domain gmail.com). Required in practice: a missing or blank value yields 400 auth.identifier.required",
             "example": "user@example.com",
             "format": "email",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SessionResponse": {
+        "description": "A device the user is signed in on",
+        "nullable": true,
+        "properties": {
+          "adminScope": {
+            "description": "Whether this is an admin console sign-in",
+            "type": "boolean"
+          },
+          "createdAt": {
+            "description": "Sign-in time; null for a session signed in before it was recorded",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "current": {
+            "description": "Whether this is the session of the access token making the request",
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "description": "Latest sign-in or token refresh, so accurate to about 15 minutes; null like userAgent",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sessionId": {
+            "description": "Names the sign-in; pass it to DELETE /api/users/me/sessions/{sessionId}. Not a credential",
+            "example": "0192f3c4-5d6e-7f80-9a1b-2c3d4e5f6a7b",
+            "type": "string"
+          },
+          "userAgent": {
+            "description": "Raw User-Agent of the latest sign-in or refresh, up to 512 characters; null for a session signed in before devices were recorded that has not refreshed since (show as an unknown device)",
+            "example": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+            "nullable": true,
             "type": "string"
           }
         },
@@ -10743,7 +10818,7 @@
     },
     "/api/auth/logout": {
       "post": {
-        "description": "**Auth**: public (identified by the refresh token in the body)\n**Precondition**: none; an unknown or already-revoked token is not an error\n**Behavior**: revokes the given refresh token. A token that was already refreshed signs out the sign-in it belongs to: the refresh token that replaced it can no longer be refreshed. Other devices' refresh tokens stay valid\n**Side effects**: the refresh token can no longer be refreshed. The access token is stateless and stays valid until it expires (default 15 minutes), so the client must discard it\n**Errors**:\n- 400 `common.validation_failed`: `refreshToken` is blank",
+        "description": "**Auth**: public (identified by the refresh token in the body)\n**Precondition**: none; an unknown or already-revoked token is not an error\n**Behavior**: revokes the given refresh token. A token that was already refreshed signs out the sign-in it belongs to: the refresh token that replaced it can no longer be refreshed. Other devices' refresh tokens stay valid\n**Side effects**: the refresh token can no longer be refreshed, and the sign-in's access tokens get 401 `auth.session_revoked` from the next request on. A logout with an already refreshed token cuts the access tokens of the refresh token that replaced it\n**Errors**:\n- 400 `common.validation_failed`: `refreshToken` is blank",
         "operationId": "logout",
         "requestBody": {
           "content": {
@@ -15746,6 +15821,293 @@
           }
         },
         "summary": "Delete one of my passkeys",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/me/sessions": {
+      "delete": {
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: ends every session of the caller except the calling one, at once, like `DELETE /api/users/me/sessions/{sessionId}` on each. Succeeds when there is nothing else to sign out\n**Side effects**: the sign-out is written to the audit log\n**Errors**:\n- 400 `common.bad_request`: `scope` is not `others`\n- 400 `common.missing_param`: `scope` is missing",
+        "operationId": "revokeMyOtherSessions",
+        "parameters": [
+          {
+            "description": "Which sessions to sign out; only `others` is supported",
+            "in": "query",
+            "name": "scope",
+            "required": true,
+            "schema": {
+              "enum": [
+                "others"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": null,
+                    "message": null,
+                    "status": null,
+                    "success": true
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Sign out all my other devices",
+        "tags": [
+          "User"
+        ]
+      },
+      "get": {
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: every session that can still refresh (signed in within the refresh lifetime, 30 days by default, and not signed out), most recently active first; sessions with no `lastSeenAt` come last. `current` marks the session of the calling access token. `userAgent` is raw: parse it on the client for display. `userAgent`, `createdAt` and `lastSeenAt` are null for sessions signed in before devices were recorded; `userAgent` and `lastSeenAt` fill in on their next refresh. Admin console sign-ins are listed too, with `adminScope` true\n**Side effects**: none\n**Errors**: none beyond 401",
+        "operationId": "listMySessions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "adminScope": false,
+                      "createdAt": "2026-10-20T08:12:00Z",
+                      "current": true,
+                      "lastSeenAt": "2026-10-29T03:40:00Z",
+                      "sessionId": "0192f3c4-5d6e-7f80-9a1b-2c3d4e5f6a7b",
+                      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
+                    },
+                    {
+                      "adminScope": false,
+                      "createdAt": null,
+                      "current": false,
+                      "lastSeenAt": null,
+                      "sessionId": "9f2c4b7e1a3d5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+                      "userAgent": null
+                    }
+                  ],
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListSessionResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "List my signed-in devices",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/me/sessions/{sessionId}": {
+      "delete": {
+        "description": "**Auth**: required\n**Precondition**: the session belongs to the caller and can still refresh\n**Behavior**: ends the session at once: its refresh token stops working, and its access tokens get 401 `auth.session_revoked` from the next request on instead of when they expire. Signing out the calling session is allowed and works like logout\n**Side effects**: the sign-out is written to the audit log\n**Errors**:\n- 404 `auth.session_not_found`: no live session with this ID, or it belongs to another user",
+        "operationId": "revokeMySession",
+        "parameters": [
+          {
+            "description": "Id of the session to sign out, from `GET /api/users/me/sessions`",
+            "example": "0192f3c4-5d6e-7f80-9a1b-2c3d4e5f6a7b",
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": null,
+                    "message": null,
+                    "status": null,
+                    "success": true
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSimpleResultResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "Signed-in device not found",
+                  "errorCode": "auth.session_not_found",
+                  "message": "Signed-in device not found",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No live session with this ID belongs to the caller (errorCode `auth.session_not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Sign out one of my devices",
         "tags": [
           "User"
         ]
