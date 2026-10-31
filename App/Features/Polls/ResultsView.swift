@@ -4,6 +4,7 @@ import VomattCore
 /// Card state D: only for Ended Polls, so it never asks for sealed data.
 struct ResultsView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let poll: Poll
     let myOptionId: String?
     let turnout: Int?
@@ -16,6 +17,9 @@ struct ResultsView: View {
     @State private var failed = false
     @State private var revealed = false
 
+    private static let barDuration = 0.8
+    private static let barEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: barDuration)
+
     private var rows: [ResultRow]? {
         poll.inlineResults ?? fetched?.options.map { ResultRow(id: $0.id, text: $0.text, votes: $0.voteCount) }
     }
@@ -27,8 +31,8 @@ struct ResultsView: View {
             } else if failed {
                 Text(app.t("poll.resultsFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             } else {
-                VStack(spacing: 6) {
-                    ForEach(poll.options) { _ in Skeleton(height: 48, radius: Radius.xl) }
+                VStack(spacing: 10) {
+                    ForEach(poll.options) { _ in Skeleton(height: 56, radius: Radius.xl) }
                 }
             }
         }
@@ -38,59 +42,98 @@ struct ResultsView: View {
     private func content(_ rows: [ResultRow]) -> some View {
         let participants = turnout ?? fetched?.totalParticipants ?? rows.reduce(0) { $0 + $1.votes }
         let winners = Results.winners(rows)
-        return VStack(alignment: .leading, spacing: 14) {
-            VStack(spacing: 8) {
+        return VStack(alignment: .leading, spacing: 10) {
+            summary(rows, participants: participants)
+            VStack(spacing: 10) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     resultRow(row, percent: Results.support(votes: row.votes, participants: participants),
                               isWinner: winners.contains(row), delay: Double(index) * 0.08)
                 }
             }
-            (Text(caption(winners, participants: participants))
-                + Text(onSelectOption != nil && !winners.isEmpty ? " · \(app.t("poll.votersHint"))" : ""))
-                .font(.vmMeta)
-                .foregroundStyle(Tokens.mutedForeground)
+            if onSelectOption != nil, !winners.isEmpty {
+                Text(app.t("poll.votersHint")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
         }
         .onAppear { revealed = true }
     }
 
-    private func resultRow(_ row: ResultRow, percent: Int, isWinner: Bool, delay: Double) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.xl)
-        let label = HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                if isWinner { CrownShape().fill(Tokens.foreground).frame(width: 14, height: 14) }
-                Text(row.text).font(.vm(15, isWinner ? .semibold : .regular)).multilineTextAlignment(.leading)
-                if row.id == myOptionId {
-                    Text(app.t("poll.yourVoteShort"))
-                        .font(.vm(11, .semibold))
-                        .foregroundStyle(Color.black.opacity(0.85))
-                        .padding(.horizontal, 8).padding(.vertical, 1)
-                        .background(Tokens.highlight, in: Capsule())
-                        .overlay(Capsule().strokeBorder(Color.black.opacity(0.2)))
-                        .fixedSize()
+    /// What the Poll decided and, for a voter, how their pick fared. Said in words; the Volt only marks a win.
+    private func summary(_ rows: [ResultRow], participants: Int) -> some View {
+        let decided = switch Results.summary(rows) {
+        case let .won(option): app.t.count("poll.won", participants, ["option": option])
+        case let .tie(options): app.t("poll.tie", ["options": options.joined(separator: app.t("poll.and"))])
+        case .none: app.t("poll.noVotes")
+        }
+        let outcome = Results.outcome(of: myOptionId, in: rows)
+        let won = outcome == .won
+        let shape = RoundedRectangle(cornerRadius: 14)
+        return HStack(spacing: 12) {
+            if won {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(Tokens.highlightForeground)
+                    .frame(width: 32, height: 32)
+                    .background(Tokens.highlight, in: Circle())
+                    .overlay(Circle().strokeBorder(Tokens.foreground))
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                if let outcome {
+                    Text(app.t("myPolls.outcome.\(outcome.rawValue)")).font(.vm(15, .semibold))
+                    Text(decided).font(.vmMeta)
+                } else {
+                    Text(decided).font(.vm(15, .medium))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 6) {
-                CountUpText(value: revealed ? Double(percent) : 0)
-                    .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.8).delay(delay), value: revealed)
-                Text("\(row.votes)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+        }
+        .foregroundStyle(Tokens.foreground)
+        .padding(14)
+        .background(won ? Tokens.highlightTint : Tokens.surfaceSoft, in: shape)
+        .overlay(shape.strokeBorder(won ? Tokens.foreground : Tokens.border))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func resultRow(_ row: ResultRow, percent: Int, isWinner: Bool, delay: Double) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.xl)
+        let isMine = row.id == myOptionId
+        let bar = reduceMotion ? nil : Self.barEase.delay(delay)
+        let label = HStack(spacing: 12) {
+            if isWinner { ElectedStamp(label: app.t("poll.elected")) }
+            Text(row.text)
+                .font(.vm(16, isWinner ? .medium : .regular))
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if isMine {
+                Text(app.t("poll.yourVoteShort"))
+                    .font(.vm(11, .semibold))
+                    .foregroundStyle(Tokens.highlightForeground)
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Tokens.highlight, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Tokens.highlightForeground))
+                    .fixedSize()
             }
-            .font(.vmMono(13))
+            CountUpText(value: revealed || reduceMotion ? Double(percent) : 0)
+                .animation(bar, value: revealed)
+                .font(.vmMono(14))
+                .foregroundStyle(isWinner ? Tokens.foreground : Tokens.mutedForeground)
         }
         .foregroundStyle(Tokens.foreground)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(minHeight: 48)
+        .padding(.vertical, 10)
+        .frame(minHeight: 56)
+        // One neutral for every bar: the winner is marked by its stamp, not its fill
         .background(alignment: .leading) {
             GeometryReader { proxy in
                 Rectangle()
-                    .fill(Tokens.foreground.opacity(isWinner ? 0.09 : 0.04))
-                    .frame(width: proxy.size.width * (revealed ? CGFloat(percent) / 100 : 0))
-                    .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.8).delay(delay), value: revealed)
+                    .fill(Tokens.muted)
+                    .frame(width: proxy.size.width * (revealed || reduceMotion ? CGFloat(percent) / 100 : 0))
+                    .animation(bar, value: revealed)
             }
         }
+        .background(Tokens.card)
         .clipShape(shape)
-        .overlay(shape.strokeBorder(isWinner ? Tokens.foreground : Tokens.border, lineWidth: 1))
+        .overlay(shape.strokeBorder(isMine ? Tokens.foreground : Tokens.border, lineWidth: isMine ? 1.5 : 1))
 
         return Group {
             if let onSelectOption, row.votes > 0 {
@@ -102,13 +145,8 @@ struct ResultsView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(row.text), \(percent)%, \(row.votes)")
-    }
-
-    private func caption(_ winners: [ResultRow], participants: Int) -> String {
-        if winners.isEmpty { return app.t("poll.noVotes") }
-        if winners.count > 1 { return app.t("poll.tie", ["options": winners.map(\.text).joined(separator: app.t("poll.and"))]) }
-        return app.t("poll.won", ["option": winners[0].text, "count": participants])
+        .accessibilityLabel([row.text, isWinner ? app.t("poll.elected") : nil, isMine ? app.t("poll.yourVoteShort") : nil, "\(percent)%"]
+            .compactMap { $0 }.joined(separator: ", "))
     }
 
     private func loadIfNeeded() async {
@@ -138,19 +176,35 @@ struct CountUpText: View, Animatable {
     }
 }
 
-/// The web's crown icon (viewBox 0 0 16 16).
-nonisolated struct CrownShape: Shape {
+/// The red ballot stamp (a ring with a 卜 mark) on the winning option, pressed down once its bar fills.
+struct ElectedStamp: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let label: String
+    @State private var pressed = false
+
+    var body: some View {
+        ElectedStampShape()
+            .stroke(Tokens.elected, lineWidth: 18 * 9.5 / 130)
+            .frame(width: 18, height: 18)
+            .scaleEffect(pressed || reduceMotion ? 1 : 1.6)
+            .opacity(pressed || reduceMotion ? 1 : 0)
+            .onAppear {
+                withAnimation(.timingCurve(0.25, 1, 0.5, 1, duration: 0.3).delay(0.8)) { pressed = true }
+            }
+            .accessibilityLabel(label)
+    }
+}
+
+/// The stamp's ring and 卜 (viewBox 0 0 130 130).
+nonisolated struct ElectedStampShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let s = rect.width / 16
+        let s = rect.width / 130
         var path = Path()
-        path.move(to: CGPoint(x: 2 * s, y: 5.5 * s))
-        path.addLine(to: CGPoint(x: 5 * s, y: 8 * s))
-        path.addLine(to: CGPoint(x: 8 * s, y: 3 * s))
-        path.addLine(to: CGPoint(x: 11 * s, y: 8 * s))
-        path.addLine(to: CGPoint(x: 14 * s, y: 5.5 * s))
-        path.addLine(to: CGPoint(x: 12.8 * s, y: 12.5 * s))
-        path.addLine(to: CGPoint(x: 3.2 * s, y: 12.5 * s))
-        path.closeSubpath()
+        path.addEllipse(in: CGRect(x: 4.7 * s, y: 4.7 * s, width: 120.6 * s, height: 120.6 * s))
+        path.move(to: CGPoint(x: 65 * s, y: 2 * s))
+        path.addLine(to: CGPoint(x: 65 * s, y: 128 * s))
+        path.move(to: CGPoint(x: 63.5 * s, y: 63.5 * s))
+        path.addLine(to: CGPoint(x: 19 * s, y: 108 * s))
         return path
     }
 }

@@ -198,17 +198,28 @@ final class CommentsModel {
 }
 
 /// The discussion under a Poll. Results stay sealed while it is open, so this is where people argue their case.
-/// The screen owns the model so `ReplyDock` can sit above the keyboard.
+/// The screen owns and loads the model so `ReplyDock` can sit above the keyboard.
 struct CommentThreadView: View {
     @Environment(AppModel.self) private var app
     let model: CommentsModel
+    /// Set on the poll page: the newest Comments only, and See all opens the whole discussion.
+    var onSeeAll: (() -> Void)?
+
+    private static let previewCount = 2
 
     var body: some View {
+        let shown = model.comments.filter { !app.isBlocked($0.author) }
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 SectionTitle(text: app.t("comments.title"))
                 if let total = model.total {
                     Text("\(total)").font(.vmMono(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+                Spacer(minLength: 0)
+                if let onSeeAll, !shown.isEmpty {
+                    Button(app.t("ios.seeAll"), action: onSeeAll)
+                        .font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(minHeight: Metrics.minTarget)
                 }
             }
             CommentComposer(placeholder: app.t("comments.placeholder")) { text in
@@ -238,21 +249,38 @@ struct CommentThreadView: View {
             }
 
             LazyVStack(alignment: .leading, spacing: 20) {
-                ForEach(model.comments.filter { !app.isBlocked($0.author) }) { comment in
+                ForEach(onSeeAll == nil ? shown : Array(shown.prefix(Self.previewCount))) { comment in
                     CommentItemView(comment: comment, model: model)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .animation(.easeOut(duration: 0.2), value: model.comments.map(\.id))
 
-            if model.hasMore {
+            if onSeeAll == nil, model.hasMore {
                 LoadingButton(style: .vm(.ghost, size: .sm, fullWidth: true), action: { await model.loadMore(app.service) }) {
                     Text(app.t("comments.loadMore")).foregroundStyle(Tokens.mutedForeground)
                 }
             }
         }
-        .padding(20)
-        .task(id: app.sessionGeneration) { await model.reload(app.service) }
+    }
+}
+
+/// The whole discussion on its own screen, reached from See all on the poll page (iOS · Discussion).
+struct PollDiscussionView: View {
+    let model: CommentsModel
+    let title: String
+
+    var body: some View {
+        ScrollView {
+            CommentThreadView(model: model)
+                .pageColumn(720)
+                .padding(.vertical, 20)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) { ReplyDock(model: model) }
+        .canvas()
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -480,10 +508,7 @@ private struct CommentRow: View {
         .opacity(comment.isPending ? 0.6 : 1)
         .animation(.easeOut(duration: 0.15), value: isTarget)
         .sheet(isPresented: $confirmingDelete) { DeleteCommentSheet(comment: comment, model: model) }
-        .sheet(isPresented: $reporting) { ReportSheet(title: app.t("ios.reportCommentTitle"), message: app.t("ios.reportCommentBody")) { reason, note in
-                try await app.service.reportComment(pollId: model.pollId, commentId: comment.id, reason: reason, note: note)
-            }
-        }
+        .sheet(isPresented: $reporting) { ReportSheet(pollId: model.pollId, commentId: comment.id) }
     }
 
     private var actions: some View {
@@ -635,28 +660,31 @@ private struct DeleteCommentSheet: View {
     }
 }
 
-/// "Report this poll/comment": a reason, an optional note. The API keeps the first report of a repeat.
+/// Reports someone else's comment, or with no `commentId` the poll itself, to the moderators: a reason
+/// and an optional note (the web's `ReportCommentDialog`). The API keeps the first report of a repeat.
 struct ReportSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
-    let title: String
-    let message: String
-    let submit: (ReportReason, String) async throws -> Void
+    let pollId: String
+    var commentId: String?
     @State private var reason: ReportReason?
     @State private var note = ""
+
+    /// Comment and poll reports share their reasons, with their own words around them.
+    private var copy: String { commentId == nil ? "poll" : "comments" }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(title).displayHeading(20)
-                    Text(message).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
+                    Text(app.t("\(copy).reportTitle")).displayHeading(20)
+                    Text(app.t("\(copy).reportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
                 }
                 VStack(spacing: 0) {
                     ForEach(ReportReason.allCases, id: \.self) { option in
                         Button { reason = option } label: {
                             HStack {
-                                Text(app.t("ios.reportReason.\(option.rawValue)")).font(.vm(15))
+                                Text(app.t("comments.reportReason.\(option.rawValue)")).font(.vm(15))
                                 Spacer()
                                 if reason == option { Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)) }
                             }
@@ -673,10 +701,12 @@ struct ReportSheet: View {
                     }
                 }
                 .card(padding: nil)
-                VMTextEditor(placeholder: app.t("ios.reportNote"), text: $note, minHeight: 80, font: .vm(16), autoFocus: false)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(app.t("comments.reportReasonLabel"))
+                VMTextEditor(placeholder: app.t("comments.reportNote"), text: $note, minHeight: 80, font: .vm(16), autoFocus: false)
                 Text("\(note.count) / \(reportNoteMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
                 VStack(spacing: 8) {
-                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: send) { Text(app.t("ios.reportSend")) }
+                    LoadingButton(style: .vm(.destructive, size: .lg, fullWidth: true), action: send) { Text(app.t("\(copy).report")) }
                         .disabled(reason == nil || note.count > reportNoteMax)
                     Button(app.t("common.cancel")) { dismiss() }.buttonStyle(.vm(.ghost, size: .lg, fullWidth: true))
                 }
@@ -692,11 +722,15 @@ struct ReportSheet: View {
     private func send() async {
         guard let reason else { return }
         do {
-            try await submit(reason, note)
-            app.showToast(app.t("ios.reportSent"))
+            if let commentId {
+                try await app.service.reportComment(pollId: pollId, commentId: commentId, reason: reason, note: note)
+            } else {
+                try await app.service.reportPoll(id: pollId, reason: reason, note: note)
+            }
+            app.showToast(app.t("\(copy).reportDone"))
             dismiss()
         } catch {
-            app.showToast(app.t.message(for: error, fallback: "ios.reportFailed"), isError: true)
+            app.showToast(app.t.message(for: error, fallback: "\(copy).reportFailed"), isError: true)
         }
     }
 }

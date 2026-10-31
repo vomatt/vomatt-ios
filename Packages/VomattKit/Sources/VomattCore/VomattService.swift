@@ -35,7 +35,10 @@ public final class VomattService: Sendable {
         self.session = session
         self.client = Client(
             serverURL: baseURL, configuration: configuration, transport: transport,
-            middlewares: [ErrorEnvelopeMiddleware(), LanguageMiddleware(language: language), AuthMiddleware(session: session)] + logging
+            middlewares: [
+                ErrorEnvelopeMiddleware(), UnknownNotificationKindsMiddleware(), LanguageMiddleware(language: language),
+                AuthMiddleware(session: session),
+            ] + logging
         )
     }
 
@@ -372,6 +375,25 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Signed-in only. Idempotent: saving a saved Poll keeps its first place in the list. Unsaving needs no access to it.
+    public func setBookmark(pollId: String, bookmarked: Bool) async throws {
+        _ = try await call {
+            if bookmarked {
+                _ = try await client.bookmark(path: .init(voteId: pollId)).ok
+            } else {
+                _ = try await client.unbookmark(path: .init(voteId: pollId)).ok
+            }
+        }
+    }
+
+    /// Signed-in only. The viewer's saved Polls in any state, most recently saved first.
+    public func bookmarkedPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await call {
+            let data = try await client.getBookmarkedVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
+        }
+    }
+
     public func setLike(pollId: String, commentId: String, liked: Bool) async throws {
         _ = try await call {
             if liked {
@@ -571,25 +593,6 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Signed-in only. Polls the caller bookmarked in any state, most recently bookmarked first.
-    public func bookmarkedPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
-        try await call {
-            let data = try await client.getBookmarkedVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
-            return try page(data.map { ($0.items, $0.nextCursor) }, Poll.init)
-        }
-    }
-
-    /// Idempotent. Bookmarking before a Poll Ends also gives a `RESULT` notification when it does.
-    public func setBookmark(pollId: String, bookmarked: Bool) async throws {
-        _ = try await call {
-            if bookmarked {
-                _ = try await client.bookmark(path: .init(voteId: pollId)).ok
-            } else {
-                _ = try await client.unbookmark(path: .init(voteId: pollId)).ok
-            }
-        }
-    }
-
     /// Everything stored about the caller as one pretty-printed JSON document (data portability).
     /// The API allows one export per UTC day; a second call is a 429.
     public func exportMyData() async throws -> Data {
@@ -672,6 +675,7 @@ public final class VomattService: Sendable {
 
     /// The feed, newest first; with `category`, one tab (pass the same one with every cursor).
     /// Items can vanish or appear behind the cursor: de-duplicate by `id`.
+    /// An item that doesn't fit its kind is left out rather than failing the page.
     public func notifications(
         category: FeedNotification.Category? = nil, cursor: String? = nil, limit: Int = 20
     ) async throws -> CursorPage<FeedNotification> {
@@ -679,7 +683,7 @@ public final class VomattService: Sendable {
             let data = try await client.list(
                 query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) }, cursor: cursor, limit: clampedPageSize(limit))
             ).ok.body.json.data
-            return try page(data.map { ($0.items, $0.nextCursor) }, FeedNotification.init)
+            return CursorPage(items: (data?.items ?? []).compactMap { try? FeedNotification($0) }, nextCursor: data?.nextCursor)
         }
     }
 
@@ -719,12 +723,12 @@ public final class VomattService: Sendable {
 
     // MARK: Tags
 
-    /// Signed-in only. The tags the caller follows, most recently followed first.
+    /// Signed-in only; the topics the viewer follows, most recently followed first.
     public func followedTags() async throws -> [Tag] {
         try await call { try (try await client.getFollowedTags().ok.body.json.data ?? []).map(Tag.init) }
     }
 
-    /// Idempotent. Followed tags add their Open Public Polls to `followingPolls`.
+    /// Signed-in only. Idempotent. A followed topic adds its Open Public Polls to the Following feed.
     public func setTagFollow(tagId: String, following: Bool) async throws {
         _ = try await call {
             if following {

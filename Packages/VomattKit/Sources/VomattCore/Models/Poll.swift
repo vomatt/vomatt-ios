@@ -90,7 +90,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var myBallotAnonymous: Bool?
     /// Only set on My Polls: an unread Invitation or Ended Notification.
     public var unread: Bool?
-    /// Whether the signed-in viewer bookmarked the Poll; nil signed out.
+    /// Whether the viewer saved the Poll; nil when signed out.
     public var bookmarked: Bool?
     public var options: [PollOption]
     public var tags: [Tag]

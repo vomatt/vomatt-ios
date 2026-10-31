@@ -285,15 +285,6 @@ private struct NotificationRow: View {
         }
     }
 
-    /// A comment on the viewer's poll or reply, a mention of them, or a like of their comment.
-    private var commentLine: String {
-        switch item.kind {
-        case .mention: "ios.notifMentioned"
-        case .like: "ios.notifLiked"
-        default: "notifications.commented"
-        }
-    }
-
     private func strong(_ text: String) -> Text { Text(text).fontWeight(.semibold) }
     private func titled(_ text: String) -> Text { Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground) }
     private var actorName: String { "@\(item.actor?.username ?? "")" }
@@ -315,11 +306,20 @@ private struct NotificationRow: View {
             case .followed:
                 return Text.rich(app.t("notifications.followedYou"), ["name": strong(actorName)])
             case .comment, .mention, .like:
-                return Text.rich(app.t(commentLine), ["name": strong(actorName), "title": titled(title)])
+                return Text.rich(app.t(commentLineKey), ["name": strong(actorName), "title": titled(title)])
             case .closingSoon:
                 guard let end = item.poll?.endTime, end > .now else { return titled(title) }
                 return Text.rich(app.t("notifications.endsIn"), ["title": titled(title), "duration": Text(app.dates.duration(end.timeIntervalSinceNow))])
             }
+        }
+    }
+
+    /// A comment on the viewer's poll or reply, a mention of them, or a like of their comment, read alike but for the verb.
+    private var commentLineKey: String {
+        switch item.kind {
+        case .mention: "notifications.mentioned"
+        case .like: "ios.notifLiked"
+        default: "notifications.commented"
         }
     }
 
@@ -333,7 +333,7 @@ private struct NotificationRow: View {
             case .cancelled: app.t("notifications.cancelledBy", ["title": title, "name": actorName])
             case .invitation: "\(app.t("notifications.invitedYou", ["name": actorName])) · \(title)"
             case .followed: app.t("notifications.followedYou", ["name": actorName])
-            case .comment, .mention, .like: app.t(commentLine, ["name": actorName, "title": title])
+            case .comment, .mention, .like: app.t(commentLineKey, ["name": actorName, "title": title])
             case .closingSoon:
                 if let end = item.poll?.endTime, end > .now {
                     app.t("notifications.endsIn", ["title": title, "duration": app.dates.duration(end.timeIntervalSinceNow)])

@@ -9,9 +9,7 @@ public enum AccountInsights {
     public static func outcome(of poll: Poll, optionId: String, at now: Date = .now) -> BallotOutcome {
         guard poll.status(at: now) == .ended else { return .pending }
         guard let rows = poll.inlineResults else { return .unknown }
-        let winners = Results.winners(rows)
-        guard winners.contains(where: { $0.id == optionId }) else { return .lost }
-        return winners.count > 1 ? .tied : .won
+        return Results.outcome(of: optionId, in: rows) ?? .lost
     }
 
     /// The text of the option the viewer picked; empty when it is gone.

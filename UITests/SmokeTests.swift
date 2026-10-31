@@ -53,7 +53,7 @@ final class SmokeTests: XCTestCase {
 
         // A poll title opens its page with the about panel and discussion
         app.buttons.matching(identifier: "poll-title").firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Asked by"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["ABOUT THIS POLL"].waitForExistence(timeout: 10))
         snapshot("5-poll-detail")
         app.swipeUp()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Discussion'")).firstMatch.waitForExistence(timeout: 10))
@@ -71,7 +71,8 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Log in or sign up for Vomatt"].waitForExistence(timeout: 5))
 
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Language'")).firstMatch.waitForExistence(timeout: 5))
+        // Signed out, Profile offers sign-in and the legal links
+        XCTAssertTrue(app.buttons["Terms"].firstMatch.waitForExistence(timeout: 5))
         snapshot("8-profile-signed-out")
     }
 

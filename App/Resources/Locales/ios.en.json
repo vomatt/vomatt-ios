@@ -2,7 +2,6 @@
 	"ios": {
 		"openProfile": "Opens their profile",
 		"report": "Report",
-		"reportSubject": "Report on vomatt",
 		"more": "More",
 		"copyText": "Copy text",
 		"shareProfile": "Share profile",
@@ -41,38 +40,16 @@
 		"followingListEmpty": "Not following anyone yet.",
 		"followFailed": "Couldn't follow this person. Try again.",
 		"unfollowFailed": "Couldn't unfollow this person. Try again.",
-		"followingEmpty": "Nothing here yet. Follow people from a poll's menu to see their open polls here.",
-		"invitedBy": "{name} invited you",
-		"inviteOnlyOtherAccount": "This poll is invite-only. Ask {name} to invite the account you're signed in with.",
-		"sealedTitle": "Sealed. Thank you.",
-		"sealedTurnout": "{count} voted, you included",
 		"setBirthday": "Add birthday",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:",
 		"followsYou": "Follows you",
 		"followBack": "Follow back",
 		"mutualTitle": "Followers you follow",
 		"mutualEmpty": "None of their followers are people you follow.",
-		"reportCommentTitle": "Report this comment",
-		"reportCommentBody": "Tell us what's wrong. The author isn't told, and the comment stays until a moderator looks at it.",
-		"reportReason.spam": "Spam",
-		"reportReason.harassment": "Harassment",
-		"reportReason.hate": "Hate",
-		"reportReason.misinformation": "Misinformation",
-		"reportReason.other": "Something else",
-		"reportNote": "Add details (optional)",
-		"reportSend": "Send report",
-		"reportSent": "Thanks, we got your report.",
-		"reportFailed": "Couldn't send your report. Try again.",
-		"reportPollTitle": "Report this poll",
-		"reportPollBody": "Tell us what's wrong. The owner isn't told, and the poll stays until a moderator looks at it.",
-		"reportPoll": "Report poll",
-		"followTag": "Follow topic",
-		"unfollowTag": "Unfollow topic",
-		"followTagFailed": "Couldn't update this topic. Try again.",
-		"bookmark": "Bookmark",
-		"bookmarked": "Bookmarked",
-		"bookmarkFailed": "Couldn't update your bookmark. Try again.",
-		"notifMentioned": "{name} mentioned you in {title}",
+		"seeAll": "See all",
+		"rulesTitle": "Rules voters will see",
+		"rulesChange": "Change",
+		"rulesDone": "Done",
 		"notifTabConversation": "Conversation",
 		"notifTabLikes": "Likes",
 		"notifTabPolls": "Poll ends",
@@ -82,8 +59,6 @@
 		"notifCategoryLabel": "Category",
 		"notifCategoryEmpty": "Nothing here yet.",
 		"notifCategoryFailed": "Couldn’t load that tab. Try again.",
-		"notifyMentions": "Mentions",
-		"notifyMentionsBody": "When someone writes your @username in a comment.",
 		"notifyLikes": "Likes",
 		"notifyLikesBody": "When someone likes your comment or reply."
 	},
@@ -185,21 +160,12 @@
 		"results": "Results"
 	},
 	"poll": {
-		"stamp": "Voted",
-		"withdrawConfirm": "Withdraw your vote? You won't be counted or notified.",
 		"yourVote": "Your vote"
 	},
 	"pollCreator": {
 		"summaryNoEnd": "Choose when it closes",
 		"summaryOpensLater": "Opens {start}, closes {end}",
-		"summaryOpensNow": "Opens now, closes {end}",
-		"summaryVisibility": "After it ends: {level}"
-	},
-	"pollDetail": {
-		"askedBy": "Asked by",
-		"invited": "{count} invited",
-		"participants": "people voted",
-		"revealsIn": "Results reveal {distance}"
+		"summaryOpensNow": "Opens now, closes {end}"
 	},
 	"profile": {
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:"

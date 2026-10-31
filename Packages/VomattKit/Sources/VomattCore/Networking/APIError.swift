@@ -43,6 +43,8 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
     /// Results are sealed while the Poll is Open; `/results` answers 403.
     public var isSealed: Bool { status == 403 }
     public var isNotFound: Bool { status == 404 }
+    /// The token still verifies but its account was deleted (on another device, say): treat it as signed out.
+    public var isAccountGone: Bool { errorCode == "user.not_found" }
 }
 
 /// Keys under `authError.*` in the locale files.

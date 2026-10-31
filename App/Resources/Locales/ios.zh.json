@@ -2,7 +2,6 @@
 	"ios": {
 		"openProfile": "開啟個人檔案",
 		"report": "檢舉",
-		"reportSubject": "檢舉 vomatt 內容",
 		"more": "更多",
 		"copyText": "複製文字",
 		"shareProfile": "分享個人頁",
@@ -41,38 +40,16 @@
 		"followingListEmpty": "還沒有追蹤任何人。",
 		"followFailed": "無法追蹤，請再試一次。",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
-		"followingEmpty": "還沒有內容。從投票的選單追蹤其他人，就能在這裡看到他們進行中的投票。",
-		"invitedBy": "{name} 邀請了你",
-		"inviteOnlyOtherAccount": "這是僅限受邀者的投票。請 {name} 邀請你目前登入的帳號。",
-		"sealedTitle": "已封存，謝謝你。",
-		"sealedTurnout": "{count} 人已投票，包括你",
 		"setBirthday": "新增生日",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followsYou": "追蹤了你",
 		"followBack": "回追蹤",
 		"mutualTitle": "你也追蹤的追蹤者",
 		"mutualEmpty": "他的追蹤者中沒有你追蹤的人。",
-		"reportCommentTitle": "檢舉此留言",
-		"reportCommentBody": "告訴我們哪裡有問題。作者不會收到通知，留言會保留到管理員處理為止。",
-		"reportReason.spam": "垃圾訊息",
-		"reportReason.harassment": "騷擾",
-		"reportReason.hate": "仇恨言論",
-		"reportReason.misinformation": "不實資訊",
-		"reportReason.other": "其他",
-		"reportNote": "補充說明（選填）",
-		"reportSend": "送出檢舉",
-		"reportSent": "謝謝，我們已收到你的檢舉。",
-		"reportFailed": "無法送出檢舉，請再試一次。",
-		"reportPollTitle": "檢舉此投票",
-		"reportPollBody": "告訴我們哪裡有問題。發起人不會收到通知，投票會保留到管理員處理為止。",
-		"reportPoll": "檢舉投票",
-		"followTag": "追蹤主題",
-		"unfollowTag": "取消追蹤主題",
-		"followTagFailed": "無法更新此主題，請再試一次。",
-		"bookmark": "收藏",
-		"bookmarked": "已收藏",
-		"bookmarkFailed": "無法更新收藏，請再試一次。",
-		"notifMentioned": "{name} 在 {title} 提到了你",
+		"seeAll": "查看全部",
+		"rulesTitle": "投票者會看到的規則",
+		"rulesChange": "更改",
+		"rulesDone": "完成",
 		"notifTabConversation": "對話",
 		"notifTabLikes": "喜歡",
 		"notifTabPolls": "投票結束",
@@ -82,8 +59,6 @@
 		"notifCategoryLabel": "分類",
 		"notifCategoryEmpty": "這裡還沒有內容。",
 		"notifCategoryFailed": "無法載入這個分頁，請再試一次。",
-		"notifyMentions": "提及",
-		"notifyMentionsBody": "有人在留言中寫到你的 @使用者名稱時。",
 		"notifyLikes": "喜歡",
 		"notifyLikesBody": "有人喜歡你的留言或回覆時。"
 	},
@@ -185,21 +160,12 @@
 		"results": "結果"
 	},
 	"poll": {
-		"stamp": "已投票",
-		"withdrawConfirm": "要撤回你的投票嗎？撤回後不會被計入，也不會收到通知。",
 		"yourVote": "你的選擇"
 	},
 	"pollCreator": {
 		"summaryNoEnd": "選擇結束時間",
 		"summaryOpensLater": "{start} 開始，{end} 結束",
-		"summaryOpensNow": "現在開始，{end} 結束",
-		"summaryVisibility": "結束後：{level}"
-	},
-	"pollDetail": {
-		"askedBy": "發起人",
-		"invited": "{count} 人受邀",
-		"participants": "人已投票",
-		"revealsIn": "結果將於{distance}揭曉"
+		"summaryOpensNow": "現在開始，{end} 結束"
 	},
 	"profile": {
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者："

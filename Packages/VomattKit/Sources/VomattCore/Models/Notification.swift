@@ -10,7 +10,7 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         case invitation
         case followed
         case comment
-        /// Someone wrote `@<your username>` in a Comment or Reply.
+        /// Someone wrote the viewer's @username in a Comment; the row reads like a Comment's.
         case mention
         case closingSoon
         /// Someone liked your Comment or Reply.
@@ -129,7 +129,7 @@ public struct NotificationPreferences: Hashable, Sendable {
     }
 }
 
-/// Why a Poll or Comment is reported (`POST …/report`, `POST …/comments/{commentId}/report`).
+/// Why a Poll or a Comment is reported (`POST …/report`).
 public enum ReportReason: String, CaseIterable, Sendable {
     case spam, harassment, hate, misinformation, other
 }

@@ -55,9 +55,6 @@ public enum ProfileLists {
     /// What an Ended Poll decided; `.none` when cancelled or its counts are withheld.
     public static func endedSummary(_ poll: Poll) -> EndedSummary {
         guard !poll.isCancelled, let rows = poll.inlineResults else { return .none }
-        let winners = Results.winners(rows)
-        if winners.count == 1 { return .won(winners[0].text) }
-        if winners.count > 1 { return .tie(winners.map(\.text)) }
-        return .none
+        return Results.summary(rows)
     }
 }
