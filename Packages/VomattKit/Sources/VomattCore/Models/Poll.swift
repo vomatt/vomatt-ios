@@ -297,7 +297,7 @@ public extension Comment {
         var previous: Character?
         while i < body.endIndex {
             let c = body[i]
-            if c == "@", !(previous.map { $0 == "_" || $0.isLetter || $0.isNumber } ?? false) {
+            if c == "@", !(previous.map(isHandleChar) ?? false) {
                 let start = body.index(after: i)
                 var end = start
                 while end < body.endIndex, isHandleChar(body[end]) { end = body.index(after: end) }

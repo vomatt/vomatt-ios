@@ -182,11 +182,10 @@ extension Comment {
             deleted: dto.deleted ?? false,
             replies: try (dto.replies ?? []).map(Comment.init),
             repliesNextCursor: dto.repliesNextCursor,
-            mentions: try (dto.mentions ?? []).map {
-                Comment.Mention(
-                    userId: try required($0.userId, "MentionDto.userId"),
-                    username: try required($0.username, "MentionDto.username")
-                )
+            // A mention the server could not fully resolve stays plain text instead of failing the page.
+            mentions: (dto.mentions ?? []).compactMap {
+                guard let userId = $0.userId, let username = $0.username else { return nil }
+                return Comment.Mention(userId: userId, username: username)
             }
         )
     }

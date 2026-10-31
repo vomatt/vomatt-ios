@@ -54,6 +54,12 @@ struct CommentMentionLinkTests {
         #expect(linked("@alice_2 hi", "alice").map(\.username) == [nil])
     }
 
+    @Test func keepsCanonicalCaseAtTheEndAndAfterNonAsciiLetters() {
+        #expect(linked("bye @ALICE", "alice").map(\.username) == [nil, "alice"])
+        #expect(linked("é@alice", "alice").map(\.username) == [nil, "alice"])
+        #expect(linked("_@alice", "alice").map(\.username) == [nil])
+    }
+
     @Test func noMentionsMeansOneSegment() {
         #expect(linked("@alice hi").map(\.text) == ["@alice hi"])
     }

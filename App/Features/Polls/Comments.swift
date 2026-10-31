@@ -408,7 +408,12 @@ private struct CommentRow: View {
     private var linkedBody: AttributedString {
         comment.bodySegments.reduce(into: AttributedString()) { result, segment in
             var part = AttributedString(segment.text)
-            if let name = segment.username, let url = URL(string: "vomatt-mention://\(name)") {
+            if let name = segment.username {
+                var components = URLComponents()
+                components.scheme = "vomatt-mention"
+                components.host = "profile"
+                components.queryItems = [URLQueryItem(name: "name", value: name)]
+                guard let url = components.url else { result.append(part); return }
                 part.link = url
                 part.underlineStyle = .single
             }
@@ -510,7 +515,10 @@ private struct CommentRow: View {
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .environment(\.openURL, OpenURLAction { url in
-                        guard url.scheme == "vomatt-mention", let name = url.host() else { return .systemAction }
+                        guard url.scheme == "vomatt-mention",
+                              let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                                  .queryItems?.first(where: { $0.name == "name" })?.value
+                        else { return .systemAction }
                         app.push(.profile(name))
                         return .handled
                     })
