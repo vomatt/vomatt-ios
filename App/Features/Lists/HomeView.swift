@@ -115,8 +115,8 @@ struct FeedView: View {
                 if polls.isEmpty {
                     switch source {
                     case .all: empty
-                    case .following: followingEmpty
-                    case .saved: savedEmpty
+                    case .following: exploreEmpty(app.t("homePage.followingEmpty"), app.t("homePage.followingEmptyHint"))
+                    case .saved: exploreEmpty(app.t("homePage.bookmarksEmpty"), app.t("homePage.bookmarksEmptyHint"))
                     }
                 } else {
                     ForEach(polls) { poll in
@@ -137,15 +137,9 @@ struct FeedView: View {
         }
     }
 
-    private var followingEmpty: some View {
-        EmptyCard(title: app.t("homePage.followingEmpty"), body: app.t("homePage.followingEmptyHint")) {
-            Button(app.t("homePage.followingEmptyCta")) { app.select(.explore) }
-                .buttonStyle(.vm(.outline))
-        }
-    }
-
-    private var savedEmpty: some View {
-        EmptyCard(title: app.t("homePage.bookmarksEmpty"), body: app.t("homePage.bookmarksEmptyHint")) {
+    /// Following or Saved with nothing yet: both point to Explore.
+    private func exploreEmpty(_ title: String, _ hint: String) -> some View {
+        EmptyCard(title: title, body: hint) {
             Button(app.t("homePage.followingEmptyCta")) { app.select(.explore) }
                 .buttonStyle(.vm(.outline))
         }
@@ -222,11 +216,7 @@ private struct ResultsInCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(app.t("homePage.resultsIn").uppercased())
-                .font(.vm(13, .semibold, relativeTo: .footnote))
-                .tracking(0.78)
-                .foregroundStyle(Tokens.mutedForeground)
-                .accessibilityAddTraits(.isHeader)
+            RailHeading(text: app.t("homePage.resultsIn"))
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(polls) { poll in row(poll) }
             }

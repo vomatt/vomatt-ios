@@ -249,7 +249,7 @@ struct InviteeManagerView: View {
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 52)
-        .overlay(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .bottom) { Hairline() }
     }
 
     private func load() async {

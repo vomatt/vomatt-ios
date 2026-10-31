@@ -361,7 +361,7 @@ struct LineTabs<Value: Hashable, Accessory: View>: View {
             }
         }
         // Behind the tabs, so the active underline covers it
-        .background(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .background(alignment: .bottom) { Hairline() }
     }
 }
 
@@ -378,6 +378,23 @@ struct SectionTitle: View {
         Text(text).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground)
             .accessibilityAddTraits(.isHeader)
     }
+}
+
+/// The small uppercase heading of a card or a form group (`text-[13px] uppercase tracking-[0.06em]`).
+struct RailHeading: View {
+    let text: String
+    var body: some View {
+        Text(text.uppercased())
+            .font(.vm(13, .semibold, relativeTo: .footnote))
+            .tracking(0.78)
+            .foregroundStyle(Tokens.mutedForeground)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// A 1pt rule in the border color, between rows and sections.
+struct Hairline: View {
+    var body: some View { Rectangle().fill(Tokens.border).frame(height: 1) }
 }
 
 /// "Couldn't load" with a retry, used by every list.

@@ -4,8 +4,9 @@
 The shared strings are copies of vomatt-web's, so a web change can delete a key the app still
 shows, or rename a `{placeholder}`, which then shows as written. Checks every literal `t("key")`
 in App/ against en.json + ios.en.json and zh.json + ios.zh.json, and that a call passing values on
-the same line passes every placeholder its English string has. Also fails on an `ios.*` key no code
-names, so iOS-only strings are dropped once the web's replace them.
+the same line passes every placeholder its English string has. Also fails on an overlay key no code
+names, so iOS-only strings are dropped once the web's replace them, and on an overlay entry that
+repeats the web's own string, which would only freeze the web's copy once it changes.
 """
 import json
 import pathlib
@@ -16,8 +17,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCALES = ROOT / "App/Resources/Locales"
 CALL = re.compile(r'\bt(\.count)?\("([^"\\]+)"(?:,[^\[]*\[(.*))?')
 # A key built at run time, `t("ios.reportReason.\(reason)")`, covers every key under its prefix
-DYNAMIC = re.compile(r'"((?:ios|apiError)\.[\w.]*)\\\(')
-IOS_KEY = re.compile(r'"(ios\.[\w.]+)"')
+DYNAMIC = re.compile(r'"([a-zA-Z]+\.[\w.]*)\\\(')
+KEY = re.compile(r'"([a-zA-Z]+\.[\w.]+)"')
+# A key quoted in a doc comment ("…reads `poll.voted`…") doesn't keep it alive
+COMMENT = re.compile(r"^\s*//.*$", re.MULTILINE)
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
@@ -40,10 +43,14 @@ used = {}
 calls = []
 named = set()
 prefixes = set()
-for path in sorted((ROOT / "App").rglob("*.swift")):
+# VomattCore builds keys too (`"apiError.\(code)"`), so it counts as naming them
+for path in sorted((ROOT / "Packages/VomattKit/Sources/VomattCore").rglob("*.swift")) + sorted((ROOT / "App").rglob("*.swift")):
     source = path.read_text()
-    named |= set(IOS_KEY.findall(source))
-    prefixes |= set(DYNAMIC.findall(source))
+    code = COMMENT.sub("", source)
+    named |= set(KEY.findall(code))
+    prefixes |= set(DYNAMIC.findall(code))
+    if path.is_relative_to(ROOT / "Packages"):
+        continue
     for line_number, line in enumerate(source.splitlines(), 1):
         for counted, key, values in CALL.findall(line):
             where = f"{path.relative_to(ROOT)}:{line_number}"
@@ -65,10 +72,16 @@ for language in ("en", "zh"):
         if key not in known:
             print(f"{where}: '{key}' is missing from {language}.json and ios.{language}.json")
             status = 1
-for language in ("en", "zh"):
-    ios = flatten(json.loads((LOCALES / f"ios.{language}.json").read_text()))
+overlays = {language: flatten(json.loads((LOCALES / f"ios.{language}.json").read_text())) for language in ("en", "zh")}
+webs = {language: flatten(json.loads((LOCALES / f"{language}.json").read_text())) for language in ("en", "zh")}
+# Both overlays keep the same keys, so an entry is a copy only when it repeats the web in every language
+for key in sorted(overlays["en"]):
+    if all(webs[language].get(key) == overlays[language].get(key) for language in overlays):
+        print(f"ios.*.json: '{key}' repeats en.json and zh.json")
+        status = 1
+for language, ios in overlays.items():
     for key in sorted(ios):
-        if key.startswith("ios.") and key not in named and not any(key.startswith(p) for p in prefixes):
+        if key not in named and not any(key.startswith(p) for p in prefixes):
             print(f"ios.{language}.json: '{key}' is not used by the app")
             status = 1
 if status == 0:

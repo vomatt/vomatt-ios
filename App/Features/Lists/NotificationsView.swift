@@ -127,8 +127,9 @@ struct NotificationsView: View {
         guard app.isSignedIn else { return }
         let list = list ?? makeList(nil)
         self.list = list
+        async let unread: Void = app.refreshUnread()
         await list.reload()
-        await app.refreshUnread()
+        await unread
     }
 
     private func makeList(_ category: FeedNotification.Category?) -> CursorList<FeedNotification> {
@@ -285,61 +286,81 @@ private struct NotificationRow: View {
         }
     }
 
-    private func strong(_ text: String) -> Text { Text(text).fontWeight(.semibold) }
-    private func titled(_ text: String) -> Text { Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground) }
     private var actorName: String { "@\(item.actor?.username ?? "")" }
     private var title: String { item.poll?.title ?? "" }
 
-    private var line: Text {
+    private enum Emphasis { case plain, strong, titled }
+
+    private struct Part {
+        let text: String
+        var emphasis = Emphasis.plain
+    }
+
+    /// The row's words, written once for both the styled line and VoiceOver: a localized template, what fills
+    /// each `{name}`, and an optional tail after " · ".
+    private struct Wording {
+        let template: String
+        let parts: [String: Part]
+        var tail: Part?
+    }
+
+    private var wording: Wording {
         switch entry {
         case let .follows(items):
-            return Text.rich(app.t.count("notifications.followedYouGroup", items.count - 1, ["name": "{name}"]), ["name": strong(actorName)])
+            return Wording(template: app.t.count("notifications.followedYouGroup", items.count - 1, ["name": "{name}"]),
+                           parts: ["name": Part(text: actorName, emphasis: .strong)])
         case .single:
             switch item.kind {
             case .result:
-                let ended = app.t("notifications.ended")
-                return (unread ? strong(ended) : Text(ended)) + Text(" · ") + Text(title)
+                return Wording(template: "{ended}", parts: ["ended": Part(text: app.t("notifications.ended"), emphasis: unread ? .strong : .plain)],
+                               tail: Part(text: title))
             case .cancelled:
-                return Text.rich(app.t("notifications.cancelledBy"), ["title": titled(title), "name": Text(actorName)])
+                return Wording(template: app.t("notifications.cancelledBy"),
+                               parts: ["title": Part(text: title, emphasis: .titled), "name": Part(text: actorName)])
             case .invitation:
-                return Text.rich(app.t("notifications.invitedYou"), ["name": strong(actorName)]) + Text(" · ") + titled(title)
+                return Wording(template: app.t("notifications.invitedYou"), parts: ["name": Part(text: actorName, emphasis: .strong)],
+                               tail: Part(text: title, emphasis: .titled))
             case .followed:
-                return Text.rich(app.t("notifications.followedYou"), ["name": strong(actorName)])
+                return Wording(template: app.t("notifications.followedYou"), parts: ["name": Part(text: actorName, emphasis: .strong)])
             case .comment, .mention, .like:
-                return Text.rich(app.t(commentLineKey), ["name": strong(actorName), "title": titled(title)])
+                // A comment on the viewer's poll or reply, a mention of them, or a like of their comment, read alike but for the verb
+                let key = switch item.kind {
+                case .mention: "notifications.mentioned"
+                case .like: "ios.notifLiked"
+                default: "notifications.commented"
+                }
+                return Wording(template: app.t(key), parts: ["name": Part(text: actorName, emphasis: .strong), "title": Part(text: title, emphasis: .titled)])
             case .closingSoon:
-                guard let end = item.poll?.endTime, end > .now else { return titled(title) }
-                return Text.rich(app.t("notifications.endsIn"), ["title": titled(title), "duration": Text(app.dates.duration(end.timeIntervalSinceNow))])
+                guard let end = item.poll?.endTime, end > .now else {
+                    return Wording(template: "{title}", parts: ["title": Part(text: title, emphasis: .titled)])
+                }
+                return Wording(template: app.t("notifications.endsIn"), parts: [
+                    "title": Part(text: title, emphasis: .titled),
+                    "duration": Part(text: app.dates.duration(end.timeIntervalSinceNow)),
+                ])
             }
         }
     }
 
-    /// A comment on the viewer's poll or reply, a mention of them, or a like of their comment, read alike but for the verb.
-    private var commentLineKey: String {
-        switch item.kind {
-        case .mention: "notifications.mentioned"
-        case .like: "ios.notifLiked"
-        default: "notifications.commented"
+    private func styled(_ part: Part) -> Text {
+        switch part.emphasis {
+        case .plain: Text(part.text)
+        case .strong: Text(part.text).fontWeight(.semibold)
+        case .titled: Text(part.text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
         }
     }
 
-    /// The same line as plain words, for VoiceOver.
+    private var line: Text {
+        let wording = wording
+        let text = Text.rich(wording.template, wording.parts.mapValues(styled))
+        return wording.tail.map { text + Text(" · ") + styled($0) } ?? text
+    }
+
+    /// The same line as plain words, for VoiceOver. One pass, so a title that reads "{name}" stays as written.
     private var lineAccessibility: String {
-        switch entry {
-        case let .follows(items): app.t.count("notifications.followedYouGroup", items.count - 1, ["name": actorName])
-        case .single:
-            switch item.kind {
-            case .result: "\(app.t("notifications.ended")) · \(title)"
-            case .cancelled: app.t("notifications.cancelledBy", ["title": title, "name": actorName])
-            case .invitation: "\(app.t("notifications.invitedYou", ["name": actorName])) · \(title)"
-            case .followed: app.t("notifications.followedYou", ["name": actorName])
-            case .comment, .mention, .like: app.t(commentLineKey, ["name": actorName, "title": title])
-            case .closingSoon:
-                if let end = item.poll?.endTime, end > .now {
-                    app.t("notifications.endsIn", ["title": title, "duration": app.dates.duration(end.timeIntervalSinceNow)])
-                } else { title }
-            }
-        }
+        let wording = wording
+        let text = Localizer.interpolate(wording.template, wording.parts.mapValues(\.text))
+        return wording.tail.map { "\(text) · \($0.text)" } ?? text
     }
 
     // MARK: Meta
@@ -373,7 +394,7 @@ private struct NotificationRow: View {
     private func winners(_ poll: FeedNotification.PollInfo) -> String? {
         guard let labels = poll.winningOptionLabels, let first = labels.first else { return nil }
         guard poll.tie == true else { return app.t("profile.wonBy", ["option": first]) }
-        let list = labels.formatted(.list(type: .and).locale(Locale(identifier: app.language.localeIdentifier)))
+        let list = app.t.list(labels)
         return app.t("profile.tieBetween", ["options": list])
     }
 

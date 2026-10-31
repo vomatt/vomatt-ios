@@ -40,6 +40,11 @@ struct LocalizerTests {
         #expect(Localizer(language: .zh, strings: [:]).sentences("任何人都能投票。", "只有你會看到。") == "任何人都能投票。只有你會看到。")
     }
 
+    @Test func listsInTheLanguagesOwnForm() {
+        #expect(Localizer(language: .en, strings: [:]).list(["A", "B", "C"]) == "A, B, and C")
+        #expect(Localizer(language: .zh, strings: [:]).list(["甲", "乙"]) == "甲和乙")
+    }
+
     @Test func preferredLanguage() {
         #expect(Language.preferred(["zh-Hant-TW", "en"]) == .zh)
         #expect(Language.preferred(["fr", "en-GB"]) == .en)
@@ -69,6 +74,22 @@ struct DateTests {
         let chinese = DateFormatting(language: .zh, timeZone: TimeZone(identifier: "Asia/Taipei")!)
         #expect(chinese.pollDate(date) == "10月7日 22:00")
         #expect(chinese.monthYear(date) == "2026年10月")
+    }
+
+    @Test func reusedFormattersKeepEachLanguageAndZone() {
+        let date = try! LenientDateTranscoder().decode("2026-10-07T14:00:00Z")
+        let readers = [
+            (DateFormatting(language: .en, timeZone: TimeZone(identifier: "Asia/Taipei")!), "Oct 7, 22:00", "2 hours ago"),
+            (DateFormatting(language: .en, timeZone: TimeZone(identifier: "America/New_York")!), "Oct 7, 10:00", "2 hours ago"),
+            (DateFormatting(language: .zh, timeZone: TimeZone(identifier: "Asia/Taipei")!), "10月7日 22:00", "2小時前"),
+        ]
+        // Twice over, so the second round reads formatters the first one built
+        for _ in 0..<2 {
+            for (dates, moment, age) in readers {
+                #expect(dates.pollDate(date) == moment)
+                #expect(dates.fromNow(date, now: date.addingTimeInterval(7200)) == age)
+            }
+        }
     }
 
     @Test func fromNowUsesWholeUnits() {

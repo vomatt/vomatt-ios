@@ -203,7 +203,7 @@ struct AccountView: View {
         return PollRow(poll: poll, unread: unread) {
             joined([
                 Text(app.t("myPolls.youChose")) + Text(" ") + strong(AccountInsights.choice(of: poll)),
-                Text(poll.isCancelled ? app.t("notifications.cancelled") : votedCount(poll)),
+                Text(poll.isCancelled ? app.t("notifications.cancelled") : votedCount(poll, app.t)),
                 unread ? Text(app.t("profile.new")).foregroundStyle(Tokens.alert) : nil,
             ].compactMap { $0 })
         } aside: {
@@ -211,9 +211,6 @@ struct AccountView: View {
         }
     }
 
-    private func votedCount(_ poll: Poll) -> String {
-        app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
-    }
 
     /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
     private func load() async {
@@ -245,11 +242,11 @@ struct AskedRow: View {
             if poll.isCancelled {
                 parts = [Text(app.t("notifications.cancelled"))]
             } else {
-                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
+                parts = [decided(poll), Text(votedCount(poll, app.t))].compactMap { $0 }
             }
         } else {
             let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
-            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
+            if status != .scheduled { parts.append(Text(votedCount(poll, app.t)).foregroundStyle(Tokens.foreground)) }
             if let when { parts.append(Text(when)) }
         }
         if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
@@ -268,7 +265,7 @@ struct AskedRow: View {
         case let .tie(winners):
             // The locale's list ("A, B and C"), formatted around placeholders so each name stays bold
             let keys = winners.indices.map { "{\($0)}" }
-            let list = keys.formatted(.list(type: .and).locale(Locale(identifier: app.language.localeIdentifier)))
+            let list = app.t.list(keys)
             let names = Dictionary(uniqueKeysWithValues: winners.enumerated().map { ("\($0.offset)", strong($0.element)) })
             return Text.rich(app.t("profile.tieBetween"), ["options": Text.rich(list, names)])
         case .none:
@@ -276,9 +273,10 @@ struct AskedRow: View {
         }
     }
 
-    private func votedCount(_ poll: Poll) -> String {
-        app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
-    }
+}
+
+private func votedCount(_ poll: Poll, _ t: Localizer) -> String {
+    t("poll.voted", ["count": t.number(poll.turnout ?? 0)])
 }
 
 private func strong(_ text: String) -> Text {
@@ -502,7 +500,7 @@ struct EditProfileSheet: View {
     private var visibilityCard: some View {
         VStack(spacing: 0) {
             visibilityRow(app.t("profile.realName")) { pill(app.t("profile.realName"), ["firstName", "lastName"]) }
-            Rectangle().fill(Tokens.border).frame(height: 1)
+            Hairline()
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(app.t("profile.birthday")).font(.vm(14))
@@ -525,15 +523,15 @@ struct EditProfileSheet: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(minHeight: 52)
-            Rectangle().fill(Tokens.border).frame(height: 1)
+            Hairline()
             visibilityRow(app.t("account.field.location"), value: profile.location) {
                 pill(app.t("account.field.location"), ["location"])
             }
-            Rectangle().fill(Tokens.border).frame(height: 1)
+            Hairline()
             visibilityRow(app.t("account.field.points"), value: app.t.number(profile.points), mono: true) {
                 pill(app.t("account.field.points"), ["points"], plural: true)
             }
-            Rectangle().fill(Tokens.border).frame(height: 1)
+            Hairline()
             visibilityRow(app.t("account.field.membershipLevel"), value: profile.membershipLevel) {
                 pill(app.t("account.field.membershipLevel"), ["membershipLevel"])
             }
@@ -689,7 +687,7 @@ struct AvatarPickerSheet: View {
     let username: String
     let avatarUrl: String?
     @State private var selected = ""
-    @State private var initial = ""
+    private var initial: String { Avatars.resolve(username: username, avatarUrl: avatarUrl) }
 
     var body: some View {
         NavigationStack {
@@ -735,10 +733,7 @@ struct AvatarPickerSheet: View {
                 }
             }
         }
-        .onAppear {
-            initial = Avatars.resolve(username: username, avatarUrl: avatarUrl)
-            selected = initial
-        }
+        .onAppear { selected = initial }
     }
 
     private func save() async {

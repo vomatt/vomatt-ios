@@ -101,7 +101,7 @@ struct PollCreatorView: View {
 
     private var question: some View {
         VStack(alignment: .leading, spacing: 8) {
-            groupHeading(app.t("pollCreator.questionLabel"))
+            RailHeading(text: app.t("pollCreator.questionLabel"))
             TextField("", text: $form.title, prompt: Text(app.t("pollCreator.questionPlaceholder")).foregroundStyle(Tokens.mutedForeground),
                       axis: .vertical)
                 .font(.vm(22, .medium, relativeTo: .title2))
@@ -141,7 +141,7 @@ struct PollCreatorView: View {
     @ViewBuilder private var context: some View {
         if showContext {
             VStack(alignment: .leading, spacing: 8) {
-                groupHeading("\(app.t("pollCreator.descriptionLabel")) (\(app.t("common.optional")))")
+                RailHeading(text: "\(app.t("pollCreator.descriptionLabel")) (\(app.t("common.optional")))")
                 TextField("", text: $form.description, prompt: Text(app.t("pollCreator.descriptionPlaceholder")).foregroundStyle(Tokens.mutedForeground),
                           axis: .vertical)
                     .lineLimit(3...12)
@@ -166,7 +166,7 @@ struct PollCreatorView: View {
 
     private var options: some View {
         VStack(alignment: .leading, spacing: 8) {
-            groupHeading(app.t("pollCreator.pollOptionsLabel"))
+            RailHeading(text: app.t("pollCreator.pollOptionsLabel"))
             ForEach(form.options.indices, id: \.self) { index in
                 optionRow(index)
             }
@@ -242,7 +242,7 @@ struct PollCreatorView: View {
 
     private var ends: some View {
         VStack(alignment: .leading, spacing: 10) {
-            groupHeading(app.t("pollCreator.endsLabel"))
+            RailHeading(text: app.t("pollCreator.endsLabel"))
             FlowLayout(spacing: 8) {
                 ForEach(PollForm.EndPreset.allCases, id: \.self) { preset in
                     PillButton(title: app.t(preset.labelKey), isOn: endPreset == preset) { apply(preset) }
@@ -379,14 +379,6 @@ struct PollCreatorView: View {
         }
     }
 
-    private func groupHeading(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.vm(13, .semibold, relativeTo: .footnote))
-            .tracking(0.78)
-            .foregroundStyle(Tokens.mutedForeground)
-            .accessibilityAddTraits(.isHeader)
-    }
-
     @ViewBuilder private func fieldError(_ field: PollForm.Field) -> some View {
         if let key = errors[field] {
             Text(app.t(key)).font(.vm(12)).foregroundStyle(Tokens.destructive)
@@ -454,7 +446,7 @@ struct PollCreatorView: View {
         .padding(.top, 12)
         .padding(.bottom, 8)
         .background(Tokens.background.ignoresSafeArea(edges: .bottom))
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     // MARK: Actions

@@ -197,8 +197,7 @@ private struct PollDetailCard: View {
 
             footer
         }
-        .background(Tokens.card, in: RoundedRectangle(cornerRadius: Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Tokens.border))
+        .card(padding: nil)
     }
 
     /// Turnout (and a non-Public Audience), comments, save and share (the web's `PollFooter`). Turnout shows in every state.
@@ -221,7 +220,7 @@ private struct PollDetailCard: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 20)
         .padding(.vertical, 4)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { Hairline() }
     }
 
     private var commentLabel: String {
@@ -250,9 +249,7 @@ private struct PollMenu: View {
     let onChanged: () async -> Void
     let onDeleted: () -> Void
 
-    enum Confirm: Identifiable { case delete, end; var id: Self { self } }
-    @State private var confirming: Confirm?
-    @State private var showInvitees = false
+    @State private var pending: OwnerAction?
     @State private var reporting = false
 
     var body: some View {
@@ -266,10 +263,10 @@ private struct PollMenu: View {
                     }
                 }
                 if actions.canEnd {
-                    Button { confirming = .end } label: { Label(app.t("poll.endNowEllipsis"), systemImage: "stop.circle") }
+                    Button { pending = .end } label: { Label(app.t("poll.endNowEllipsis"), systemImage: "stop.circle") }
                 }
                 if actions.canInvite {
-                    Button { showInvitees = true } label: { Label(app.t("invitees.title"), systemImage: "person.2") }
+                    Button { pending = .invitees } label: { Label(app.t("invitees.title"), systemImage: "person.2") }
                 }
             }
             ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
@@ -279,7 +276,7 @@ private struct PollMenu: View {
             if isOwner {
                 if actions.canDelete {
                     Divider()
-                    Button(role: .destructive) { confirming = .delete } label: {
+                    Button(role: .destructive) { pending = .delete } label: {
                         Label(app.t("poll.deletePollEllipsis"), systemImage: "trash")
                     }
                 }
@@ -292,63 +289,12 @@ private struct PollMenu: View {
             Image(systemName: "ellipsis").frame(width: Metrics.minTarget, height: Metrics.minTarget)
         }
         .accessibilityLabel(app.t("poll.moreActions", ["title": poll.title]))
-        .alert(
-            app.t(confirming == .end ? "poll.endNowTitle" : "poll.deletePollTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { action in
-            Button(app.t("poll.keepPoll"), role: .cancel) {}
-            Button(app.t(action == .end ? "poll.endNow" : "poll.deletePoll"), role: action == .delete ? .destructive : nil) {
-                Task { action == .delete ? await remove() : await end() }
-            }
-        } message: { action in
-            Text(app.t(action == .end ? "poll.endNowBody" : "poll.deletePollBody"))
-        }
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
-        .sheet(isPresented: $showInvitees) {
-            InviteeManagerView(pollId: poll.id) { invitees in
-                // The Poll Ends once every Invitee holds a Ballot; only then refetch it
-                if !invitees.isEmpty, invitees.allSatisfy(\.hasBallot) {
-                    Task { await onChanged() }
-                } else {
-                    var changed = poll
-                    changed.inviteeCount = invitees.count
-                    app.didUpdate(changed)
-                }
-            }
-        }
-    }
-
-    private func remove() async {
-        do {
-            try await app.service.deletePoll(id: poll.id)
-            app.showToast(app.t("poll.deleted"))
-            onDeleted()
-        } catch {
-            // The API explains a passed delete window
-            app.showToast(app.t.message(for: error, fallback: "poll.deleteFailed"), isError: true)
-        }
-    }
-
-    private func end() async {
-        do {
-            try await app.service.closePoll(id: poll.id)
-            await onChanged()
-        } catch {
-            app.showToast(app.t.message(for: error, fallback: "poll.endFailed"), isError: true)
-        }
-    }
-}
-
-/// The small uppercase heading of a card beside the poll (`text-[13px] uppercase tracking-[0.06em]`).
-private struct RailHeading: View {
-    let text: String
-    var body: some View {
-        Text(text.uppercased())
-            .font(.vm(13, .semibold, relativeTo: .footnote))
-            .tracking(0.78)
-            .foregroundStyle(Tokens.mutedForeground)
-            .accessibilityAddTraits(.isHeader)
+        .ownerActionFlows($pending, poll: poll, onChanged: onChanged, onInviteeCount: { count in
+            var changed = poll
+            changed.inviteeCount = count
+            app.didUpdate(changed)
+        }, onDeleted: onDeleted)
     }
 }
 

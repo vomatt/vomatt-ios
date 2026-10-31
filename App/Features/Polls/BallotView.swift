@@ -68,7 +68,7 @@ struct BallotView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 16)
-            .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+            .overlay(alignment: .top) { Hairline() }
         }
         .animation(.easeOut(duration: 0.2), value: stage)
         .sensoryFeedback(.impact(weight: .light), trigger: ballot.myOptionId) { _, new in new != nil }
