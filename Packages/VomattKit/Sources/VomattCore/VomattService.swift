@@ -585,7 +585,7 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 20) { try await self.followedUsers(cursor: $0) }.page.items
     }
 
-    /// Signed-in only. Open Public Polls by followed people, most recently opened first.
+    /// Signed-in only. Open Public Polls by followed people or carrying a followed tag, most recently opened first.
     public func followingPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
         try await call {
             let data = try await client.getFollowingVotes(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
@@ -646,18 +646,43 @@ public final class VomattService: Sendable {
         _ = try await call { try await client.deleteMyPasskey(path: .init(passkeyId: id)).ok }
     }
 
-    // MARK: Notifications
+    // MARK: Devices
 
-    /// Unread feed items of the kinds switched on.
-    public func unreadCount() async throws -> Int {
-        try await call { Int(try await client.unreadCount().ok.body.json.data?.count ?? 0) }
+    /// Every session that can still refresh, most recently active first.
+    public func deviceSessions() async throws -> [DeviceSession] {
+        try await call { try (try await client.listMySessions().ok.body.json.data ?? []).map(DeviceSession.init) }
     }
 
-    /// The feed, newest first. Items can vanish or appear behind the cursor: de-duplicate by `id`.
-    /// A kind the app has no row for, or an item that doesn't fit its kind, is left out rather than failing the page.
-    public func notifications(cursor: String? = nil, limit: Int = 20) async throws -> CursorPage<FeedNotification> {
+    /// Signs out one session; 404 when it isn't the caller's or is gone. Signing out the
+    /// calling session is a sign-out here too.
+    public func signOutDevice(id: String) async throws {
+        _ = try await call { try await client.revokeMySession(path: .init(sessionId: id)).ok }
+    }
+
+    /// Signs out every session but this one.
+    public func signOutOtherDevices() async throws {
+        _ = try await call { try await client.revokeMyOtherSessions(query: .init(scope: .others)).ok }
+    }
+
+    // MARK: Notifications
+
+    /// Unread feed items of the kinds switched on; with `category`, that tab's only.
+    public func unreadCount(category: FeedNotification.Category? = nil) async throws -> Int {
         try await call {
-            let data = try await client.list(query: .init(cursor: cursor, limit: clampedPageSize(limit))).ok.body.json.data
+            Int(try await client.unreadCount(query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) })).ok.body.json.data?.count ?? 0)
+        }
+    }
+
+    /// The feed, newest first; with `category`, one tab (pass the same one with every cursor).
+    /// Items can vanish or appear behind the cursor: de-duplicate by `id`.
+    /// An item that doesn't fit its kind is left out rather than failing the page.
+    public func notifications(
+        category: FeedNotification.Category? = nil, cursor: String? = nil, limit: Int = 20
+    ) async throws -> CursorPage<FeedNotification> {
+        try await call {
+            let data = try await client.list(
+                query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) }, cursor: cursor, limit: clampedPageSize(limit))
+            ).ok.body.json.data
             return CursorPage(items: (data?.items ?? []).compactMap { try? FeedNotification($0) }, nextCursor: data?.nextCursor)
         }
     }
@@ -684,13 +709,14 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted switches keep their value. Resolves to all of them.
+    /// Omitted switches keep their value. Resolves to all six.
     public func updateNotificationPreferences(
-        resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, mentions: Bool? = nil, closingSoon: Bool? = nil
+        resultsIn: Bool? = nil, invitations: Bool? = nil, comments: Bool? = nil, mentions: Bool? = nil,
+        likes: Bool? = nil, closingSoon: Bool? = nil
     ) async throws -> NotificationPreferences {
         try await call {
             try await NotificationPreferences(required(client.update1(body: .json(.init(
-                closingSoon: closingSoon, comments: comments, invitations: invitations, mentions: mentions, resultsIn: resultsIn
+                closingSoon: closingSoon, comments: comments, invitations: invitations, likes: likes, mentions: mentions, resultsIn: resultsIn
             ))).ok.body.json.data, "updateNotificationPreferences.data"))
         }
     }

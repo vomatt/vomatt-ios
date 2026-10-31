@@ -49,7 +49,18 @@
 		"seeAll": "See all",
 		"rulesTitle": "Rules voters will see",
 		"rulesChange": "Change",
-		"rulesDone": "Done"
+		"rulesDone": "Done",
+		"notifTabConversation": "Conversation",
+		"notifTabLikes": "Likes",
+		"notifTabPolls": "Poll ends",
+		"notifTabInvitations": "Invitations",
+		"notifTabFollows": "Follows",
+		"notifLiked": "{name} liked your comment in {title}",
+		"notifCategoryLabel": "Category",
+		"notifCategoryEmpty": "Nothing here yet.",
+		"notifCategoryFailed": "Couldn’t load that tab. Try again.",
+		"notifyLikes": "Likes",
+		"notifyLikesBody": "When someone likes your comment or reply."
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
@@ -187,5 +198,25 @@
 	},
 	"common": {
 		"tryAgain": "Try again"
+	},
+	"devices": {
+		"title": "Signed-in devices",
+		"body": "Where you’re signed in. Sign out any you don’t recognize.",
+		"current": "This device",
+		"admin": "Admin console",
+		"unknown": "Unknown device",
+		"signedInOn": "Signed in {date}",
+		"lastActive": "last active {date}",
+		"loadFailed": "Couldn’t load your devices.",
+		"signOut": "Sign out",
+		"signOutLabel": "Sign out {name}",
+		"signOutTitle": "Sign out this device?",
+		"signOutBody": "{name} will need to sign in again.",
+		"signedOut": "Device signed out",
+		"signOutFailed": "Couldn’t sign the device out. Please try again.",
+		"signOutOthers": "Sign out all other devices",
+		"signOutOthersTitle": "Sign out all other devices?",
+		"signOutOthersBody": "Every device except this one will need to sign in again.",
+		"othersSignedOut": "Other devices signed out"
 	}
 }
