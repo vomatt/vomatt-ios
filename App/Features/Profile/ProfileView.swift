@@ -302,42 +302,52 @@ struct ProfileHeader<Action: View>: View {
     var hiddenFields: Set<String> = []
     @ViewBuilder var action: () -> Action
 
+    /// As on the web's phone layout, the name gets a row of its own under the avatar and actions, so it wraps instead of truncating.
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Group {
-                if let onAvatarTap {
-                    Button(action: onAvatarTap) {
-                        AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
-                            .overlay(alignment: .bottomTrailing) {
-                                Image(systemName: "pencil").font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Tokens.primaryForeground)
-                                    .frame(width: 22, height: 22).background(Tokens.primary, in: Circle())
-                                    .overlay(Circle().strokeBorder(Tokens.background, lineWidth: 2))
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(app.t("avatar.change"))
-                } else {
-                    AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                avatar
+                Spacer(minLength: 0)
+                action()
             }
-            VStack(alignment: .leading, spacing: 4) {
-                nameLine.displayHeading(19).lineLimit(2)
-                    .accessibilityLabel(nameSpoken)
-                    .accessibilityAddTraits(.isHeader)
-                Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
-                if let bio = profile.bio, !bio.isEmpty {
-                    marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
-                        .accessibilityLabel(spoken(bio, "bio"))
-                }
-                if let joinedAt = profile.joinedAt {
-                    Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
-                        .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            action()
+            details
         }
+    }
+
+    @ViewBuilder private var avatar: some View {
+        if let onAvatarTap {
+            Button(action: onAvatarTap) {
+                AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil").font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Tokens.primaryForeground)
+                            .frame(width: 22, height: 22).background(Tokens.primary, in: Circle())
+                            .overlay(Circle().strokeBorder(Tokens.background, lineWidth: 2))
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(app.t("avatar.change"))
+        } else {
+            AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            nameLine.displayHeading(19).fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(nameSpoken)
+                .accessibilityAddTraits(.isHeader)
+            Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
+            if let bio = profile.bio, !bio.isEmpty {
+                marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
+                    .accessibilityLabel(spoken(bio, "bio"))
+            }
+            if let joinedAt = profile.joinedAt {
+                Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
+                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var name: ProfileName {
