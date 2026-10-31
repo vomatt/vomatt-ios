@@ -152,6 +152,16 @@ public struct PollDraft: Codable, Identifiable, Hashable, Sendable {
         self.savedAt = savedAt
         self.form = form
     }
+
+    /// "Saved yesterday · 3 options · no end date yet"; blank option fields aren't options yet.
+    public func meta(t: Localizer, dates: DateFormatting, now: Date = .now) -> String {
+        let options = form.options.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+        return [
+            t("myPolls.draftSavedAt", ["date": dates.pollDay(savedAt, now: now)]),
+            options > 0 ? t.count("myPolls.draftOptions", options) : nil,
+            form.endTime == nil ? t("myPolls.draftNoEnd") : nil,
+        ].compactMap { $0 }.joined(separator: " · ")
+    }
 }
 
 /// Drafts in `UserDefaults`, newest first.

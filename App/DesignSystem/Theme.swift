@@ -81,6 +81,13 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(border, lineWidth: 1))
     }
 
+    /// The quieter card of something only its author sees, such as a draft: dashed on `surface-soft`.
+    func draftCard() -> some View {
+        padding(16)
+            .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.borderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+    }
+
     /// `px-contain mx-auto max-w-2xl`: a centered column that fills phones.
     func pageColumn(_ maxWidth: CGFloat = Metrics.listWidth) -> some View {
         frame(maxWidth: maxWidth, alignment: .leading)
@@ -91,5 +98,25 @@ extension View {
     /// The canvas behind every screen.
     func canvas() -> some View {
         background(Tokens.background.ignoresSafeArea())
+    }
+}
+
+extension Text {
+    /// A localized template with `{name}` placeholders filled by styled pieces (the web's `rich`):
+    /// `Text.rich(t("notifications.followedYou"), ["name": Text("@jtan").bold()])`.
+    static func rich(_ template: String, _ parts: [String: Text]) -> Text {
+        var result = Text(verbatim: "")
+        var rest = Substring(template)
+        while let open = rest.firstIndex(of: "{"), let close = rest[open...].firstIndex(of: "}") {
+            let name = String(rest[rest.index(after: open)..<close])
+            guard let part = parts[name] else {
+                result = result + Text(verbatim: String(rest[...close]))
+                rest = rest[rest.index(after: close)...]
+                continue
+            }
+            result = result + Text(verbatim: String(rest[..<open])) + part
+            rest = rest[rest.index(after: close)...]
+        }
+        return result + Text(verbatim: String(rest))
     }
 }

@@ -1,49 +1,87 @@
 import SwiftUI
 import VomattCore
 
-/// The signed-in user's own page: header, numbers and the Activity / Polls / Groups / Settings tabs.
+/// The signed-in user's own page (the web's `OwnProfileView`): their record, then two lists one at a time.
+/// Asked holds their polls and drafts; Voted holds the polls they voted in and what they chose, which only they see.
 struct AccountView: View {
     @Environment(AppModel.self) private var app
     let profile: MyProfile
 
-    enum Tab: Hashable { case activity, polls, groups, settings }
-    @State private var tab = Tab.activity
+    enum Tab: Hashable { case asked, voted }
+    enum AskedFilter: Hashable { case all, drafts, open, ended }
+    enum VotedFilter: Hashable { case all, sealed, decided }
+    @State private var tab = Tab.asked
+    @State private var askedFilter = AskedFilter.all
+    @State private var votedFilter = VotedFilter.all
+    /// Every Poll in My Polls, asked and voted in; nil until loaded.
     @State private var polls: [Poll]?
+    @State private var loadFailed = false
+    @State private var drafts: [PollDraft] = []
     @State private var showEdit = false
     @State private var showAvatar = false
 
-    private var myPolls: [Poll] { app.visible(polls ?? []).filter { $0.creatorId == profile.id } }
-    private var history: [BallotRecord] { AccountInsights.history(app.visible(polls ?? [])) }
-    private var insights: Insights { AccountInsights.compute(myPolls: myPolls, history: history) }
-
     var body: some View {
+        let visible = app.visible(polls ?? [])
+        let asked = ProfileLists.asked(visible, viewerId: profile.id)
+        let voted = ProfileLists.voted(visible, viewerId: profile.id)
+        let askedSplit = ProfileLists.splitAsked(asked)
+        let votedSplit = ProfileLists.splitVoted(voted)
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 24) {
                 // The header leaves out fields hidden from visitors, as they see it
                 ProfileHeader(profile: profile.asPublicProfile, onAvatarTap: { showAvatar = true }) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
+                    Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
+                        .buttonStyle(.vm(.outline, size: .icon))
+                        .accessibilityLabel(app.t("navigation.settings"))
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
-                    (app.t("account.votesCast"), app.t.number(profile.totalVotes)),
-                    (app.t("account.pollsCreated"), app.t.number(profile.totalPolls)),
-                    (app.t("account.peopleReached"), app.t.number(insights.peopleReached)),
-                    (app.t("account.majorityRate"), insights.majorityRate.map { "\($0)%" } ?? app.t("account.majorityNone")),
+                    .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.totalPolls)),
+                    .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.totalVotes)),
+                    .init(
+                        label: app.t("profile.recordReached"),
+                        value: polls == nil ? "–" : app.t.number(asked.reduce(0) { $0 + ($1.turnout ?? 0) }),
+                        onlyYou: true
+                    ),
+                    .init(
+                        label: app.t("profile.recordPicksWon"),
+                        value: ProfileLists.picksWonRate(voted).map { "\(app.t.number($0))%" } ?? "–",
+                        onlyYou: true
+                    ),
                 ])
-                .accessibilityLabel(app.t("account.stats"))
 
-                VStack(alignment: .leading, spacing: 16) {
-                    LineTabs(items: [
-                        (Tab.activity, app.t("account.tabActivity") + (insights.awaitingResults > 0 ? " · \(insights.awaitingResults)" : "")),
-                        (Tab.polls, app.t("account.tabPolls")),
-                        (Tab.groups, app.t("account.tabGroups")),
-                        (Tab.settings, app.t("account.tabSettings")),
-                    ], selection: $tab)
+                VStack(alignment: .leading, spacing: 12) {
+                    LineTabs(items: [(Tab.asked, app.t("profile.tabAsked")), (Tab.voted, app.t("profile.tabVoted"))], selection: $tab) { value in
+                        switch value {
+                        case .asked:
+                            TabCount(count: asked.count)
+                            if askedSplit.ended.contains(where: { $0.unread == true }) {
+                                UnreadDot(label: app.t("profile.askedUnread"))
+                            }
+                        case .voted:
+                            TabCount(count: voted.count)
+                            OnlyYouMarker()
+                            let unread = votedSplit.decided.filter { $0.unread == true }.count
+                            if unread > 0 { UnreadBadge(count: formatUnreadCount(unread), label: app.t("notifications.unread")) }
+                        }
+                    }
                     switch tab {
-                    case .activity: activity
-                    case .polls: pollsList
-                    case .groups: GroupsPanel()
-                    case .settings: AccountSettings(profile: profile)
+                    case .asked:
+                        FilterPills(label: app.t("profile.filterLabel"), selection: $askedFilter, options: [
+                            (AskedFilter.all, app.t("profile.filterAll"), nil),
+                            (AskedFilter.drafts, app.t("myPolls.tabDrafts"), nil),
+                            (AskedFilter.open, app.t("profile.filterOpen"), nil),
+                            (AskedFilter.ended, app.t("myPolls.tabEnded"), nil),
+                        ])
+                        lists { askedList(askedSplit) }
+                    case .voted:
+                        FilterPills(label: app.t("profile.filterLabel"), selection: $votedFilter, options: [
+                            (VotedFilter.all, app.t("profile.filterAll"), nil),
+                            (VotedFilter.sealed, app.t("profile.filterSealed"), nil),
+                            (VotedFilter.decided, app.t("profile.filterDecided"), nil),
+                        ])
+                        lists { votedList(votedSplit) }
                     }
                 }
             }
@@ -54,716 +92,221 @@ struct AccountView: View {
         .canvas()
         .navigationBarTitleDisplayMode(.inline)
         .task(id: app.sessionGeneration) { await load() }
+        .onAppear { drafts = app.drafts.list() }
+        .onChange(of: app.creator == nil) { _, closed in if closed { drafts = app.drafts.list() } }
         .sheet(isPresented: $showEdit) { EditProfileSheet(profile: profile) }
         .sheet(isPresented: $showAvatar) { AvatarPickerSheet(username: profile.username, avatarUrl: profile.avatarUrl) }
     }
 
-    @ViewBuilder private var activity: some View {
-        if polls == nil {
-            ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
-        } else if history.isEmpty {
-            EmptyState {
-                Text(app.t("account.noVotes"))
-                Button(app.t("account.findPolls")) { app.selectedTab = .home }.buttonStyle(.vm)
+    /// The lists once My Polls is in; a failed load isn't an empty list, so it says so and retries.
+    @ViewBuilder private func lists(@ViewBuilder _ content: () -> some View) -> some View {
+        if polls != nil {
+            LazyVStack(alignment: .leading, spacing: 8, content: content)
+        } else if loadFailed {
+            LoadFailed(message: app.t("profile.pollsLoadFailed")) { await load() }
+        } else {
+            VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
+        }
+    }
+
+    @ViewBuilder private func askedList(_ split: (open: [Poll], ended: [Poll])) -> some View {
+        if askedFilter == .drafts {
+            if drafts.isEmpty {
+                EmptyState { Text(app.t("profile.noDrafts")) }
+            } else {
+                ForEach(drafts) { draftRow($0) }
             }
         } else {
-            LazyVStack(spacing: 8) {
-                ForEach(history) { record in
-                    PollRow(poll: record.poll) {
-                        Text(app.t("account.youChose")) + Text(" ") + Text(record.choice).foregroundStyle(Tokens.foreground).fontWeight(.medium)
-                    } aside: {
-                        Chip(text: app.t("account.outcome.\(record.outcome.rawValue)"), tint: tint(record.outcome))
+            let open = askedFilter == .ended ? [] : split.open
+            let ended = askedFilter == .open ? [] : split.ended
+            if askedFilter == .all, !drafts.isEmpty {
+                ProfileSection(label: app.t("myPolls.tabDrafts"), count: drafts.count, note: app.t("profile.onlyYouSeeThese"), onlyYou: true)
+                ForEach(drafts) { draftRow($0) }
+            }
+            if open.isEmpty, ended.isEmpty {
+                if askedFilter == .all {
+                    EmptyState {
+                        Text(app.t("profile.noPollsYet")).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground)
+                        Text(app.t("profile.noPollsYetOwn"))
+                        Button(app.t("common.createPoll")) { app.openCreator() }.buttonStyle(.vm)
                     }
+                } else {
+                    EmptyState { Text(app.t("myPolls.empty")) }
                 }
+            }
+            if !open.isEmpty {
+                ProfileSection(label: app.t("profile.sectionOpen"), count: open.count)
+                ForEach(open) { askedRow($0) }
+            }
+            if !ended.isEmpty {
+                ProfileSection(label: app.t("myPolls.tabEnded"), count: ended.count)
+                ForEach(ended) { askedRow($0) }
             }
         }
     }
 
-    @ViewBuilder private var pollsList: some View {
-        if myPolls.isEmpty {
-            EmptyState { Text(app.t("account.noPolls")) }
+    @ViewBuilder private func votedList(_ split: (sealed: [Poll], decided: [Poll])) -> some View {
+        let sealed = votedFilter == .decided ? [] : split.sealed
+        let decided = votedFilter == .sealed ? [] : split.decided
+        if sealed.isEmpty, decided.isEmpty {
+            EmptyState { Text(app.t(votedFilter == .all ? "profile.noVotesYet" : "myPolls.empty")) }
+        }
+        if !sealed.isEmpty {
+            ProfileSection(label: app.t("profile.sectionSealed"), count: sealed.count, onlyYou: true)
+            ForEach(sealed) { sealedRow($0) }
+        }
+        if !decided.isEmpty {
+            ProfileSection(label: app.t("profile.filterDecided"), count: decided.count)
+            ForEach(decided) { decidedRow($0) }
+        }
+    }
+
+    /// Drafts live on this device only, so only their author sees them: a quieter, dashed row.
+    private func draftRow(_ draft: PollDraft) -> some View {
+        let title = draft.form.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = title.isEmpty ? app.t("myPolls.untitledDraft") : title
+        return HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name).font(.vm(17, relativeTo: .headline))
+                    .foregroundStyle(title.isEmpty ? Tokens.mutedForeground : Tokens.foreground).lineLimit(1)
+                Text(draft.meta(t: app.t, dates: app.dates)).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("myPolls.draftContinue")) { app.openCreator(draft: draft) }.buttonStyle(.vm(.outline, size: .sm))
+            Menu {
+                Button(app.t("myPolls.actionDelete"), systemImage: "trash", role: .destructive) { drafts = app.drafts.delete(draft.id) }
+            } label: {
+                Image(systemName: "ellipsis").font(.system(size: 16))
+                    .foregroundStyle(Tokens.mutedForeground)
+                    .frame(width: Metrics.minTarget, height: Metrics.minTarget)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(app.t("myPolls.draftMore", ["title": name]))
+        }
+        .draftCard()
+    }
+
+    /// An owner's poll: "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted" once ended.
+    private func askedRow(_ poll: Poll) -> some View {
+        let status = poll.status()
+        let unread = status == .ended && poll.unread == true
+        var parts: [Text] = []
+        if status == .ended {
+            if poll.isCancelled {
+                parts = [Text(app.t("notifications.cancelled"))]
+            } else {
+                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
+            }
         } else {
-            LazyVStack(spacing: 8) {
-                ForEach(myPolls) { poll in
-                    PollRow(poll: poll) {
-                        Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)]))
-                    } aside: {
-                        StatusChip(poll: poll)
-                    }
-                }
-            }
+            let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
+            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
+            if let when { parts.append(Text(when)) }
+        }
+        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
+        return PollRow(poll: poll, unread: unread) {
+            joined(parts)
+        } aside: {
+            StatusChip(poll: poll, timeElsewhere: true)
         }
     }
 
-    private func tint(_ outcome: BallotOutcome) -> Color {
-        switch outcome {
-        case .pending: Tokens.statusScheduled
-        case .won: Tokens.statusOpen
-        case .tied: Tokens.statusClosing
-        case .lost, .unknown: Tokens.secondary
+    /// A Sealed Ballot: the pick and when the results open.
+    private func sealedRow(_ poll: Poll) -> some View {
+        PollRow(poll: poll, sealed: true) {
+            joined([
+                Text(app.t("myPolls.youChose")) + Text(" ") + Text(AccountInsights.choice(of: poll)).fontWeight(.medium),
+                poll.endTime.map { Text(app.t("profile.resultsAt", ["date": app.dates.pollMoment($0)])) },
+            ].compactMap { $0 })
         }
     }
 
-    /// Every Poll the user created or holds a Ballot in, so insights cover them all.
+    /// A decided Ballot: the pick, how it fared, and the unread dot until the results are opened.
+    private func decidedRow(_ poll: Poll) -> some View {
+        let unread = poll.unread == true
+        let outcome = poll.isCancelled ? nil : poll.myOptionId.map { AccountInsights.outcome(of: poll, optionId: $0) }
+        return PollRow(poll: poll, unread: unread) {
+            joined([
+                Text(app.t("myPolls.youChose")) + Text(" ") + strong(AccountInsights.choice(of: poll)),
+                Text(poll.isCancelled ? app.t("notifications.cancelled") : votedCount(poll)),
+                unread ? Text(app.t("profile.new")).foregroundStyle(Tokens.alert) : nil,
+            ].compactMap { $0 })
+        } aside: {
+            if let outcome, outcome == .won || outcome == .tied || outcome == .lost { OutcomeChip(outcome: outcome) }
+        }
+    }
+
+    /// "**Yes** won" or "Tie between **A** and **B**"; nil when there is no winner to name.
+    private func decided(_ poll: Poll) -> Text? {
+        switch ProfileLists.endedSummary(poll) {
+        case let .won(winner):
+            return Text.rich(app.t("profile.wonBy"), ["option": strong(winner)])
+        case let .tie(winners):
+            // The locale's list ("A, B and C"), formatted around placeholders so each name stays bold
+            let keys = winners.indices.map { "{\($0)}" }
+            let list = keys.formatted(.list(type: .and).locale(Locale(identifier: app.language.localeIdentifier)))
+            let names = Dictionary(uniqueKeysWithValues: winners.enumerated().map { ("\($0.offset)", strong($0.element)) })
+            return Text.rich(app.t("profile.tieBetween"), ["options": Text.rich(list, names)])
+        case .none:
+            return nil
+        }
+    }
+
+    private func votedCount(_ poll: Poll) -> String {
+        app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
+    }
+
+    private func strong(_ text: String) -> Text {
+        Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
+    }
+
+    private func joined(_ parts: [Text]) -> Text {
+        parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
+    }
+
+    /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
     private func load() async {
-        async let open = try? app.service.allMyPolls(status: .open)
-        async let ended = try? app.service.allMyPolls(status: .ended)
-        polls = (await open ?? []) + (await ended ?? [])
+        do {
+            async let open = app.service.allMyPolls(status: .open)
+            async let ended = app.service.allMyPolls(status: .ended)
+            let (openPolls, endedPolls) = try await (open, ended)
+            polls = openPolls + endedPolls
+            loadFailed = false
+        } catch {
+            loadFailed = polls == nil
+        }
         await app.refreshAccount()
     }
 }
 
-/// Which kinds of notification show in the feed and the unread count.
-private struct NotificationPreferencesSection: View {
+/// A tab's count, in mono beside its label.
+private struct TabCount: View {
     @Environment(AppModel.self) private var app
-    private enum Switch: CaseIterable { case resultsIn, invitations, comments, mentions, likes, closingSoon }
-
-    @State private var preferences: NotificationPreferences?
-    @State private var failed = false
-    @State private var inFlight = 0
+    let count: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                SectionTitle(text: app.t("ios.notifPrefsTitle"))
-                Text(app.t("ios.notifPrefsBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            if let preferences {
-                VStack(spacing: 0) {
-                    ForEach(Switch.allCases, id: \.self) { item in
-                        Toggle(label(item), isOn: Binding(
-                            get: { value(item, preferences) },
-                            set: { newValue in Task { await set(item, newValue) } }
-                        ))
-                        .font(.vm(14))
-                        .tint(Tokens.primary)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 52)
-                        .overlay(alignment: .bottom) {
-                            if item != Switch.allCases.last { Rectangle().fill(Tokens.border).frame(height: 1) }
-                        }
-                    }
-                }
-                .card(padding: nil)
-            } else if failed {
-                LoadFailed(message: app.t("ios.notifPrefFailed")) { await load() }
-            } else {
-                Skeleton(height: 312, radius: Radius.xl)
-            }
-        }
-        .task(id: app.sessionGeneration) { await load() }
-    }
-
-    private func label(_ item: Switch) -> String {
-        switch item {
-        case .resultsIn: app.t("ios.notifPrefResults")
-        case .invitations: app.t("ios.notifPrefInvitations")
-        case .comments: app.t("ios.notifPrefComments")
-        case .mentions: app.t("ios.notifPrefMentions")
-        case .likes: app.t("ios.notifPrefLikes")
-        case .closingSoon: app.t("ios.notifPrefClosingSoon")
-        }
-    }
-
-    private func value(_ item: Switch, _ preferences: NotificationPreferences) -> Bool {
-        switch item {
-        case .resultsIn: preferences.resultsIn
-        case .invitations: preferences.invitations
-        case .comments: preferences.comments
-        case .mentions: preferences.mentions
-        case .likes: preferences.likes
-        case .closingSoon: preferences.closingSoon
-        }
-    }
-
-    private func load() async {
-        failed = false
-        do {
-            preferences = try await app.service.notificationPreferences()
-        } catch {
-            failed = preferences == nil
-        }
-    }
-
-    /// Shows the new value at once; the API's answer, or the old value after a failure, replaces it.
-    private func set(_ item: Switch, _ newValue: Bool) async {
-        guard let previous = preferences else { return }
-        let before = value(item, previous)
-        setValue(item, newValue)
-        inFlight += 1
-        defer { inFlight -= 1 }
-        do {
-            let saved = try await app.service.updateNotificationPreferences(
-                resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
-                comments: item == .comments ? newValue : nil, mentions: item == .mentions ? newValue : nil, likes: item == .likes ? newValue : nil,
-                closingSoon: item == .closingSoon ? newValue : nil
-            )
-            // Another toggle still in flight: its answer carries the final state.
-            if inFlight == 1 { preferences = saved }
-            await app.refreshUnread()
-        } catch {
-            setValue(item, before)
-            app.showToast(app.t.message(for: error, fallback: "ios.notifPrefFailed"), isError: true)
-        }
-    }
-
-    private func setValue(_ item: Switch, _ newValue: Bool) {
-        switch item {
-        case .resultsIn: preferences?.resultsIn = newValue
-        case .invitations: preferences?.invitations = newValue
-        case .comments: preferences?.comments = newValue
-        case .mentions: preferences?.mentions = newValue
-        case .likes: preferences?.likes = newValue
-        case .closingSoon: preferences?.closingSoon = newValue
-        }
+        Text(app.t.number(count)).font(.vmMono(13)).foregroundStyle(Tokens.mutedForeground)
     }
 }
 
-/// Visibility switches, sign out, delete account.
-private struct AccountSettings: View {
+/// A small heading over a run of rows: "Open now · 2", with the lock on what only the owner sees.
+private struct ProfileSection: View {
     @Environment(AppModel.self) private var app
-    let profile: MyProfile
-    @State private var confirmingSignOut = false
-    /// The last Ballot default the server confirmed; quick toggles can answer out of order.
-    @State private var savedAnonymousDefault: Bool
-
-    init(profile: MyProfile) {
-        self.profile = profile
-        _savedAnonymousDefault = State(initialValue: profile.anonymousBallotByDefault)
-    }
-
-    /// Fields whose labels are iOS-only strings.
-    private let extraFields: Set = ["firstName", "lastName"]
-    /// Profile fields other people can see, in the order shown.
-    private let fields = ["displayName", "firstName", "lastName", "bio", "location", "points", "membershipLevel"]
+    let label: String
+    let count: Int
+    var note: String?
+    var onlyYou = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 32) {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    SectionTitle(text: app.t("account.privacyTitle"))
-                    Text(app.t("account.privacyBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-                VStack(spacing: 0) {
-                    ForEach(fields, id: \.self) { field in
-                        Toggle(app.t(extraFields.contains(field) ? "ios.field.\(field)" : "account.field.\(field)"), isOn: Binding(
-                            get: { profile.visibilitySettings[field] == true },
-                            set: { value in Task { await toggle(field, value) } }
-                        ))
-                        .font(.vm(14))
-                        .tint(Tokens.primary)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 52)
-                        .overlay(alignment: .bottom) {
-                            if field != fields.last { Rectangle().fill(Tokens.border).frame(height: 1) }
-                        }
-                    }
-                }
-                .card(padding: nil)
-            }
-
-            Toggle(isOn: Binding(
-                get: { profile.anonymousBallotByDefault },
-                set: { value in Task { await toggleAnonymousDefault(value) } }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("account.anonymousDefault")).font(.vm(15, .medium))
-                    Text(app.t("account.anonymousDefaultBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            .tint(Tokens.primary)
-            .card()
-
-            PasskeysSection(service: app.service)
-
-            DevicesSection(service: app.service)
-
-            NotificationPreferencesSection()
-
-            if !app.following.isEmpty { followingSection }
-            if !app.blocked.isEmpty { blockedSection }
-
-            AppSettingsSection()
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("account.signOutTitle")).font(.vm(15, .medium))
-                    Text(profile.email ?? profile.username).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Button(app.t("account.signOut")) { confirmingSignOut = true }.buttonStyle(.vm(.outline))
-            }
-            .card()
-            .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
-                Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
-            }
-
-            FeedbackSection()
-
-            ExportDataSection()
-
-            DeleteAccountSection(username: profile.username)
+        HStack(spacing: 6) {
+            if onlyYou { OnlyYouMarker() }
+            Text([label, app.t.number(count), note].compactMap { $0 }.joined(separator: " · "))
         }
-    }
-
-    private var followingSection: some View {
-        peopleSection(title: app.t("profile.following"), actionTitle: app.t("ios.unfollowShort"), people: app.following.map { user in
-            Person(id: user.id, username: user.username, avatarUrl: user.avatarUrl, link: true, action: { app.unfollow(user.id) })
-        })
-    }
-
-    private var blockedSection: some View {
-        peopleSection(title: app.t("ios.blockedTitle"), actionTitle: app.t("ios.unblock"), people: app.blocked.map { username in
-            Person(id: username, username: username, avatarUrl: nil, link: false, action: { app.unblock(username) })
-        })
-    }
-
-    private struct Person: Identifiable {
-        let id: String
-        let username: String
-        let avatarUrl: String?
-        let link: Bool
-        let action: () -> Void
-    }
-
-    /// A card of people, each with one outline button (unfollow, unblock).
-    private func peopleSection(title: String, actionTitle: String, people: [Person]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(text: title)
-            VStack(spacing: 0) {
-                ForEach(people) { person in
-                    HStack {
-                        UserChip(username: person.username, avatarUrl: person.avatarUrl, avatarSize: 28, link: person.link).font(.vm(15))
-                        Spacer()
-                        Button(actionTitle, action: person.action).buttonStyle(.vm(.outline, size: .sm))
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 56)
-                    .overlay(alignment: .bottom) {
-                        if person.id != people.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
-                    }
-                }
-            }
-            .card(padding: nil)
-        }
-    }
-
-    private func toggleAnonymousDefault(_ value: Bool) async {
-        app.updateMe { $0.anonymousBallotByDefault = value }
-        do {
-            try await app.service.updateProfile(anonymousBallotByDefault: value)
-            savedAnonymousDefault = value
-        } catch {
-            app.updateMe { $0.anonymousBallotByDefault = savedAnonymousDefault }
-            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
-        }
-    }
-
-    private func toggle(_ field: String, _ value: Bool) async {
-        let previous = profile.visibilitySettings
-        app.updateMe { $0.visibilitySettings[field] = value }
-        do {
-            let settings = try await app.service.updateVisibility([field: value])
-            app.updateMe { $0.visibilitySettings = settings }
-        } catch {
-            app.updateMe { $0.visibilitySettings = previous }
-            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
-        }
-    }
-}
-
-/// Passkeys on the account (the web's `PasskeysPanel`): the list, each removable after
-/// confirmation, and Add passkey for this device.
-private struct PasskeysSection: View {
-    @Environment(AppModel.self) private var app
-    @State private var model: PasskeysModel
-    @State private var confirming: Passkey?
-
-    init(service: VomattService) {
-        _model = State(initialValue: PasskeysModel(service: service))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("passkey.title")).font(.vm(15, .medium))
-                    Text(app.t("passkey.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                LoadingButton(style: .vm(.outline), action: add) { Text(app.t("passkey.add")) }
-            }
-            if model.loadFailed {
-                HStack(spacing: 12) {
-                    Text(app.t("passkey.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
-                }
-            } else if let passkeys = model.passkeys {
-                if passkeys.isEmpty {
-                    Text(app.t("passkey.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-                }
-                ForEach(passkeys) { passkey in row(passkey) }
-            } else {
-                ProgressView().frame(maxWidth: .infinity)
-            }
-        }
-        .card()
-        .task { await model.load() }
-        .alert(
-            app.t("passkey.deleteConfirmTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { passkey in
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("passkey.delete"), role: .destructive) { Task { await delete(passkey) } }
-        } message: { passkey in
-            Text(app.t("passkey.deleteConfirmBody", ["name": name(passkey)]))
-        }
-    }
-
-    private func row(_ passkey: Passkey) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name(passkey)).font(.vm(14, .medium)).lineLimit(1)
-                Text(dates(passkey)).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Button(app.t("passkey.delete")) { confirming = passkey }
-                .buttonStyle(.vm(.outline, size: .sm))
-                .accessibilityLabel(app.t("passkey.deleteLabel", ["name": name(passkey)]))
-        }
-        .padding(.top, 12)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
-    }
-
-    private func name(_ passkey: Passkey) -> String { passkey.name ?? app.t("passkey.unnamed") }
-
-    private func dates(_ passkey: Passkey) -> String {
-        let created = app.t("passkey.created", ["date": app.dates.pollDate(passkey.createdAt)])
-        let used = passkey.lastUsedAt.map { app.t("passkey.lastUsed", ["date": app.dates.pollDate($0)]) } ?? app.t("passkey.neverUsed")
-        return "\(created) · \(used)"
-    }
-
-    private func add() async {
-        if await model.add(authenticate: PasskeyAuthenticator.register) {
-            app.showToast(app.t("passkey.added"))
-        } else if let failure = model.failure {
-            showError(failure)
-        }
-    }
-
-    private func delete(_ passkey: Passkey) async {
-        if await model.delete(passkey) {
-            app.showToast(app.t("passkey.deleted"))
-        } else if let failure = model.failure {
-            showError(failure)
-        }
-    }
-
-    private func showError(_ failure: PasskeyFailure) {
-        app.showToast(failure.error.map { app.t.message(for: $0, fallback: failure.key) } ?? app.t(failure.key), isError: true)
-    }
-}
-
-/// Devices signed in to the account: each other one can be signed out after confirmation, or all
-/// at once. This device signs out with Sign out below.
-private struct DevicesSection: View {
-    @Environment(AppModel.self) private var app
-    @State private var model: DevicesModel
-    @State private var confirming: DeviceSession?
-    @State private var confirmingOthers = false
-
-    init(service: VomattService) {
-        _model = State(initialValue: DevicesModel(service: service))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("devices.title")).font(.vm(15, .medium))
-                Text(app.t("devices.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            if model.loadFailed {
-                HStack(spacing: 12) {
-                    Text(app.t("devices.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
-                }
-            } else if let devices = model.devices {
-                ForEach(devices) { device in row(device) }
-                if model.hasOthers {
-                    Button(app.t("devices.signOutOthers")) { confirmingOthers = true }
-                        .buttonStyle(.vm(.outline, fullWidth: true))
-                }
-            } else {
-                ProgressView().frame(maxWidth: .infinity)
-            }
-        }
-        .card()
-        .task { await model.load() }
-        .alert(
-            app.t("devices.signOutTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { device in
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("devices.signOut"), role: .destructive) { Task { await signOut(device) } }
-        } message: { device in
-            Text(app.t("devices.signOutBody", ["name": name(device)]))
-        }
-        .alert(app.t("devices.signOutOthersTitle"), isPresented: $confirmingOthers) {
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("devices.signOut"), role: .destructive) { Task { await signOutOthers() } }
-        } message: {
-            Text(app.t("devices.signOutOthersBody"))
-        }
-    }
-
-    private func row(_ device: DeviceSession) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(name(device)).font(.vm(14, .medium)).lineLimit(1)
-                if device.isCurrent || device.isAdminScope {
-                    HStack(spacing: 6) {
-                        if device.isCurrent { Chip(text: app.t("devices.current"), bordered: true) }
-                        if device.isAdminScope { Chip(text: app.t("devices.admin")) }
-                    }
-                }
-                if let dates = dates(device) {
-                    Text(dates).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if !device.isCurrent {
-                Button(app.t("devices.signOut")) { confirming = device }
-                    .buttonStyle(.vm(.outline, size: .sm))
-                    .accessibilityLabel(app.t("devices.signOutLabel", ["name": name(device)]))
-            }
-        }
-        .padding(.top, 12)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
-    }
-
-    private func name(_ device: DeviceSession) -> String { device.deviceName ?? app.t("devices.unknown") }
-
-    private func dates(_ device: DeviceSession) -> String? {
-        let parts = [
-            device.createdAt.map { app.t("devices.signedInOn", ["date": app.dates.pollDate($0)]) },
-            device.lastSeenAt.map { app.t("devices.lastActive", ["date": app.dates.pollDate($0)]) },
-        ].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    private func signOut(_ device: DeviceSession) async {
-        if await model.signOut(device) {
-            app.showToast(app.t("devices.signedOut"))
-        } else {
-            showError()
-        }
-    }
-
-    private func signOutOthers() async {
-        if await model.signOutOthers() {
-            app.showToast(app.t("devices.othersSignedOut"))
-        } else {
-            showError()
-        }
-    }
-
-    private func showError() {
-        guard let error = model.failure else { return }
-        app.showToast(app.t.message(for: error, fallback: "devices.signOutFailed"), isError: true)
-    }
-}
-
-/// Legal links and the version; shown signed in or out.
-struct AppSettingsSection: View {
-    @Environment(AppModel.self) private var app
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        let mail = app.config.supportEmail.isEmpty ? nil : URL(string: "mailto:\(app.config.supportEmail)")
-        VStack(spacing: 0) {
-            link(app.t("ios.terms"), url: app.config.siteURL.appending(path: "terms-of-service"))
-            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy-policy"), last: mail == nil)
-            if let mail {
-                link(app.t("ios.contact"), url: mail, last: true)
-            }
-        }
-        .card(padding: nil)
-        .overlay(alignment: .bottomTrailing) {
-            Text(version).font(.vmMono(11)).foregroundStyle(Tokens.mutedForeground).offset(y: 20)
-        }
-        .padding(.bottom, 12)
-    }
-
-    private func link(_ title: String, url: URL, last: Bool = false) -> some View {
-        Button { openURL(url) } label: {
-            HStack {
-                Text(title).font(.vm(14)).foregroundStyle(Tokens.foreground)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.system(size: 12)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 52)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .overlay(alignment: .bottom) { if !last { Rectangle().fill(Tokens.border).frame(height: 1) } }
-    }
-
-    private var version: String {
-        let info = Bundle.main.infoDictionary
-        return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
-    }
-}
-
-/// Opens the feedback sheet.
-private struct FeedbackSection: View {
-    @Environment(AppModel.self) private var app
-    @State private var isPresented = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("ios.feedbackTitle")).font(.vm(15, .medium))
-                Text(app.t("ios.feedbackBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline))
-        }
-        .card()
-        .sheet(isPresented: $isPresented) { FeedbackSheet() }
-    }
-}
-
-/// A free-text message to the team (max 2000 characters).
-private struct FeedbackSheet: View {
-    @Environment(AppModel.self) private var app
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    @State private var error: String?
-
-    private static let maxLength = 2000
-    private var content: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    VMTextEditor(placeholder: app.t("ios.feedbackPlaceholder"), text: $text, minHeight: 160)
-                    if let error { Text(error).font(.vm(14)).foregroundStyle(Tokens.destructive) }
-                }
-                .padding(Metrics.gutter)
-            }
-            .canvas()
-            .navigationTitle(app.t("ios.feedbackTitle"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    LoadingButton(style: .vm(.link), action: send) { Text(app.t("ios.feedbackSend")).fontWeight(.semibold) }
-                        .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    private func send() async {
-        error = nil
-        do {
-            try await app.service.sendFeedback(content)
-            app.showToast(app.t("ios.feedbackSent"))
-            dismiss()
-        } catch {
-            let limited = (error as? APIError)?.isRateLimited == true
-            self.error = app.t.message(for: error, fallback: limited ? "ios.feedbackLimited" : "ios.feedbackFailed")
-        }
-    }
-}
-
-/// Writes the export to a temporary file, then offers it through the share sheet.
-private struct ExportDataSection: View {
-    @Environment(AppModel.self) private var app
-    @State private var file: URL?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("ios.exportTitle")).font(.vm(15, .medium))
-                Text(app.t("ios.exportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let file {
-                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline))
-            } else {
-                LoadingButton(style: .vm(.outline), action: export) { Text(app.t("ios.exportCta")) }
-            }
-        }
-        .card()
-        .onDisappear(perform: discard)
-    }
-
-    private func export() async {
-        do {
-            let data = try await app.service.exportMyData()
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-export.json")
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
-            file = url
-        } catch {
-            let limited = (error as? APIError)?.isRateLimited == true
-            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "ios.exportFailed"), isError: true)
-        }
-    }
-
-    /// The export holds everything about the account, so it doesn't outlive the screen.
-    private func discard() {
-        guard let file else { return }
-        try? FileManager.default.removeItem(at: file)
-        self.file = nil
-    }
-}
-
-/// Typing the username confirms a permanent delete (App Store guideline 5.1.1(v)).
-private struct DeleteAccountSection: View {
-    @Environment(AppModel.self) private var app
-    let username: String
-    @State private var isPresented = false
-    @State private var confirmation = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("account.deleteTitle")).font(.vm(15, .medium)).foregroundStyle(Tokens.destructive)
-                Text(app.t("account.deleteBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            Button(app.t("account.deleteCta")) { isPresented = true }.buttonStyle(.vm(.destructive))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card(border: Tokens.destructive.opacity(0.3))
-        .alert(app.t("account.deleteConfirmTitle"), isPresented: $isPresented) {
-            TextField(username, text: $confirmation)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button(app.t("common.cancel"), role: .cancel) { confirmation = "" }
-            Button(app.t("account.deleteCta"), role: .destructive) { Task { await delete() } }
-                .disabled(confirmation != username)
-        } message: {
-            Text(app.t("account.deleteConfirmBody", ["username": username]))
-        }
-    }
-
-    private func delete() async {
-        guard confirmation == username else { return }
-        confirmation = ""
-        do {
-            try await app.service.deleteMyAccount()
-            app.selectedTab = .home
-        } catch {
-            app.showToast(app.t.message(for: error, fallback: "common.error"), isError: true)
-        }
+        .font(.vm(12, .medium))
+        .foregroundStyle(Tokens.mutedForeground)
+        .padding(.top, 10)
+        .padding(.horizontal, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 

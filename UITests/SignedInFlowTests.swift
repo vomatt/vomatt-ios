@@ -26,7 +26,10 @@ final class SignedInFlowTests: XCTestCase {
     }
 
     private func code(for email: String) throws -> String {
-        let path = "\(ProcessInfo.processInfo.environment["E2E_OTP_DIR"]!)/\(email).txt"
+        let folder = ProcessInfo.processInfo.environment["E2E_OTP_DIR"]!
+        // scripts/e2e-otp.py answers each `.want` with the code
+        FileManager.default.createFile(atPath: "\(folder)/\(email).want", contents: nil)
+        let path = "\(folder)/\(email).txt"
         for _ in 0..<40 {
             if let code = try? String(contentsOfFile: path, encoding: .utf8), code.count == 6 { return code }
             Thread.sleep(forTimeInterval: 0.5)
@@ -86,15 +89,11 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Raohe has the best pepper buns."].waitForExistence(timeout: 10))
         snapshot("e2e-5-commented")
 
-        // My Polls lists it as Active
-        app.buttons["My Polls"].tap()
-        XCTAssertTrue(app.staticTexts[question].waitForExistence(timeout: 10))
-        snapshot("e2e-6-my-polls")
-
-        // Account page and sign out
+        // Profile, whose Asked tab lists it as Open now, then sign out from Settings
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
-        snapshot("e2e-7-account")
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[question].waitForExistence(timeout: 10))
+        snapshot("e2e-6-account")
         app.buttons["Settings"].tap()
         app.swipeUp()
         app.buttons["Log out"].firstMatch.tap()
@@ -148,14 +147,14 @@ final class SignedInFlowTests: XCTestCase {
         app.typeText(try code(for: email))
         XCTAssertTrue(app.staticTexts["What should we call you?"].waitForExistence(timeout: 10))
         app.buttons["Skip for now"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
 
         // Past the 60s refresh leeway of a 120s token
         Thread.sleep(forTimeInterval: 70)
-        app.buttons["My Polls"].tap()
-        XCTAssertTrue(app.staticTexts["My Polls"].waitForExistence(timeout: 10))
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.staticTexts["Invite lists"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["Log in or sign up for Vomatt"].exists, "the session should have been refreshed, not ended")
         app.buttons["Profile"].tap()
-        XCTAssertTrue(app.staticTexts["Votes cast"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
     }
 }

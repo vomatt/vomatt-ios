@@ -9,7 +9,8 @@
 #   scripts/sync.sh all                                   everything above, the contract from the web repo
 #   scripts/sync.sh check                                 fails when anything differs from the web repo
 #
-# WEB_DIR points at the vomatt-web checkout (default: ../vomatt-web).
+# WEB_DIR points at the vomatt-web checkout (default: ../vomatt-web). Files are read from its commit
+# WEB_REF (default: main), not its working tree, so work in progress there never reaches the app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -19,9 +20,21 @@ LOCALES="$ROOT/App/Resources/Locales"
 COLORS="$ROOT/App/Resources/Colors.xcassets"
 TOKENS_SWIFT="$ROOT/App/DesignSystem/Tokens.generated.swift"
 AVATARS="$ROOT/App/Resources/Avatars.xcassets"
+WEB_REF="${WEB_REF:-main}"
 
 require_web() {
-	[[ -d "$WEB_DIR/src" ]] || { echo "sync.sh: vomatt-web not found at $WEB_DIR (set WEB_DIR)" >&2; exit 1; }
+	git -C "$WEB_DIR" rev-parse --verify --quiet "$WEB_REF^{commit}" >/dev/null \
+		|| { echo "sync.sh: no commit $WEB_REF in vomatt-web at $WEB_DIR (set WEB_DIR, WEB_REF)" >&2; exit 1; }
+}
+
+# Prints a web file as of WEB_REF.
+web_file() {
+	git -C "$WEB_DIR" show "$WEB_REF:$1"
+}
+
+# The avatar names (without .svg) as of WEB_REF.
+web_avatars() {
+	git -C "$WEB_DIR" ls-tree --name-only "$WEB_REF" public/avatars/ | grep '\.svg$' | sed 's|.*/||; s/\.svg$//' | sort
 }
 
 sync_api() {
@@ -35,9 +48,9 @@ sync_api() {
 			source="${2:?--file needs a path}"
 		else
 			require_web
-			source="$WEB_DIR/api-docs.json"
+			source="$WEB_DIR/api-docs.json at $WEB_REF"
 		fi
-		cp "$source" "$tmp"
+		if [[ "${1:-}" == "--file" ]]; then cp "$2" "$tmp"; else web_file api-docs.json > "$tmp"; fi
 	fi
 	# Stable formatting keeps the git diff readable
 	python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$tmp"
@@ -49,14 +62,18 @@ sync_api() {
 
 sync_locales() {
 	require_web
-	cp "$WEB_DIR/src/locales/en.json" "$LOCALES/en.json"
-	cp "$WEB_DIR/src/locales/zh.json" "$LOCALES/zh.json"
-	echo "Copied en.json and zh.json"
+	web_file src/locales/en.json > "$LOCALES/en.json"
+	web_file src/locales/zh.json > "$LOCALES/zh.json"
+	echo "Copied en.json and zh.json from $WEB_REF"
 }
 
 sync_tokens() {
 	require_web
-	python3 "$ROOT/scripts/tokens.py" "$WEB_DIR/src/styles/global.css" "$COLORS" "$TOKENS_SWIFT"
+	local css
+	css="$(mktemp)"
+	web_file src/styles/global.css > "$css"
+	python3 "$ROOT/scripts/tokens.py" "$css" "$COLORS" "$TOKENS_SWIFT"
+	rm "$css"
 }
 
 sync_avatars() {
@@ -65,12 +82,10 @@ sync_avatars() {
 	mkdir -p "$AVATARS"
 	echo '{"info":{"author":"xcode","version":1}}' > "$AVATARS/Contents.json"
 	local count=0
-	for svg in "$WEB_DIR"/public/avatars/*.svg; do
-		local kind set
-		kind="$(basename "$svg" .svg)"
-		set="$AVATARS/bot-$kind.imageset"
+	for kind in $(web_avatars); do
+		local set="$AVATARS/bot-$kind.imageset"
 		mkdir -p "$set"
-		cp "$svg" "$set/$kind.svg"
+		web_file "public/avatars/$kind.svg" > "$set/$kind.svg"
 		python3 "$ROOT/scripts/svg_oklch.py" "$set/$kind.svg"
 		cat > "$set/Contents.json" <<-JSON
 		{
@@ -87,16 +102,15 @@ sync_avatars() {
 check() {
 	require_web
 	local status=0
-	cmp -s "$WEB_DIR/src/locales/en.json" "$LOCALES/en.json" || { echo "locales/en.json differs from the web"; status=1; }
-	cmp -s "$WEB_DIR/src/locales/zh.json" "$LOCALES/zh.json" || { echo "locales/zh.json differs from the web"; status=1; }
+	cmp -s <(web_file src/locales/en.json) "$LOCALES/en.json" || { echo "locales/en.json differs from the web"; status=1; }
+	cmp -s <(web_file src/locales/zh.json) "$LOCALES/zh.json" || { echo "locales/zh.json differs from the web"; status=1; }
 	local diff
-	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$WEB_DIR/api-docs.json")"
+	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" <(web_file api-docs.json))"
 	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from the web:"; echo "$diff"; status=1; }
-	local web_avatars ios_avatars
-	web_avatars="$(cd "$WEB_DIR/public/avatars" && ls *.svg | sed 's/\.svg$//' | sort)"
+	local ios_avatars
 	ios_avatars="$(ls "$AVATARS" | grep imageset | sed 's/^bot-//; s/\.imageset$//' | sort)"
-	[[ "$web_avatars" == "$ios_avatars" ]] || { echo "avatars differ from the web"; status=1; }
-	[[ $status -eq 0 ]] && echo "In sync with $WEB_DIR"
+	[[ "$(web_avatars)" == "$ios_avatars" ]] || { echo "avatars differ from the web"; status=1; }
+	[[ $status -eq 0 ]] && echo "In sync with vomatt-web $WEB_REF ($(git -C "$WEB_DIR" rev-parse --short "$WEB_REF"))"
 	return $status
 }
 

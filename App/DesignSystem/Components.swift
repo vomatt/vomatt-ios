@@ -27,11 +27,14 @@ struct StatusChip: View {
     let status: PollStatus
     let startTime: Date
     let endTime: Date?
+    /// The status word alone ("Open"), for a row whose meta line already says when (`time="elsewhere"`).
+    var timeElsewhere = false
 
-    init(poll: Poll, now: Date = .now) {
+    init(poll: Poll, now: Date = .now, timeElsewhere: Bool = false) {
         self.status = poll.status(at: now)
         self.startTime = poll.startTime
         self.endTime = poll.endTime
+        self.timeElsewhere = timeElsewhere
     }
 
     init(status: PollStatus, startTime: Date, endTime: Date?) {
@@ -56,7 +59,61 @@ struct StatusChip: View {
     }
 
     private var label: String? {
-        PollTiming(startTime: startTime, endTime: endTime, status: status, t: app.t, dates: app.dates).chip
+        if timeElsewhere { return PollTiming.statusWord(status, app.t) }
+        return PollTiming(startTime: startTime, endTime: endTime, status: status, t: app.t, dates: app.dates).chip
+    }
+}
+
+/// How the viewer's Ballot fared on an Ended Poll (`OutcomeChip`); the words carry it, never the color alone.
+/// A pick that won is the viewer's own: the Volt tint with an ink line, as on a cast Ballot.
+struct OutcomeChip: View {
+    @Environment(AppModel.self) private var app
+    let outcome: BallotOutcome
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if outcome == .won { Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).accessibilityHidden(true) }
+            if outcome == .tied { Text(verbatim: "=").accessibilityHidden(true) }
+            Text(app.t("myPolls.outcome.\(outcome.rawValue)").uppercased())
+        }
+        .font(.vm(11, .semibold, relativeTo: .caption2))
+        .tracking(0.55)
+        .lineLimit(1)
+        .foregroundStyle(Tokens.foreground)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
+        .background(outcome == .won ? Tokens.highlightTint : Tokens.secondary, in: Capsule())
+        .overlay(Capsule().strokeBorder(Tokens.foreground.opacity(outcome == .won ? 1 : 0), lineWidth: 1))
+        .fixedSize()
+    }
+}
+
+/// A row of toggle pills where one is current, a list filter (`FilterPills`); the current one is ink.
+struct FilterPills<Value: Hashable>: View {
+    /// Names the group for VoiceOver.
+    let label: String
+    @Binding var selection: Value
+    let options: [(value: Value, label: String, count: Int?)]
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(options, id: \.value) { option in
+                let isActive = option.value == selection
+                Button { selection = option.value } label: {
+                    HStack(spacing: 6) {
+                        Text(option.label)
+                        if let count = option.count {
+                            Text("\(count)").font(.vmMono(13, medium: true))
+                                .foregroundStyle(isActive ? Tokens.primaryForeground : Tokens.mutedForeground)
+                        }
+                    }
+                }
+                .buttonStyle(.vm(isActive ? .default : .outline, size: .sm, pill: true))
+                .accessibilityAddTraits(isActive ? .isSelected : [])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -274,10 +331,11 @@ struct UserChip: View {
     }
 }
 
-/// Underlined tabs (`TabsList variant="line"`).
-struct LineTabs<Value: Hashable>: View {
+/// Underlined tabs (`TabsList variant="line"`); `accessory` follows a tab's label, e.g. its count.
+struct LineTabs<Value: Hashable, Accessory: View>: View {
     let items: [(value: Value, label: String)]
     @Binding var selection: Value
+    @ViewBuilder var accessory: (Value) -> Accessory
 
     var body: some View {
         HStack(spacing: 0) {
@@ -285,15 +343,18 @@ struct LineTabs<Value: Hashable>: View {
                 let isActive = item.value == selection
                 // Instant: tab switches are too frequent to animate
                 Button { selection = item.value } label: {
-                    Text(item.label)
-                        .font(.vm(15, .medium))
-                        .foregroundStyle(isActive ? Tokens.foreground : Tokens.foreground.opacity(0.6))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
-                        .overlay(alignment: .bottom) {
-                            if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
-                        }
+                    HStack(spacing: 6) {
+                        Text(item.label)
+                            .font(.vm(15, .medium))
+                            .foregroundStyle(isActive ? Tokens.foreground : Tokens.foreground.opacity(0.6))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        accessory(item.value)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: Metrics.minTarget)
+                    .overlay(alignment: .bottom) {
+                        if isActive { Rectangle().fill(Tokens.foreground).frame(height: 2) }
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)
@@ -301,6 +362,12 @@ struct LineTabs<Value: Hashable>: View {
         }
         // Behind the tabs, so the active underline covers it
         .background(alignment: .bottom) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+}
+
+extension LineTabs where Accessory == EmptyView {
+    init(items: [(value: Value, label: String)], selection: Binding<Value>) {
+        self.init(items: items, selection: selection, accessory: { _ in EmptyView() })
     }
 }
 

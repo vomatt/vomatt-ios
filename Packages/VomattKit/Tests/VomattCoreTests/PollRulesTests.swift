@@ -124,24 +124,30 @@ struct ResultsTests {
     }
 }
 
+// Cases ported from vomatt-web's src/__tests__/features/account/insights.test.ts
 @Suite("Account insights")
 struct InsightsTests {
-    @Test func outcomesAndRates() {
-        let ended: (String) -> Poll = { mine in
-            poll(end: hours(-1), options: [PollOption(id: "a", text: "A", votes: 3), PollOption(id: "b", text: "B", votes: 1)], myOptionId: mine, participants: 4)
-        }
-        let open = poll(myOptionId: "a", participants: 2)
-        let history = AccountInsights.history([ended("a"), ended("b"), open], at: now)
-        #expect(history.map(\.outcome) == [.won, .lost, .pending])
-        #expect(history.first?.choice == "A")
-        let insights = AccountInsights.compute(myPolls: [ended("a"), open], history: history)
-        #expect(insights.majorityRate == 50)
-        #expect(insights.awaitingResults == 1)
-        #expect(insights.peopleReached == 6)
+    private func counted(_ a: Int?, _ b: Int?, ended: Bool = true) -> Poll {
+        poll(end: hours(ended ? -1 : 72), options: [PollOption(id: "a", text: "A", votes: a), PollOption(id: "b", text: "B", votes: b)])
     }
 
-    @Test func noDecidedBallotsHasNoRate() {
-        #expect(AccountInsights.compute(myPolls: [], history: []).majorityRate == nil)
+    @Test func pendingWhileOpen() {
+        #expect(AccountInsights.outcome(of: counted(1, 0, ended: false), optionId: "a", at: now) == .pending)
+    }
+
+    @Test func readsWonLostAndTiedFromTheCounts() {
+        #expect(AccountInsights.outcome(of: counted(3, 1), optionId: "a", at: now) == .won)
+        #expect(AccountInsights.outcome(of: counted(3, 1), optionId: "b", at: now) == .lost)
+        #expect(AccountInsights.outcome(of: counted(2, 2), optionId: "b", at: now) == .tied)
+    }
+
+    @Test func unknownWhenTheCountsAreWithheld() {
+        #expect(AccountInsights.outcome(of: counted(nil, nil), optionId: "a", at: now) == .unknown)
+    }
+
+    @Test func choiceIsThePickedOptionsText() {
+        #expect(AccountInsights.choice(of: poll(myOptionId: "b")) == "B")
+        #expect(AccountInsights.choice(of: poll(myOptionId: "gone")) == "")
     }
 }
 

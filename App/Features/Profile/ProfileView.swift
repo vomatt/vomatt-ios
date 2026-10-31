@@ -67,8 +67,8 @@ struct ProfileView: View {
                         MutualFollowers(profile: profile)
                     }
                     StatsGrid(stats: [
-                        (app.t("account.votesCast"), app.t.number(profile.totalVotes)),
-                        (app.t("account.pollsCreated"), app.t.number(profile.totalPolls)),
+                        .init(label: app.t("account.votesCast"), value: app.t.number(profile.totalVotes)),
+                        .init(label: app.t("account.pollsCreated"), value: app.t.number(profile.totalPolls)),
                     ])
                     .accessibilityLabel(app.t("profile.stats"))
                     VStack(alignment: .leading, spacing: 16) {
@@ -242,9 +242,16 @@ extension ProfileHeader where Action == EmptyView {
     }
 }
 
-/// The numbers grid: hairline-separated cells on the card color.
+/// The numbers grid: hairline-separated cells on the card color (the web's `ProfileRecord`).
 struct StatsGrid: View {
-    let stats: [(label: String, value: String)]
+    struct Stat {
+        let label: String
+        let value: String
+        /// Only the owner sees it: marked with the lock.
+        var onlyYou = false
+    }
+
+    let stats: [Stat]
     var columns = 2
 
     var body: some View {
@@ -253,7 +260,11 @@ struct StatsGrid: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(stat.value).font(.vmMono(28)).tracking(-0.5).foregroundStyle(Tokens.foreground)
                         .lineLimit(1).minimumScaleFactor(0.6)
-                    Text(stat.label).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                    HStack(spacing: 4) {
+                        Text(stat.label)
+                        if stat.onlyYou { OnlyYouMarker() }
+                    }
+                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
@@ -264,5 +275,17 @@ struct StatsGrid: View {
         .background(Tokens.border)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
         .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+    }
+}
+
+/// Marks what only the owner can see: a lock, named for VoiceOver.
+struct OnlyYouMarker: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        Image(systemName: "lock.fill")
+            .font(.system(size: 10))
+            .foregroundStyle(Tokens.mutedForeground)
+            .accessibilityLabel(app.t("profile.onlyYou"))
     }
 }

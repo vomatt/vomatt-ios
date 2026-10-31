@@ -31,7 +31,7 @@ struct AppConfig {
 }
 
 enum AppTab: Hashable, CaseIterable {
-    case home, explore, myPolls, account
+    case home, explore, notifications, account
 }
 
 /// Which people a `FollowListView` lists.
@@ -47,7 +47,7 @@ enum Route: Hashable {
     case profile(String)
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
-    case notifications
+    case settings
 }
 
 struct Toast: Equatable, Identifiable {
@@ -218,13 +218,15 @@ final class AppModel {
             ? [url.host()].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }
             : url.pathComponents.filter { $0 != "/" }
         guard let first = parts.first else { return }
+        if first == "notifications" {
+            selectedTab = .notifications
+            paths[.notifications] = NavigationPath()
+            return
+        }
         selectedTab = .home
         paths[.home] = NavigationPath()
         if first == "poll", parts.count > 1 {
             push(.poll(parts[1]))
-        } else if first == "notifications" {
-            selectedTab = .myPolls
-            push(.notifications)
         } else if parts.count == 1, !Username.reserved.contains(first) {
             push(.profile(first))
         }
