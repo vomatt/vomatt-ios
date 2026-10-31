@@ -181,7 +181,12 @@ extension Comment {
             replyCount: dto.replyCount.map(Int.init) ?? 0,
             deleted: dto.deleted ?? false,
             replies: try (dto.replies ?? []).map(Comment.init),
-            repliesNextCursor: dto.repliesNextCursor
+            repliesNextCursor: dto.repliesNextCursor,
+            // A mention the server could not fully resolve stays plain text instead of failing the page.
+            mentions: (dto.mentions ?? []).compactMap {
+                guard let userId = $0.userId, let username = $0.username else { return nil }
+                return Comment.Mention(userId: userId, username: username)
+            }
         )
     }
 }
@@ -225,6 +230,8 @@ extension MyProfile {
             joinedAt: dto.joinedAt,
             totalPolls: dto.totalPolls.map(Int.init) ?? 0,
             totalVotes: dto.totalVotes.map(Int.init) ?? 0,
+            createdPollCount: dto.createdPollCount.map(Int.init),
+            votedPollCount: dto.votedPollCount.map(Int.init),
             followersCount: dto.followersCount.map(Int.init) ?? 0,
             followingCount: dto.followingCount.map(Int.init) ?? 0,
             visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:],

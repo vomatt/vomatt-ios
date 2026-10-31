@@ -2467,6 +2467,13 @@
             "example": false,
             "type": "boolean"
           },
+          "mentions": {
+            "description": "Users the text @mentions, in order of first appearance: the handles the server resolved when the Comment was written (at most the first `comment_max_mentions` distinct handles, default 10), less any user renamed since. Link exactly these `@username` handles (case-insensitive); others, unknown or over the cap, are plain text. [] on a deleted placeholder",
+            "items": {
+              "$ref": "#/components/schemas/MentionDto"
+            },
+            "type": "array"
+          },
           "parentId": {
             "description": "ID of the top-level Comment this Reply belongs to. Null for a top-level Comment",
             "example": "0199c3a2-7b1e-7c4d-9a10-3f5e8d2b6a41",
@@ -3403,6 +3410,22 @@
         },
         "type": "object"
       },
+      "MentionDto": {
+        "description": "A user a Comment @mentions: link `@username` in the text to this user; other handles are plain text",
+        "properties": {
+          "userId": {
+            "description": "ID of the mentioned user",
+            "example": "0199b8e4-1c2d-7f60-8a3b-6d4e2f1a9b05",
+            "type": "string"
+          },
+          "username": {
+            "description": "The handle as written in the text, without `@` (the user's current username)",
+            "example": "alice",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "MyProfileResponse": {
         "description": "The caller's own profile; every field is returned regardless of visibility settings",
         "properties": {
@@ -3434,6 +3457,12 @@
             "format": "date",
             "nullable": true,
             "type": "string"
+          },
+          "createdPollCount": {
+            "description": "Number of Polls the caller created, as My Polls lists them: every Audience (Public, Unlisted, Invite-only) and status (Scheduled, Open, Ended, Cancelled); Deleted Polls excluded",
+            "example": 6,
+            "format": "int32",
+            "type": "integer"
           },
           "displayName": {
             "description": "Display name; null if not set",
@@ -3543,6 +3572,12 @@
               "email": false
             },
             "type": "object"
+          },
+          "votedPollCount": {
+            "description": "Number of Polls the caller holds a Ballot in, as My Polls lists them: every Audience, the caller's own Polls and Anonymous Ballots included; Deleted Polls and Polls of users who blocked the caller excluded. Polls the caller is only invited to count in neither this nor createdPollCount",
+            "example": 21,
+            "format": "int32",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3617,7 +3652,7 @@
             "type": "string"
           },
           "kind": {
-            "description": "RESULT: a Poll you own, hold a Ballot in or are invited to has Ended. CANCELLED: an Invite-only Poll you are invited to was Cancelled before it opened. INVITATION: you are invited to a Scheduled or Open Invite-only Poll (replaced by RESULT once it Ends). FOLLOWED: someone followed you. COMMENT: someone commented on your Poll or replied to your Comment. MENTION: someone @mentioned you in a Comment or Reply that is not already your COMMENT. CLOSING_SOON: a Poll you are invited to, or a Public Poll of someone you follow, ends within 24 hours and you hold no Ballot in it. LIKE: someone liked your Comment or Reply",
+            "description": "RESULT: a Poll you own, hold a Ballot in, are invited to or bookmarked has Ended with at least one Ballot. CANCELLED: an Invite-only Poll you are invited to was Cancelled before it opened. INVITATION: you are invited to a Scheduled or Open Invite-only Poll (replaced by RESULT once it Ends). FOLLOWED: someone followed you. COMMENT: someone commented on your Poll or replied to your Comment. MENTION: someone @mentioned you in a Comment or Reply that is not already your COMMENT. CLOSING_SOON: a Poll you are invited to, or a Public Poll of someone you follow, ends within 24 hours and you hold no Ballot in it. LIKE: someone liked your Comment or Reply",
             "enum": [
               "RESULT",
               "CANCELLED",
@@ -13439,7 +13474,7 @@
     },
     "/api/notifications": {
       "get": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: the caller's notifications, newest `createdAt` first, cursor-paged. They are not stored but derived from Polls, Invitations, follows and Comments when read, so an item disappears when what it is about goes away (a Comment deleted, a follow undone, a Poll Deleted). Kinds:\n- RESULT: a Poll the caller owns, holds a Ballot in, is an Invitee of or bookmarked has Ended (end time passed, Closed, or every Invitee voted); one item per Poll whatever the reasons. A Participant who made a Retraction and is neither an Invitee nor bookmarked it gets none\n- CANCELLED: an Invite-only Poll the caller is an Invitee of was Cancelled before it opened (only Polls Cancelled before 2026-10-14; a Scheduled Poll is now Deleted, which notifies nobody)\n- INVITATION: the caller is an Invitee of a Scheduled or Open Invite-only Poll; listed until the Poll Ends, when its RESULT takes over. Being removed and invited again is a new, unread INVITATION\n- FOLLOWED: someone followed the caller (one item per follower; group them in the UI)\n- COMMENT: someone else commented on or replied under the caller's Poll, or replied to the caller's Comment, on a Poll the caller can see; not a Reply in a thread started by a user the caller blocked (the Comment lists hide that thread)\n- MENTION: someone else @mentioned the caller (`@<username>`) in a Comment or Reply on a Poll the caller can see, unless that Comment is the caller's COMMENT (one Comment, one notification) and COMMENT is switched on; same thread-starter block rule as COMMENT\n- CLOSING_SOON: an Open Poll ends within 24 hours and the caller holds no Ballot in it, if the caller is its Invitee, or it is a Public Poll of a user the caller follows. Gone once the caller casts a Ballot or the Poll Ends. Off by default\n- LIKE: someone else liked the caller's Comment or Reply, on a Poll the caller can see and not in a thread started by a user the caller blocked (as COMMENT). Gone if the like is taken back; liking again is a new, unread LIKE\nEach kind falls in one `category`: CONVERSATION (COMMENT, MENTION), LIKE (LIKE), POLL_END (RESULT, CANCELLED, CLOSING_SOON), INVITATION (INVITATION), FOLLOW (FOLLOWED). With `category`, only that category is listed; pass the same `category` with every page.\nKinds switched off in the caller's preferences are left out (FOLLOWED cannot be switched off). Nothing from a suspended user, a user the caller blocked or a user who blocked the caller is listed, nor anything about a Poll whose owner blocked the caller. `poll` never carries per-option counts, its outcome (`winningOptionIds`, `winningOptionLabels`, `tie`) stays null until the Poll has Ended, and `actor` is never a voter, so Sealed results and Anonymous Ballots stay hidden. Each item carries what a row needs: the caller's Selection (`poll.myOptionId`), the caller's follows with the actor both ways (`actor.isFollowing`, `actor.followsYou`), and for a Reply the Comment it is under (`comment.parentId`). An item can appear or vanish behind a cursor (a follow, a block); de-duplicate by `id`.\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` came from another list\n- 400 `common.type_mismatch`: `category` is not one of the categories",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: the caller's notifications, newest `createdAt` first, cursor-paged. They are not stored but derived from Polls, Invitations, follows and Comments when read, so an item disappears when what it is about goes away (a Comment deleted, a follow undone, a Poll Deleted). Kinds:\n- RESULT: a Poll the caller owns, holds a Ballot in, is an Invitee of or bookmarked has Ended (end time passed, Closed, or every Invitee voted); one item per Poll whatever the reasons. A Poll that Ended with no Ballots (Turnout 0) gives none. A Participant who made a Retraction and is neither an Invitee nor bookmarked it gets none\n- CANCELLED: an Invite-only Poll the caller is an Invitee of was Cancelled before it opened (only Polls Cancelled before 2026-10-14; a Scheduled Poll is now Deleted, which notifies nobody)\n- INVITATION: the caller is an Invitee of a Scheduled or Open Invite-only Poll; listed until the Poll Ends, when its RESULT takes over. Being removed and invited again is a new, unread INVITATION\n- FOLLOWED: someone followed the caller (one item per follower; group them in the UI)\n- COMMENT: someone else commented on or replied under the caller's Poll, or replied to the caller's Comment, on a Poll the caller can see; not a Reply in a thread started by a user the caller blocked (the Comment lists hide that thread)\n- MENTION: someone else @mentioned the caller (`@<username>`) in a Comment or Reply on a Poll the caller can see, unless that Comment is the caller's COMMENT (one Comment, one notification) and COMMENT is switched on; same thread-starter block rule as COMMENT\n- CLOSING_SOON: an Open Poll ends within 24 hours and the caller holds no Ballot in it, if the caller is its Invitee, or it is a Public Poll of a user the caller follows. Gone once the caller casts a Ballot or the Poll Ends. Off by default\n- LIKE: someone else liked the caller's Comment or Reply, on a Poll the caller can see and not in a thread started by a user the caller blocked (as COMMENT). Gone if the like is taken back; liking again is a new, unread LIKE\nEach kind falls in one `category`: CONVERSATION (COMMENT, MENTION), LIKE (LIKE), POLL_END (RESULT, CANCELLED, CLOSING_SOON), INVITATION (INVITATION), FOLLOW (FOLLOWED). With `category`, only that category is listed; pass the same `category` with every page.\nKinds switched off in the caller's preferences are left out (FOLLOWED cannot be switched off). Nothing from a suspended user, a user the caller blocked or a user who blocked the caller is listed, nor anything about a Poll whose owner blocked the caller. `poll` never carries per-option counts, its outcome (`winningOptionIds`, `winningOptionLabels`, `tie`) stays null until the Poll has Ended, and `actor` is never a voter, so Sealed results and Anonymous Ballots stay hidden. Each item carries what a row needs: the caller's Selection (`poll.myOptionId`), the caller's follows with the actor both ways (`actor.isFollowing`, `actor.followsYou`), and for a Reply the Comment it is under (`comment.parentId`). An item can appear or vanish behind a cursor (a follow, a block); de-duplicate by `id`.\n**Side effects**: none\n**Errors**:\n- 400 `common.cursor_invalid`: `cursor` came from another list\n- 400 `common.type_mismatch`: `category` is not one of the categories",
         "operationId": "list",
         "parameters": [
           {
@@ -18744,7 +18779,7 @@
         ]
       },
       "post": {
-        "description": "**Auth**: required\n**Precondition**: the Poll exists (any Poll state is accepted). When `parentId` is sent it must be a non-deleted Comment or Reply of the same Poll\n**Behavior**: without `parentId` creates a top-level Comment. With `parentId` creates a Reply; Replies are one level deep, so replying to a Reply attaches the new Reply to that Reply's top-level Comment (the response `parentId` is the top-level Comment, not the id you sent). Mentions: `@<username>` in the text (a username, 3-50 characters of `[a-z0-9_]`, matched case-insensitively, not preceded by a letter or digit of any script or `_`, so `a@b.com` and `測試@alice` are no mentions) names that user; a handle with no account is plain text. At most 10 distinct users per Comment (admin-tunable), the first handles in the text; later ones are plain text, not an error. Responds 201\n**Side effects**: the top-level Comment's `replyCount` grows by 1 in later list reads. Each mentioned user other than the author gets a MENTION notification while they can see the Poll, unless the Comment already gives them a COMMENT (it is on their Poll or replies to their Comment)\n**Errors**:\n- 400 `comment.parent.invalid`: `parentId` does not exist, is deleted, or belongs to another Poll\n- 404 `comment.not_found`: `parentId` is hidden from the caller as in the lists (written by a user the caller blocked, or a Reply in a thread such a user started)\n- 404 `vote.not_found`: Poll does not exist or is Deleted, or its owner blocked the caller\n- 404 `user.not_found`: the signed-in user no longer exists\n",
+        "description": "**Auth**: required\n**Precondition**: the Poll exists (any Poll state is accepted). When `parentId` is sent it must be a non-deleted Comment or Reply of the same Poll\n**Behavior**: without `parentId` creates a top-level Comment. With `parentId` creates a Reply; Replies are one level deep, so replying to a Reply attaches the new Reply to that Reply's top-level Comment (the response `parentId` is the top-level Comment, not the id you sent). Mentions: `@<username>` in the text (a username, 3-50 characters of `[a-z0-9_]`, matched case-insensitively, not preceded by a letter or digit of any script or `_`, so `a@b.com` and `測試@alice` are no mentions) names that user; a handle with no account is plain text. At most 10 distinct users per Comment (admin-tunable), the first handles in the text; later ones are plain text, not an error. The response's `mentions` lists the resolved users; link only those handles. Responds 201\n**Side effects**: the top-level Comment's `replyCount` grows by 1 in later list reads. Each mentioned user other than the author gets a MENTION notification while they can see the Poll, unless the Comment already gives them a COMMENT (it is on their Poll or replies to their Comment)\n**Errors**:\n- 400 `comment.parent.invalid`: `parentId` does not exist, is deleted, or belongs to another Poll\n- 404 `comment.not_found`: `parentId` is hidden from the caller as in the lists (written by a user the caller blocked, or a Reply in a thread such a user started)\n- 404 `vote.not_found`: Poll does not exist or is Deleted, or its owner blocked the caller\n- 404 `user.not_found`: the signed-in user no longer exists\n",
         "operationId": "createComment",
         "parameters": [
           {
@@ -19638,7 +19673,7 @@
     },
     "/api/votes/{voteId}/creator": {
       "get": {
-        "description": "**Auth**: public (login is ignored)\n**Precondition**: the Poll is INVITE_ONLY and not Deleted\n**Behavior**: returns only the owner's `username` and `avatarUrl`, so an Invitation link can show \"<username> invited you\" to a caller who cannot open the Poll yet (signed out, or signed in but not yet an Invitee). Reveals nothing else about the Poll. Answers regardless of blocks, also to a user the owner blocked.\n**Side effects**: none\n**Errors**:\n- 404 `vote.not_found`: Poll does not exist, is Deleted, or is PUBLIC / UNLISTED\n",
+        "description": "**Auth**: public (optional login changes the answer: a signed-in caller must be the owner or an Invitee; an invalid or expired token is treated as signed out)\n**Precondition**: the Poll is INVITE_ONLY and not Deleted\n**Behavior**: returns only the owner's `username` and `avatarUrl`, so an Invitation link can show \"<username> invited you\" and prompt a signed-out caller to sign in. Reveals nothing else about the Poll. A signed-out caller, the owner and Invitees (an email Invitee once signed in with that address) get the owner; any other signed-in caller gets 404, as `GET /api/votes/{voteId}` does. Answers regardless of blocks, also to an Invitee the owner blocked.\n**Side effects**: none\n**Errors**:\n- 404 `vote.not_found`: Poll does not exist, is Deleted, or is PUBLIC / UNLISTED, or the caller is signed in and neither its owner nor an Invitee\n",
         "operationId": "getInviteOnlyCreator",
         "parameters": [
           {
@@ -19657,8 +19692,8 @@
             "content": {
               "application/json": {
                 "examples": {
-                  "Invite-only Poll owner": {
-                    "description": "Invite-only Poll owner",
+                  "Invite-only Poll owner (signed out or Invitee)": {
+                    "description": "Invite-only Poll owner (signed out or Invitee)",
                     "value": {
                       "data": {
                         "avatarUrl": "bot:boba",

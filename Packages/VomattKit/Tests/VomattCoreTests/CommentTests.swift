@@ -34,3 +34,33 @@ struct CommentMentionTests {
         #expect(comment(nil).bodyText == nil)
     }
 }
+
+@Suite("Comment mention links")
+struct CommentMentionLinkTests {
+    private func linked(_ text: String, _ names: String...) -> [VomattCore.Comment.Segment] {
+        VomattCore.Comment(
+            id: "c1", author: "june", text: text, createdAt: .now,
+            mentions: names.map { .init(userId: "u-\($0)", username: $0) }
+        ).bodySegments
+    }
+
+    @Test func linksOnlyTheHandlesTheServerResolved() {
+        let segments = linked("hi @Alice and @bob, mail a@alice.com", "alice")
+        #expect(segments.map(\.text) == ["hi ", "@Alice", " and @bob, mail a@alice.com"])
+        #expect(segments.map(\.username) == [nil, "alice", nil])
+    }
+
+    @Test func aLongerHandleIsNotAPrefixMatch() {
+        #expect(linked("@alice_2 hi", "alice").map(\.username) == [nil])
+    }
+
+    @Test func keepsCanonicalCaseAtTheEndAndAfterNonAsciiLetters() {
+        #expect(linked("bye @ALICE", "alice").map(\.username) == [nil, "alice"])
+        #expect(linked("é@alice", "alice").map(\.username) == [nil, "alice"])
+        #expect(linked("_@alice", "alice").map(\.username) == [nil])
+    }
+
+    @Test func noMentionsMeansOneSegment() {
+        #expect(linked("@alice hi").map(\.text) == ["@alice hi"])
+    }
+}

@@ -242,13 +242,22 @@ public struct Comment: Identifiable, Hashable, Sendable {
     public var replies: [Comment]
     /// Passed as `cursor` to load the rest of the Replies; nil when `replies` holds them all.
     public var repliesNextCursor: String?
+    /// The users the server resolved from `@handles` in `text`, in order of first appearance. Only these link.
+    public var mentions: [Mention]
+
+    public struct Mention: Hashable, Sendable {
+        public let userId: String
+        public let username: String
+        public init(userId: String, username: String) { self.userId = userId; self.username = username }
+    }
 
     public init(
         id: String, userId: String? = nil, author: String?, authorAvatarUrl: String? = nil,
         text: String?, createdAt: Date, likeCount: Int = 0, edited: Bool = false,
         likedByCurrentUser: Bool = false, parentId: String? = nil, replyCount: Int = 0, deleted: Bool = false,
-        replies: [Comment] = [], repliesNextCursor: String? = nil
+        replies: [Comment] = [], repliesNextCursor: String? = nil, mentions: [Mention] = []
     ) {
+        self.mentions = mentions
         self.replies = replies
         self.repliesNextCursor = repliesNextCursor
         self.id = id
@@ -269,6 +278,45 @@ public struct Comment: Identifiable, Hashable, Sendable {
 }
 
 public extension Comment {
+    /// A run of the body: plain text, or an `@handle` to link to `username`'s profile.
+    struct Segment: Hashable, Sendable {
+        public let text: String
+        public let username: String?
+    }
+
+    /// `bodyText` cut at the handles `mentions` names (case-insensitive). Every other `@handle`, one
+    /// preceded by a letter, digit or `_` (`a@b.com`), or one the server left out stays plain text.
+    var bodySegments: [Segment] {
+        let body = bodyText ?? ""
+        guard !mentions.isEmpty else { return [Segment(text: body, username: nil)] }
+        let known = Dictionary(mentions.map { ($0.username.lowercased(), $0.username) }, uniquingKeysWith: { first, _ in first })
+        func isHandleChar(_ c: Character) -> Bool { c == "_" || (c.isASCII && (c.isLetter || c.isNumber)) }
+        var segments: [Segment] = []
+        var plain = ""
+        var i = body.startIndex
+        var previous: Character?
+        while i < body.endIndex {
+            let c = body[i]
+            if c == "@", !(previous.map(isHandleChar) ?? false) {
+                let start = body.index(after: i)
+                var end = start
+                while end < body.endIndex, isHandleChar(body[end]) { end = body.index(after: end) }
+                if let name = known[body[start..<end].lowercased()] {
+                    if !plain.isEmpty { segments.append(Segment(text: plain, username: nil)); plain = "" }
+                    segments.append(Segment(text: String(body[i..<end]), username: name))
+                    previous = body[body.index(before: end)]
+                    i = end
+                    continue
+                }
+            }
+            plain.append(c)
+            previous = c
+            i = body.index(after: i)
+        }
+        if !plain.isEmpty { segments.append(Segment(text: plain, username: nil)) }
+        return segments
+    }
+
     /// Replying to a Reply opens the text with "@name " (the web's reply prefix). Split off, the name
     /// becomes the addressee and the body reads without it. Top-level Comments keep their text as written.
     var addressee: String? { mentionSplit?.name }

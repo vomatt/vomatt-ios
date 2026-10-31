@@ -37,8 +37,8 @@ struct AccountView: View {
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
-                    .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.totalPolls)),
-                    .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.totalVotes)),
+                    .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.createdPollCount ?? profile.totalPolls)),
+                    .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.votedPollCount ?? profile.totalVotes)),
                     .init(
                         label: app.t("profile.recordReached"),
                         value: polls == nil ? "–" : app.t.number(asked.reduce(0) { $0 + ($1.turnout ?? 0) }),
