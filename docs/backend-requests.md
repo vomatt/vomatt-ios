@@ -4,7 +4,7 @@ What vomatt-api needs before the remaining App Store items can ship. Content rep
 asked for here earlier, have landed (`POST /api/votes/{voteId}/report`, `…/comments/{commentId}/report`,
 `/api/users/me/blocks`). Each follows the API's
 conventions: the `{ success, data, message, errorCode }` envelope, lowercase dotted error codes,
-Bearer auth. Once one lands in `api-docs.json`, `scripts/sync.sh api` shows it and the app can use it.
+Bearer auth. Once one lands in vomatt-api's `docs/frontend/openapi.json`, `scripts/sync.sh api` shows it and the app can use it.
 
 ## 1. Push notification devices
 

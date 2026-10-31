@@ -106,5 +106,30 @@
 		"signOutOthersTitle": "Sign out all other devices?",
 		"signOutOthersBody": "Every device except this one will need to sign in again.",
 		"othersSignedOut": "Other devices signed out"
+	},
+	"notifications": {
+		"intro": "Results, invitations, people who followed you, and comments on your polls.",
+		"markAllRead": "Mark all read",
+		"markAllFailed": "Couldn’t mark notifications read. Try again."
+	},
+	"onboarding": {
+		"displayName": "Display name",
+		"displayNameHint": "You can change it later in your account.",
+		"displayNameTooLong": "Keep it under 100 characters.",
+		"skip": "Skip for now"
+	},
+	"profile": {
+		"groupAboutYou": "About you",
+		"groupOnProfile": "On your profile",
+		"notSet": "Not set",
+		"points": "{count} points",
+		"membership": "{level} member"
+	},
+	"account": {
+		"field": {
+			"location": "Location",
+			"points": "Points",
+			"membershipLevel": "Membership level"
+		}
 	}
 }

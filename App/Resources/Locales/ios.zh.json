@@ -106,5 +106,30 @@
 		"signOutOthersTitle": "登出其他所有裝置？",
 		"signOutOthersBody": "除了這個裝置，其他裝置都需要重新登入。",
 		"othersSignedOut": "已登出其他裝置"
+	},
+	"notifications": {
+		"intro": "投票結果、邀請、追蹤你的人，以及你的投票下的留言。",
+		"markAllRead": "全部標為已讀",
+		"markAllFailed": "無法將通知標為已讀，請再試一次。"
+	},
+	"onboarding": {
+		"displayName": "顯示名稱",
+		"displayNameHint": "之後可以在帳號頁面修改。",
+		"displayNameTooLong": "請少於 100 個字元。",
+		"skip": "先跳過"
+	},
+	"profile": {
+		"groupAboutYou": "關於你",
+		"groupOnProfile": "個人頁上",
+		"notSet": "未設定",
+		"points": "{count} 點",
+		"membership": "{level} 會員"
+	},
+	"account": {
+		"field": {
+			"location": "地區",
+			"points": "點數",
+			"membershipLevel": "會員等級"
+		}
 	}
 }

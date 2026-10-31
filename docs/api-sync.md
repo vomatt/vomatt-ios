@@ -1,18 +1,23 @@
 # Keeping the app in step with vomatt-api
 
-The contract is `Packages/VomattKit/Sources/VomattAPI/openapi.json`, a copy of the same document
-vomatt-web keeps as `api-docs.json` (what vomatt-api serves at `/v3/api-docs`). The Swift client and
-types are generated from it on every build, so the app can only call what the contract describes.
+The contract is `Packages/VomattKit/Sources/VomattAPI/openapi.json`, a copy of vomatt-api's
+`docs/frontend/openapi.json` (what it serves at `/v3/api-docs`). vomatt-web keeps its own copy as
+`api-docs.json`, which can lag behind endpoints the web already calls, so the app reads vomatt-api's.
+The Swift client and types are generated from it on every build, so the app can only call what the
+contract describes.
 
 ## Updating
 
 1. Pull the new contract and read what changed:
 
    ```bash
-   scripts/sync.sh api                                     # from ../vomatt-web/api-docs.json
+   scripts/sync.sh api                                     # ../vomatt-api's docs/frontend/openapi.json at origin/main
    scripts/sync.sh api --url https://vomatt-api-production.up.railway.app # or straight from a deployed API
-   scripts/sync.sh api --file ../vomatt-api/docs/frontend/openapi.json  # or vomatt-api's snapshot
+   scripts/sync.sh api --file path/to/openapi.json         # or any file, e.g. another vomatt-api commit's
    ```
+
+   `API_DIR` points at the vomatt-api checkout and `API_REF` at the commit to read (default
+   `origin/main`, fetched first), so work in progress in its working tree never reaches the app.
 
    The script prints a summary before writing the file, for example:
 
@@ -60,7 +65,7 @@ ios.yml does not run on it), and
 
 ## Checking for drift
 
-- `make sync-check` fails when the contract, strings or avatars differ from `../vomatt-web`.
+- `make sync-check` fails when the strings or avatars differ from `../vomatt-web`, or the contract from `../vomatt-api`.
 - `make api-diff API_URL=https://…` compares the contract with what a deployed API serves.
 
 ## Where things live

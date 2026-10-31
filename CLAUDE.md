@@ -26,7 +26,7 @@ Command-line `xcodebuild` needs `-skipPackagePluginValidation` (the Makefile pas
 ## Rules
 
 - **The API contract is generated.** `Packages/VomattKit/Sources/VomattAPI/openapi.json` is synced
-  from vomatt-web/vomatt-api with `scripts/sync.sh api` (docs/api-sync.md). Only
+  from vomatt-api's `docs/frontend/openapi.json` with `scripts/sync.sh api` (docs/api-sync.md). Only
   `Networking/Mapping.swift` and `VomattService.swift` touch generated types; the app sees domain
   models from `VomattCore/Models`. When checking a new contract, skip the admin endpoints (`Admin …`
   tags, the admin console's): only the tags in `openapi-generator-config.yaml` matter, and

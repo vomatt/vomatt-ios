@@ -8,7 +8,7 @@ contract, in SwiftUI.
 |---|---|
 | UI | SwiftUI, iOS 17+, iPhone and iPad |
 | API | [vomatt-api](../vomatt-api), through a client generated from `openapi.json` at build time ([swift-openapi-generator](https://github.com/apple/swift-openapi-generator)) |
-| Shared with the web | API contract, `en`/`zh` strings, color tokens, the 48 bot avatars, the Geist fonts, poll rules |
+| Shared with the web | API contract, `en`/`zh` strings, color tokens, the 72 bot avatars, the Geist fonts, poll rules |
 | Project | [XcodeGen](https://github.com/yonaskolb/XcodeGen) generates `Vomatt.xcodeproj` from `project.yml` |
 
 ## Getting started
@@ -41,7 +41,7 @@ If `xcode-select -p` points at the Command Line Tools, the Makefile still finds 
 | `make build` | Builds the app for a simulator (`SIMULATOR="iPhone 17"` by default) |
 | `make test-ui` | UI smoke tests against the configured API |
 | `make test` | What CI runs: `test-core` and `build` |
-| `make sync` | Pulls the API contract, strings, color tokens and avatars from `../vomatt-web`'s `origin/main` (`WEB_REF`) |
+| `make sync` | Pulls the strings, color tokens and avatars from `../vomatt-web`'s `origin/main` (`WEB_REF`), and the API contract from `../vomatt-api`'s (`API_REF`) |
 | `make sync-check` | Fails when any of those differ from it |
 | `make api-diff API_URL=https://…` | Compares `openapi.json` with what a deployed API serves |
 | `make archive` | Release archive and App Store Connect upload (needs signing) |

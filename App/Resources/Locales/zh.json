@@ -81,7 +81,8 @@
 		"accountDeleted": "這個帳號已刪除。用同一個電子郵件登入會建立新帳號。",
 		"sessionExpired": "登入已過期，請重新登入。",
 		"dialogDescription": "使用電子郵件登入或註冊以繼續",
-		"sessionRevoked": "為了你的帳號安全，已登出這個裝置，請重新登入。"
+		"sessionRevoked": "為了你的帳號安全，已登出這個裝置，請重新登入。",
+		"signedOutHere": "你已在這個裝置登出，請重新登入。"
 	},
 	"verificationCode": {
 		"title": "請查看你的信箱",
@@ -118,7 +119,9 @@
 	},
 	"explore": {
 		"title": "探索",
-		"searchPlaceholder": "搜尋投票標題與說明…",
+		"searchPlaceholder": "搜尋投票與主題…",
+		"topics": "主題",
+		"moreOptions": "還有 {count} 個",
 		"searchLabel": "搜尋",
 		"filterActive": "進行中",
 		"filterEnded": "已結束",
@@ -126,6 +129,7 @@
 		"noResults": "找不到投票。",
 		"noResultsHint": "試試其他字詞，或切換到已結束的投票。",
 		"noResultsHintEnded": "試試其他字詞，或切換到進行中的投票。",
+		"noResultsHintTopic": "試試其他主題，或再點一次目前的主題來查看所有投票。",
 		"status": "狀態",
 		"sort": "排序",
 		"sortEnding": "即將結束",
@@ -134,7 +138,6 @@
 		"sortTop": "最多人投票"
 	},
 	"pollDetail": {
-		"backToFeed": "返回",
 		"about": "關於這個投票",
 		"share": "分享",
 		"notFound": "找不到投票。",
@@ -165,10 +168,8 @@
 		"noPollsYet": "還沒有投票。",
 		"noPollsYetOwn": "你的投票開放後會顯示在這裡。",
 		"pollsLoadFailed": "無法載入投票。",
-		"points": "{count} 點",
 		"cardFailed": "無法載入個人資料。",
 		"joined": "{date} 加入",
-		"membership": "{level} 會員",
 		"followers": "追蹤者",
 		"following": "追蹤中",
 		"noFollowers": "尚無追蹤者。",
@@ -229,24 +230,19 @@
 		"previewBack": "回到你的個人頁",
 		"moreFor": "@{username} 的更多動作",
 		"followingNoteTitle": "追蹤代表什麼",
-		"followingNoteBody": "對方的投票會出現在你的「追蹤中」動態。對方不會看到你怎麼投，隨時一鍵取消。",
+		"followingNoteBody": "對方的投票會出現在你的「追蹤中」動態。對方不會看到你怎麼投，隨時都能取消。",
 		"mutualsOne": "追蹤者包括 @{name}",
 		"mutualsTwo": "追蹤者包括 @{name} 和 @{other}",
 		"mutualsMore": "追蹤者包括 @{name} 和另外 {count} 位你追蹤的人",
 		"mutualFollowers": "你認識的追蹤者",
 		"allFollowers": "全部 {count} 位追蹤者",
 		"editIntro": "每項資料都標示誰看得到，可在輸入處直接變更。",
-		"groupOnProfile": "個人頁上",
-		"groupAboutYou": "關於你",
 		"alwaysShown": "一律公開",
 		"realName": "真實姓名",
 		"onlyYouShort": "只有你",
 		"everyone": "所有人",
 		"visibilityPillEveryone": "{field}：所有人都看得到。變更",
 		"visibilityPillOnlyYou": "{field}：只有你看得到。變更",
-		"visibilityPillEveryonePlural": "{field}：所有人都看得到。變更",
-		"visibilityPillOnlyYouPlural": "{field}：只有你看得到。變更",
-		"notSet": "未設定",
 		"visibilitySavesHint": "可見範圍會在儲存時一併更新。",
 		"visibilitySaveFailed": "資料已儲存，但可見範圍未能更新，請再試一次。"
 	},
@@ -255,13 +251,9 @@
 		"empty": "目前沒有通知。",
 		"emptyHint": "你發起或參與的投票結果會顯示在這裡。",
 		"unread": "未讀",
-		"intro": "投票結果、邀請、追蹤你的人，以及你的投票下的留言。",
-		"markAllHint": "打開投票即標為已讀。",
 		"loadFailed": "無法載入通知。",
 		"ended": "結果出爐",
 		"cancelled": "已取消",
-		"markAllRead": "全部標為已讀",
-		"caughtUp": "沒有未讀通知。",
 		"day": {
 			"today": "今天",
 			"yesterday": "昨天",
@@ -273,13 +265,23 @@
 		"cancelledBy": "{title} 已被 {name} 取消",
 		"railTitle": "打開投票即標為已讀",
 		"railBody": "結果通知會保留到你打開為止，密封的承諾不會在列表中遺失。",
-		"markAllFailed": "無法將通知標為已讀，請再試一次。",
 		"followedYou": "{name} 追蹤了你",
 		"followedYouGroup": "{name} 和其他 {count} 人追蹤了你",
 		"followedYouGroup_one": "{name} 和其他 {count} 人追蹤了你",
 		"seeFollowers": "查看追蹤者",
 		"commented": "{name} 在 {title} 下發表了看法",
 		"mentioned": "{name} 在 {title} 提到了你",
+		"liked": "{name} 喜歡你在 {title} 的留言",
+		"categoryLabel": "分類",
+		"category": {
+			"CONVERSATION": "對話",
+			"LIKE": "喜歡",
+			"POLL_END": "投票結束",
+			"INVITATION": "邀請",
+			"FOLLOW": "追蹤"
+		},
+		"categoryEmpty": "這裡還沒有內容。",
+		"categoryFailed": "無法載入這個分頁，請再試一次。",
 		"excerpt": "「{text}」",
 		"endsIn": "{title} 將在 {duration}後截止",
 		"notVoted": "你還沒投票",
@@ -290,6 +292,7 @@
 			"invitations": "邀請",
 			"comments": "留言",
 			"mentions": "提及",
+			"likes": "喜歡",
 			"closingSoon": "即將結束"
 		},
 		"summaryOn": "{kinds}已開啟",
@@ -535,13 +538,10 @@
 		"serverError": "發生錯誤，請稍後再試。"
 	},
 	"onboarding": {
-		"title": "我們該怎麼稱呼你？",
-		"subtitle": "其他投票者會看到這個名字。",
-		"displayName": "顯示名稱",
-		"displayNameHint": "之後可以在帳號頁面修改。",
-		"displayNameTooLong": "請少於 100 個字元。",
-		"finish": "完成",
-		"skip": "先跳過"
+		"title": "你叫什麼名字？",
+		"subtitle": "之後可以在編輯個人資料中修改，並決定誰看得到。",
+		"saveFailed": "名字未儲存，請到編輯個人資料中新增。",
+		"finish": "完成"
 	},
 	"comments": {
 		"title": "討論",
@@ -613,10 +613,7 @@
 		"anonymousDefaultOff": "新的投票預設會顯示你的名字。",
 		"field": {
 			"displayName": "顯示名稱",
-			"bio": "自我介紹",
-			"location": "地區",
-			"points": "點數",
-			"membershipLevel": "會員等級"
+			"bio": "自我介紹"
 		},
 		"saveFailed": "儲存失敗，請再試一次。",
 		"exportTitle": "下載我的資料",
@@ -636,6 +633,9 @@
 		"deleteLastAdmin": "你是唯一的管理員，請先將其他人設為管理員再刪除帳號。",
 		"tabGroups": "邀請名單",
 		"deleteCtaEllipsis": "刪除帳號…"
+	},
+	"page": {
+		"lastUpdated": "最後更新"
 	},
 	"cookieConsent": {
 		"label": "Cookie 同意",
@@ -701,7 +701,9 @@
 			"bites": "台灣小吃",
 			"guardians": "廟宇守護",
 			"visitors": "外星訪客",
-			"animals": "島上動物"
+			"animals": "島上動物",
+			"cats": "貓咪",
+			"dogs": "狗狗"
 		},
 		"none": {
 			"name": "帳號圖示",
@@ -899,6 +901,102 @@
 			"dog": {
 				"name": "台灣土狗",
 				"trait": "捲尾巴"
+			},
+			"fold": {
+				"name": "摺耳貓",
+				"trait": "銀虎斑，不為所動"
+			},
+			"munchkin": {
+				"name": "曼赤肯",
+				"trait": "白色短腿，大計畫"
+			},
+			"chinchilla": {
+				"name": "金吉拉",
+				"trait": "白色蓬毛，扁扁臉"
+			},
+			"mainecoon": {
+				"name": "緬因貓",
+				"trait": "黑色，耳尖簇毛，溫柔巨人"
+			},
+			"siamese": {
+				"name": "暹羅貓",
+				"trait": "深色重點色，意見很多"
+			},
+			"orange": {
+				"name": "橘貓",
+				"trait": "虎斑，共用一顆腦細胞"
+			},
+			"tuxedo": {
+				"name": "賓士貓",
+				"trait": "每次投票都穿正式"
+			},
+			"calico": {
+				"name": "三花貓",
+				"trait": "三種顏色，三種心情"
+			},
+			"sphynx": {
+				"name": "無毛貓",
+				"trait": "沒有毛，全是皺摺"
+			},
+			"ragdoll": {
+				"name": "布偶貓",
+				"trait": "一抱就軟掉"
+			},
+			"british": {
+				"name": "英短",
+				"trait": "藍色短毛，肉肉臉頰"
+			},
+			"bengal": {
+				"name": "豹貓",
+				"trait": "玫瑰斑點，什麼都爬"
+			},
+			"shiba": {
+				"name": "柴犬",
+				"trait": "狐狸臉，自有主張"
+			},
+			"corgi": {
+				"name": "柯基",
+				"trait": "大耳朵，沒有腿"
+			},
+			"golden": {
+				"name": "黃金獵犬",
+				"trait": "每個人都一樣愛"
+			},
+			"husky": {
+				"name": "哈士奇",
+				"trait": "會頂嘴，很大聲"
+			},
+			"pug": {
+				"name": "巴哥",
+				"trait": "每場會議都在打呼"
+			},
+			"dachshund": {
+				"name": "臘腸狗",
+				"trait": "故事很長，腿很短"
+			},
+			"poodle": {
+				"name": "貴賓狗",
+				"trait": "剛從美容院回來"
+			},
+			"frenchie": {
+				"name": "法鬥",
+				"trait": "蝙蝠耳，扁扁臉"
+			},
+			"beagle": {
+				"name": "米格魯",
+				"trait": "永遠鼻子先走"
+			},
+			"collie": {
+				"name": "牧羊犬",
+				"trait": "把整群人趕在一起"
+			},
+			"dalmatian": {
+				"name": "大麥町",
+				"trait": "自己數自己的斑點"
+			},
+			"labrador": {
+				"name": "拉不拉多",
+				"trait": "黑色，吐舌頭，等零食"
 			}
 		}
 	},
@@ -973,6 +1071,8 @@
 			},
 			"email_not_verified": "此 OAuth 帳號的 email 尚未驗證，無法登入或合併既有帳號",
 			"account_banned": "此帳號已被停權，無法登入",
+			"session_revoked": "此裝置已被登出，請重新登入",
+			"session_not_found": "找不到此登入裝置",
 			"passkey": {
 				"invalid": "通行密鑰驗證失敗，請重新操作一次"
 			}
@@ -1104,6 +1204,7 @@
 	},
 	"follows": {
 		"unfollow": "取消追蹤",
+		"confirmUnfollow": "要取消追蹤 @{username} 嗎？",
 		"unfollowFailed": "無法取消追蹤，請再試一次。",
 		"follow": "追蹤",
 		"followed": "已追蹤 @{username}",
@@ -1149,6 +1250,8 @@
 		"notifyCommentsBody": "有人在你發起的投票下發表看法時。",
 		"notifyMentions": "提及",
 		"notifyMentionsBody": "有人在留言中寫到你的 @使用者名稱時。",
+		"notifyLikes": "喜歡",
+		"notifyLikesBody": "有人喜歡你的留言或回覆時。",
 		"notifyClosingSoon": "即將結束",
 		"notifyClosingSoonBody": "你還沒投的投票結束前一天提醒你。",
 		"notifyOn": "已開啟「{name}」通知。",
@@ -1174,5 +1277,27 @@
 		"deleteConfirmBody": "移除後就不能再用 {name} 登入。裝置上的通行密鑰要到裝置設定中另外刪除。",
 		"deleted": "已移除通行密鑰",
 		"deleteFailed": "無法移除通行密鑰，請再試一次。"
+	},
+	"sessions": {
+		"title": "已登入的裝置",
+		"body": "你目前登入的地方。不認得的裝置可以直接登出。",
+		"thisDevice": "這個裝置",
+		"unknownDevice": "未知裝置",
+		"adminConsole": "管理後台",
+		"lastActive": "{time}活躍",
+		"activityUnknown": "活動時間不明",
+		"signedInOn": "登入於 {date}",
+		"empty": "沒有已登入的裝置。",
+		"loadFailed": "無法載入你的裝置。",
+		"signOut": "登出",
+		"signOutLabel": "登出 {name}",
+		"signOutOthers": "登出其他裝置",
+		"signOutConfirmTitle": "登出這個裝置？",
+		"signOutConfirmBody": "{name} 會被登出，再登入時需要新的驗證碼。",
+		"signOutOthersConfirmTitle": "登出所有其他裝置？",
+		"signOutOthersConfirmBody": "除了這個裝置，其他裝置都會被登出，再登入時需要新的驗證碼。",
+		"signedOut": "已登出該裝置",
+		"othersSignedOut": "已登出其他裝置",
+		"signOutFailed": "無法登出，請再試一次。"
 	}
 }
