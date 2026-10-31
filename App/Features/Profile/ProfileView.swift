@@ -261,10 +261,7 @@ struct ProfileFollowButton: View {
                     .background(Tokens.secondary, in: RoundedRectangle(cornerRadius: Radius.lg))
                     .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Tokens.border))
             } else if app.isFollowing(id) {
-                Button { app.unfollow(id) } label: { Label(app.t("follows.following"), systemImage: "checkmark") }
-                    .buttonStyle(.vm(.outline, size: .sm, fullWidth: true))
-                    .accessibilityAddTraits(.isSelected)
-                    .accessibilityHint(app.t("follows.unfollow"))
+                FollowingButton(userId: id, username: profile.username, fullWidth: true)
             } else {
                 let followBack = profile.followsYou == true
                 Button {
@@ -325,7 +322,7 @@ struct ProfileHeader<Action: View>: View {
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                nameLine.displayHeading(28).lineLimit(2)
+                nameLine.displayHeading(19).lineLimit(2)
                     .accessibilityLabel(nameSpoken)
                     .accessibilityAddTraits(.isHeader)
                 Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
@@ -371,6 +368,27 @@ struct ProfileHeader<Action: View>: View {
 
     private func spoken(_ text: String, _ field: String) -> String {
         hiddenFields.contains(field) ? "\(text) (\(app.t("profile.onlyYou")))" : text
+    }
+}
+
+/// "Following", which asks before it unfollows (the web's `FollowButton` and `UnfollowDialog`).
+struct FollowingButton: View {
+    @Environment(AppModel.self) private var app
+    let userId: String
+    let username: String
+    var fullWidth = false
+    @State private var confirming = false
+
+    var body: some View {
+        Button { confirming = true } label: {
+            Label(app.t("follows.following"), systemImage: "checkmark").labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(.vm(.outline, size: .sm, fullWidth: fullWidth))
+        .accessibilityAddTraits(.isSelected)
+        .alert(app.t("follows.confirmUnfollow", ["username": username]), isPresented: $confirming) {
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(userId) }
+        }
     }
 }
 

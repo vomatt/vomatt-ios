@@ -19,6 +19,8 @@ enum Metrics {
     static let gutter: CGFloat = 16
     /// `max-w-2xl`, the width of list pages
     static let listWidth: CGFloat = 672
+    /// `max-w-page`, Explore's wide column with no rail (`PageShell wide`)
+    static let wideWidth: CGFloat = 1020
     /// Touch targets are at least 44pt (`h-11`)
     static let minTarget: CGFloat = 44
 }

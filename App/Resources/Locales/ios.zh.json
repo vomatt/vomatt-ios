@@ -34,7 +34,6 @@
 		"exportLimited": "你今天已經匯出過了，請明天（UTC）再試。",
 		"follow": "追蹤 {name}",
 		"unfollow": "取消追蹤 {name}",
-		"unfollowShort": "取消追蹤",
 		"followShort": "追蹤",
 		"followersEmpty": "還沒有人追蹤。",
 		"followingListEmpty": "還沒有追蹤任何人。",
@@ -58,9 +57,6 @@
 		"invite_list.not_found": "找不到群組",
 		"invite_list.max_reached": "最多只能建立 {0} 個群組",
 		"invite_list.members.max": "每個群組最多 {0} 位成員"
-	},
-	"explore": {
-		"topics": "依主題瀏覽"
 	},
 	"groups": {
 		"memberCountOne": "1 位成員"

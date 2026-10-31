@@ -764,6 +764,13 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Every topic, most used first, for Explore's topic search; empty when the API is down.
+    public func allTags() async -> [Tag] {
+        let tags = (try? await call { try (await client.getAllTags().ok.body.json.data ?? []).map(Tag.init) }) ?? []
+        // The API sends display order; sorted once here, not on every keystroke
+        return tags.sorted { ($0.usageCount ?? 0) > ($1.usageCount ?? 0) }
+    }
+
     /// Most-used topics first; empty when the API is down.
     public func popularTags(limit: Int = 12) async -> [Tag] {
         (try? await call {

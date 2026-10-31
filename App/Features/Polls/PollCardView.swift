@@ -1,7 +1,9 @@
 import SwiftUI
 import VomattCore
 
-/// Shows the Ballot until the Poll Ends, then the Results (the web's `PollCard`).
+/// Shows the Ballot until the Poll Ends, then the Results (the web's `PollCard` in a feed). The whole
+/// card opens the poll page, but the Ballot or Results, owner actions and footer keep their own taps, so
+/// a stray tap in the Ballot can't drop an uncast choice.
 struct PollCardView: View {
     @Environment(AppModel.self) private var app
     let initialPoll: Poll
@@ -60,6 +62,7 @@ struct PollCardView: View {
                 .id(status == .ended)
                 .transition(.opacity)
                 .animation(.easeInOut(duration: 0.2), value: status == .ended)
+                .keepsItsOwnTaps()
 
                 if app.userId == poll.creatorId, poll.ownerActions().any {
                     HStack {
@@ -71,13 +74,16 @@ struct PollCardView: View {
                             onDeleted?()
                         })
                     }
+                    .keepsItsOwnTaps()
                 }
             }
             .padding(20)
 
-            footer
+            footer.keepsItsOwnTaps()
         }
         .card(padding: nil)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card))
+        .onTapGesture { app.push(.poll(poll.id)) }
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
@@ -299,22 +305,17 @@ struct PollFooterActions: View {
     @Environment(AppModel.self) private var app
     @Binding var poll: Poll
 
+    /// Icons only, each named for VoiceOver, as the web's `PollFooter`.
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            actions.labelStyle(.titleAndIcon)
-            actions.labelStyle(.iconOnly)
-        }
-    }
-
-    private var actions: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 0) {
             BookmarkButton(poll: $poll)
             ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
             }
-            .frame(minHeight: Metrics.minTarget)
+            .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
             .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
+        .labelStyle(.iconOnly)
     }
 }
 
@@ -332,7 +333,7 @@ private struct BookmarkButton: View {
         }
         .foregroundStyle(saved ? Tokens.foreground : Tokens.mutedForeground)
         .accessibilityAddTraits(saved ? .isSelected : [])
-        .frame(minHeight: Metrics.minTarget)
+        .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
     }
 
     private func toggle() async {
@@ -451,5 +452,12 @@ extension PollRow where Aside == EmptyView {
         @ViewBuilder meta: @escaping () -> Meta
     ) {
         self.init(poll: poll, highlighted: highlighted, unread: unread, sealed: sealed, onOpen: onOpen, meta: meta, aside: { EmptyView() })
+    }
+}
+
+private extension View {
+    /// Takes the taps that miss its own controls, so they don't reach the card's open-the-poll tap.
+    func keepsItsOwnTaps() -> some View {
+        contentShape(Rectangle()).onTapGesture {}
     }
 }

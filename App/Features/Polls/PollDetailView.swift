@@ -483,30 +483,6 @@ struct TimelineStyle: ProgressViewStyle {
     }
 }
 
-/// `#topic`, linking to its feed.
-struct TopicChip: View {
-    @Environment(AppModel.self) private var app
-    let tag: Tag
-    var compact = false
-
-    var body: some View {
-        Button { app.push(.topic(tag)) } label: {
-            HStack(spacing: 8) {
-                Text("#\(tag.name)")
-                if !compact, let count = tag.usageCount {
-                    Text("\(count)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            .font(.vm(compact ? 13 : 14))
-            .foregroundStyle(Tokens.foreground)
-            .padding(.horizontal, compact ? 12 : 14)
-            .frame(minHeight: compact ? 32 : 40)
-            .background(Tokens.secondary, in: Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// Wraps its children onto new lines (`flex-wrap`).
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8

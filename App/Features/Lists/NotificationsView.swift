@@ -458,7 +458,7 @@ private struct NotificationRow: View {
     }
 }
 
-/// Follow back on a follower's row; once following, the button says so and unfollows.
+/// Follow back on a follower's row; once following, the button says so and asks before it unfollows.
 private struct FollowBackButton: View {
     @Environment(AppModel.self) private var app
     let user: UserSummary
@@ -466,11 +466,7 @@ private struct FollowBackButton: View {
 
     var body: some View {
         if app.isFollowing(user.id) {
-            Button { app.unfollow(user.id) } label: {
-                Label(app.t("follows.following"), systemImage: "checkmark").labelStyle(.titleAndIcon)
-            }
-            .buttonStyle(.vm(.outline, size: .sm))
-            .accessibilityHint(app.t("ios.unfollow", ["name": "@\(user.username)"]))
+            FollowingButton(userId: user.id, username: user.username)
         } else {
             Button(app.t("follows.followBack")) {
                 app.follow(user)
