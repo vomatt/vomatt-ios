@@ -692,9 +692,34 @@ public final class VomattService: Sendable {
         _ = try await call { try await client.markRead(path: .init(id: id)).ok }
     }
 
-    /// Reads everything up to now, switched-off kinds included. Later items arrive unread.
-    public func markAllNotificationsRead() async throws {
-        _ = try await call { try await client.markAllRead().ok }
+    /// The most ids one `markNotificationsRead` call reads.
+    public static let markReadMax = 50
+
+    /// Marks several feed items read, a few requests at a time, and returns the ids left unread: those
+    /// whose request failed, and any past `markReadMax`. One that is gone (its Comment deleted, the
+    /// follow undone) counts as read.
+    public func markNotificationsRead(ids: [String]) async -> [String] {
+        var unread = Array(ids.dropFirst(Self.markReadMax))
+        let taken = Array(ids.prefix(Self.markReadMax))
+        for start in stride(from: 0, to: taken.count, by: 5) {
+            let chunk = Array(taken[start..<min(start + 5, taken.count)])
+            let failed = await withTaskGroup(of: String?.self) { group in
+                for id in chunk {
+                    group.addTask {
+                        do {
+                            try await self.markNotificationRead(id: id)
+                        } catch let error as APIError where error.errorCode == "notification.not_found" {
+                        } catch {
+                            return id
+                        }
+                        return nil
+                    }
+                }
+                return await group.reduce(into: Set<String>()) { if let id = $1 { $0.insert(id) } }
+            }
+            unread += chunk.filter(failed.contains)
+        }
+        return unread
     }
 
     /// Marks the Poll's current notification read through the deprecated Poll-id form of

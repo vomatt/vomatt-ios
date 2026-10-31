@@ -49,18 +49,7 @@
 		"seeAll": "See all",
 		"rulesTitle": "Rules voters will see",
 		"rulesChange": "Change",
-		"rulesDone": "Done",
-		"notifTabConversation": "Conversation",
-		"notifTabLikes": "Likes",
-		"notifTabPolls": "Poll ends",
-		"notifTabInvitations": "Invitations",
-		"notifTabFollows": "Follows",
-		"notifLiked": "{name} liked your comment in {title}",
-		"notifCategoryLabel": "Category",
-		"notifCategoryEmpty": "Nothing here yet.",
-		"notifCategoryFailed": "Couldn’t load that tab. Try again.",
-		"notifyLikes": "Likes",
-		"notifyLikesBody": "When someone likes your comment or reply."
+		"rulesDone": "Done"
 	},
 	"apiError": {
 		"auth.email_not_verified": "This OAuth account's email is not verified; cannot sign in or merge an existing account",
@@ -86,31 +75,6 @@
 	},
 	"authError": {
 		"passkeyInvalid": "Passkey verification failed. Please try again"
-	},
-	"devices": {
-		"title": "Signed-in devices",
-		"body": "Where you’re signed in. Sign out any you don’t recognize.",
-		"current": "This device",
-		"admin": "Admin console",
-		"unknown": "Unknown device",
-		"signedInOn": "Signed in {date}",
-		"lastActive": "last active {date}",
-		"loadFailed": "Couldn’t load your devices.",
-		"signOut": "Sign out",
-		"signOutLabel": "Sign out {name}",
-		"signOutTitle": "Sign out this device?",
-		"signOutBody": "{name} will need to sign in again.",
-		"signedOut": "Device signed out",
-		"signOutFailed": "Couldn’t sign the device out. Please try again.",
-		"signOutOthers": "Sign out all other devices",
-		"signOutOthersTitle": "Sign out all other devices?",
-		"signOutOthersBody": "Every device except this one will need to sign in again.",
-		"othersSignedOut": "Other devices signed out"
-	},
-	"notifications": {
-		"intro": "Results, invitations, people who followed you, and comments on your polls.",
-		"markAllRead": "Mark all read",
-		"markAllFailed": "Couldn’t mark notifications read. Try again."
 	},
 	"onboarding": {
 		"displayName": "Display name",

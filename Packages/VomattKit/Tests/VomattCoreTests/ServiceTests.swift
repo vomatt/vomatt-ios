@@ -1,4 +1,5 @@
 import Foundation
+import os
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
@@ -548,13 +549,39 @@ struct ServiceTests {
         #expect(page.nextCursor == "n2")
     }
 
-    @Test func notificationsAreReadOneByOneOrAllAtOnce() async throws {
+    // markNotificationsRead() cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
+    @Test func markNotificationsReadPostsEachIdToItsReadEndpoint() async {
         let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
-        try await service.markNotificationRead(id: "comment_1")
-        try await service.markAllNotificationsRead()
-        let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
-        #expect(calls == ["POST /api/notifications/comment_1/read", "POST /api/notifications/read-all"])
+        let unread = await service.markNotificationsRead(ids: ["comment_1", "follow_2"])
+        let calls = Set(transport.requests.map { "\($0.method.rawValue) \($0.path)" })
+        #expect(unread.isEmpty)
+        #expect(calls == ["POST /api/notifications/comment_1/read", "POST /api/notifications/follow_2/read"])
+    }
+
+    @Test func markNotificationsReadReturnsTheIdsWhoseRequestFailed() async {
+        let transport = StubTransport { request, _ in
+            if request.path?.contains("follow_2") == true { return (503, failure("common.unavailable"), [:]) }
+            if request.path?.contains("gone_3") == true { return (404, failure("notification.not_found"), [:]) }
+            return (200, envelope(#"{"success":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(await service.markNotificationsRead(ids: ["comment_1", "follow_2", "gone_3"]) == ["follow_2"])
+    }
+
+    @Test func markNotificationsReadReadsAtMostTheMaxAFewAtATimeAndReturnsTheRest() async {
+        let open = OSAllocatedUnfairLock(initialState: (now: 0, most: 0))
+        let transport = StubTransport { _, _ in
+            open.withLock { $0.now += 1; $0.most = max($0.most, $0.now) }
+            try await Task.sleep(for: .milliseconds(2))
+            open.withLock { $0.now -= 1 }
+            return (200, envelope(#"{"success":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = (0..<(VomattService.markReadMax + 2)).map { "follow_\($0)" }
+        #expect(await service.markNotificationsRead(ids: ids) == Array(ids.suffix(2)))
+        #expect(transport.requests.count == VomattService.markReadMax)
+        #expect(open.withLock { $0.most } <= 5)
     }
 
     @Test func likeNotificationsFilterByCategoryAndTheLikesSwitchRoundTrips() async throws {
