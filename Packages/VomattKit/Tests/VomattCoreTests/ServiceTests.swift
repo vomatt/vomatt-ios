@@ -395,12 +395,13 @@ struct ServiceTests {
             (200, envelope(#"""
             {"items":[{"id":"c1","author":"june","text":"Hi","createdAt":"2026-10-26T09:30:00+08:00","replyCount":3,
               "replies":[{"id":"r1","parentId":"c1","author":"tom","text":"Yo","createdAt":"2026-10-26T09:31:00+08:00"}],
-              "repliesNextCursor":"rc"}],"nextCursor":null}
+              "repliesNextCursor":"rc","mentions":[{"userId":"u9","username":"alice"}]}],"nextCursor":null}
             """#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let comment = try #require(try await service.comments(pollId: "p1").items.first)
         #expect(comment.replies.map(\.id) == ["r1"] && comment.repliesNextCursor == "rc" && comment.replyCount == 3)
+        #expect(comment.mentions == [.init(userId: "u9", username: "alice")])
     }
 
     @Test func sharingAPollSendsTheNativeChannelAndReturnsTheCount() async throws {

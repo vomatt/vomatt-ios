@@ -404,6 +404,18 @@ private struct CommentRow: View {
     private var isOwn: Bool { app.userId != nil && comment.userId == app.userId }
     private var isTarget: Bool { model.replyTarget?.comment.id == comment.id }
 
+    /// The body with the handles the server resolved as links to their profiles (underlined, not colored).
+    private var linkedBody: AttributedString {
+        comment.bodySegments.reduce(into: AttributedString()) { result, segment in
+            var part = AttributedString(segment.text)
+            if let name = segment.username, let url = URL(string: "vomatt-mention://\(name)") {
+                part.link = url
+                part.underlineStyle = .single
+            }
+            result.append(part)
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             switch rail {
@@ -491,11 +503,17 @@ private struct CommentRow: View {
                         .disabled(draft.count > commentMax)
                 }
             } else {
-                Text(comment.bodyText ?? "")
+                Text(linkedBody)
                     .font(.vm(15))
                     .foregroundStyle(Tokens.foreground)
+                    .tint(Tokens.foreground)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
+                    .environment(\.openURL, OpenURLAction { url in
+                        guard url.scheme == "vomatt-mention", let name = url.host() else { return .systemAction }
+                        app.push(.profile(name))
+                        return .handled
+                    })
             }
 
             if !comment.isPending, !isEditing { actions }

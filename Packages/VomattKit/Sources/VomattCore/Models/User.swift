@@ -66,6 +66,9 @@ public struct MyProfile: Hashable, Sendable {
     public var joinedAt: Date?
     public var totalPolls: Int
     public var totalVotes: Int
+    /// Polls the caller created / holds a Ballot in, as My Polls lists them; nil from an older API.
+    public var createdPollCount: Int?
+    public var votedPollCount: Int?
     public var followersCount: Int
     public var followingCount: Int
     public var visibilitySettings: [String: Bool]
@@ -75,7 +78,7 @@ public struct MyProfile: Hashable, Sendable {
     public init(
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
         avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil,
-        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, followersCount: Int = 0, followingCount: Int = 0,
+        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, createdPollCount: Int? = nil, votedPollCount: Int? = nil, followersCount: Int = 0, followingCount: Int = 0,
         visibilitySettings: [String: Bool] = [:], anonymousBallotByDefault: Bool = false
     ) {
         self.followersCount = followersCount
@@ -92,6 +95,8 @@ public struct MyProfile: Hashable, Sendable {
         self.joinedAt = joinedAt
         self.totalPolls = totalPolls
         self.totalVotes = totalVotes
+        self.createdPollCount = createdPollCount
+        self.votedPollCount = votedPollCount
         self.visibilitySettings = visibilitySettings
         self.anonymousBallotByDefault = anonymousBallotByDefault
     }
