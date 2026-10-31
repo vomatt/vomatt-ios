@@ -39,6 +39,7 @@ extension Poll {
             myOptionId: dto.myOptionId,
             myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,
+            bookmarked: dto.bookmarked,
             options: try (dto.options ?? []).map(PollOption.init).sorted { $0.displayOrder < $1.displayOrder },
             tags: try (dto.tags ?? []).map(Tag.init)
         )
@@ -282,7 +283,22 @@ extension FeedNotification.Kind {
         case .invitation: self = .invitation
         case .followed: self = .followed
         case .comment: self = .comment
+        case .mention: self = .mention
         case .closingSoon: self = .closingSoon
+        case .like: self = .like
+        }
+    }
+}
+
+extension FeedNotification.Category {
+    /// The `category` query value (the generated payload enums of the two endpoints share it).
+    var apiValue: String {
+        switch self {
+        case .conversation: "CONVERSATION"
+        case .like: "LIKE"
+        case .pollEnd: "POLL_END"
+        case .invitation: "INVITATION"
+        case .follow: "FOLLOW"
         }
     }
 }
@@ -314,13 +330,13 @@ extension NotificationPreferences {
     init(_ dto: Schemas.NotificationPreferencesResponse) {
         self.init(
             resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
-            comments: dto.comments ?? true, closingSoon: dto.closingSoon ?? false
+            comments: dto.comments ?? true, mentions: dto.mentions ?? true, likes: dto.likes ?? true, closingSoon: dto.closingSoon ?? false
         )
     }
 }
 
 extension ReportReason {
-    var request: Schemas.ReportCommentRequest.ReasonPayload {
+    var request: Schemas.ReportRequest.ReasonPayload {
         switch self {
         case .spam: .spam
         case .harassment: .harassment
@@ -421,6 +437,19 @@ extension Passkey {
             name: dto.name,
             createdAt: try required(dto.createdAt, "PasskeyResponse.createdAt"),
             lastUsedAt: dto.lastUsedAt
+        )
+    }
+}
+
+extension DeviceSession {
+    init(_ dto: Schemas.SessionResponse) throws {
+        self.init(
+            id: try required(dto.sessionId, "SessionResponse.sessionId"),
+            userAgent: dto.userAgent,
+            createdAt: dto.createdAt,
+            lastSeenAt: dto.lastSeenAt,
+            isCurrent: dto.current ?? false,
+            isAdminScope: dto.adminScope ?? false
         )
     }
 }
