@@ -75,25 +75,5 @@
 	},
 	"authError": {
 		"passkeyInvalid": "Passkey verification failed. Please try again"
-	},
-	"onboarding": {
-		"displayName": "Display name",
-		"displayNameHint": "You can change it later in your account.",
-		"displayNameTooLong": "Keep it under 100 characters.",
-		"skip": "Skip for now"
-	},
-	"profile": {
-		"groupAboutYou": "About you",
-		"groupOnProfile": "On your profile",
-		"notSet": "Not set",
-		"points": "{count} points",
-		"membership": "{level} member"
-	},
-	"account": {
-		"field": {
-			"location": "Location",
-			"points": "Points",
-			"membershipLevel": "Membership level"
-		}
 	}
 }

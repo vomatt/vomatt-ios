@@ -75,25 +75,5 @@
 	},
 	"authError": {
 		"passkeyInvalid": "通行密鑰驗證失敗，請重新操作一次"
-	},
-	"onboarding": {
-		"displayName": "顯示名稱",
-		"displayNameHint": "之後可以在帳號頁面修改。",
-		"displayNameTooLong": "請少於 100 個字元。",
-		"skip": "先跳過"
-	},
-	"profile": {
-		"groupAboutYou": "關於你",
-		"groupOnProfile": "個人頁上",
-		"notSet": "未設定",
-		"points": "{count} 點",
-		"membership": "{level} 會員"
-	},
-	"account": {
-		"field": {
-			"location": "地區",
-			"points": "點數",
-			"membershipLevel": "會員等級"
-		}
 	}
 }

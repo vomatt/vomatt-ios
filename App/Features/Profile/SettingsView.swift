@@ -192,7 +192,7 @@ private struct AccountSettings: View {
                     NavigationRow(
                         title: app.t("account.privacyTitle"),
                         detail: app.t("settings.whatOthersSeeBody"),
-                        value: app.t("settings.shownCount", ["shown": profile.shownFieldCount, "total": ProfileVisibility.fields.count])
+                        value: app.t("settings.shownCount", ["shown": profile.shownSettingCount, "total": ProfileVisibility.settings.count])
                     ) { editingProfile = true }
                     Hairline()
                     BlockedPeople().padding(16)

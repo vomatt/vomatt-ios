@@ -53,8 +53,10 @@ final class SignedInFlowTests: XCTestCase {
         app.textFields["6-digit verification code"].tap()
         app.typeText(try code(for: email))
 
-        // A new account names itself
-        XCTAssertTrue(app.staticTexts["What should we call you?"].waitForExistence(timeout: 10))
+        // A new account gives its real name
+        XCTAssertTrue(app.staticTexts["What's your name?"].waitForExistence(timeout: 10))
+        app.textFields["First name"].tap()
+        app.typeText("Mei")
         app.buttons["Finish"].tap()
 
         // The creator opens once signed in
@@ -145,8 +147,9 @@ final class SignedInFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Check your email"].waitForExistence(timeout: 10))
         app.textFields["6-digit verification code"].tap()
         app.typeText(try code(for: email))
-        XCTAssertTrue(app.staticTexts["What should we call you?"].waitForExistence(timeout: 10))
-        app.buttons["Skip for now"].tap()
+        XCTAssertTrue(app.staticTexts["What's your name?"].waitForExistence(timeout: 10))
+        // Closing at the name step still signs in
+        app.buttons["Close"].tap()
         XCTAssertTrue(app.staticTexts["polls voted in"].waitForExistence(timeout: 10))
 
         // Past the 60s refresh leeway of a 120s token

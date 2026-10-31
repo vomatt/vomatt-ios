@@ -338,7 +338,6 @@ struct EditProfileSheet: View {
     /// A new username breaks old links, so it takes a second step.
     @State private var confirmingUsername = false
     @State private var isSaving = false
-    @State private var showAvatar = false
     @FocusState private var usernameFocused: Bool
 
     private static let displayNameMax = 100
@@ -392,7 +391,6 @@ struct EditProfileSheet: View {
             } message: {
                 Text(usernameMove)
             }
-            .sheet(isPresented: $showAvatar) { AvatarPickerSheet(username: profile.username, avatarUrl: profile.avatarUrl) }
         }
         .onAppear(perform: start)
     }
@@ -421,37 +419,54 @@ struct EditProfileSheet: View {
         })
     }
 
+    /// The web's order: username, real name, display name, birthday, bio, each with who sees it.
     private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
-                    AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
-                    Button(app.t("avatar.change")) { showAvatar = true }.buttonStyle(.vm(.outline, size: .sm))
+                usernameField
+                // First and last name share one visibility setting, so they share one header
+                VStack(alignment: .leading, spacing: 6) {
+                    labelRow(app.t("profile.realName")) { pill(app.t("profile.realName"), ["firstName", "lastName"]) }
+                    HStack(alignment: .top, spacing: 10) {
+                        nameField(app.t("profile.firstName"), $firstName, .givenName)
+                        nameField(app.t("profile.lastName"), $lastName, .familyName)
+                    }
                 }
-
-                groupLabel(app.t("profile.groupOnProfile"))
                 VStack(alignment: .leading, spacing: 6) {
                     labelRow(app.t("profile.displayName")) { pill(app.t("profile.displayName"), ["displayName"]) }
                     VMTextField(label: nil, placeholder: app.t("profile.displayNamePlaceholder"), text: limited($displayName, Self.displayNameMax), contentType: .nickname)
                 }
-                .padding(.top, -8)
-                usernameField
+                birthdayField
                 VStack(alignment: .leading, spacing: 6) {
                     labelRow(app.t("profile.bio")) { pill(app.t("profile.bio"), ["bio"]) }
                     VMTextEditor(placeholder: app.t("profile.bioPlaceholder"), text: limited($bio, Self.bioMax), minHeight: 72)
                     Text("\(bio.count) / \(Self.bioMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-
-                groupLabel(app.t("profile.groupAboutYou"))
-                HStack(alignment: .top, spacing: 10) {
-                    VMTextField(label: app.t("profile.firstName"), placeholder: "", text: limited($firstName, Self.nameMax), contentType: .givenName)
-                    VMTextField(label: app.t("profile.lastName"), placeholder: "", text: limited($lastName, Self.nameMax), contentType: .familyName)
-                }
-                .padding(.top, -8)
-                visibilityCard
             }
             .padding(Metrics.gutter)
+        }
+    }
+
+    private func nameField(_ label: String, _ text: Binding<String>, _ contentType: UITextContentType) -> some View {
+        VMTextField(label: label, placeholder: "", text: limited(text, Self.nameMax), contentType: contentType)
+    }
+
+    /// Set once, then changed but never cleared; the API never shows it to anyone else.
+    private var birthdayField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            labelRow(app.t("profile.birthday")) { VisibilityPill(isPublic: false) }
+            if birthday == nil {
+                Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }.buttonStyle(.vm(.outline, size: .sm))
+            } else {
+                DatePicker(
+                    app.t("profile.birthday"),
+                    selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
+                    in: Self.earliestBirthday...Self.latestBirthday,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+            }
         }
     }
 
@@ -496,55 +511,6 @@ struct EditProfileSheet: View {
         }
     }
 
-    /// Real name, birthday, location, points and membership level, each with who sees it.
-    private var visibilityCard: some View {
-        VStack(spacing: 0) {
-            visibilityRow(app.t("profile.realName")) { pill(app.t("profile.realName"), ["firstName", "lastName"]) }
-            Hairline()
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(app.t("profile.birthday")).font(.vm(14))
-                    if birthday == nil {
-                        Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }.buttonStyle(.vm(.link))
-                    } else {
-                        DatePicker(
-                            app.t("profile.birthday"),
-                            selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
-                            in: Self.earliestBirthday...Self.latestBirthday,
-                            displayedComponents: .date
-                        )
-                        .labelsHidden()
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // The API never shows a birthday to anyone else
-                VisibilityPill(isPublic: false)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .frame(minHeight: 52)
-            Hairline()
-            visibilityRow(app.t("account.field.location"), value: profile.location) {
-                pill(app.t("account.field.location"), ["location"])
-            }
-            Hairline()
-            visibilityRow(app.t("account.field.points"), value: app.t.number(profile.points), mono: true) {
-                pill(app.t("account.field.points"), ["points"], plural: true)
-            }
-            Hairline()
-            visibilityRow(app.t("account.field.membershipLevel"), value: profile.membershipLevel) {
-                pill(app.t("account.field.membershipLevel"), ["membershipLevel"])
-            }
-        }
-        .card(padding: nil)
-    }
-
-    private func groupLabel(_ text: String) -> some View {
-        Text(text).font(.vm(12, .medium)).foregroundStyle(Tokens.mutedForeground)
-            .padding(.horizontal, 2)
-            .accessibilityAddTraits(.isHeader)
-    }
-
     private func labelRow(_ label: String, @ViewBuilder trailing: () -> some View) -> some View {
         HStack(spacing: 8) {
             Text(label).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
@@ -554,32 +520,9 @@ struct EditProfileSheet: View {
         .frame(minHeight: 28)
     }
 
-    /// A detail that isn't edited here: its label, then its value or "Not set".
-    private func visibilityRow(_ label: String, value: String?? = .none, mono: Bool = false, @ViewBuilder pill: () -> some View) -> some View {
-        HStack(spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(label).font(.vm(14)).foregroundStyle(Tokens.foreground)
-                if let value {
-                    Text(value.flatMap { $0.isEmpty ? nil : $0 } ?? app.t("profile.notSet"))
-                        .font(mono ? .vmMono(12) : .vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            pill()
-        }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 52)
-    }
-
     /// Who sees `fields`, switching all of them between Everyone and Only you.
-    private func pill(_ label: String, _ fields: [String], plural: Bool = false) -> some View {
+    private func pill(_ label: String, _ fields: [String]) -> some View {
         let isPublic = ProfileVisibility.isPublic(visibility, fields[0])
-        let key = switch (isPublic, plural) {
-        case (true, false): "profile.visibilityPillEveryone"
-        case (true, true): "profile.visibilityPillEveryonePlural"
-        case (false, false): "profile.visibilityPillOnlyYou"
-        case (false, true): "profile.visibilityPillOnlyYouPlural"
-        }
         return Button {
             for field in fields { visibility[field] = !isPublic }
         } label: {
@@ -588,7 +531,7 @@ struct EditProfileSheet: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(app.t(key, ["field": label]))
+        .accessibilityLabel(app.t(isPublic ? "profile.visibilityPillEveryone" : "profile.visibilityPillOnlyYou", ["field": label]))
     }
 
     private func showUsernameError(_ message: String) {

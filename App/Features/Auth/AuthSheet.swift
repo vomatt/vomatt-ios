@@ -1,7 +1,7 @@
 import SwiftUI
 import VomattCore
 
-/// One flow for sign-in and sign-up (the web's `AuthFlow`): email → code → (new accounts) display name.
+/// One flow for sign-in and sign-up (the web's `AuthFlow`): email → code → (new accounts) first and last name.
 struct AuthSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
@@ -23,7 +23,7 @@ struct AuthSheet: View {
                             if isNewUser { withAnimation { step = .profile } } else { finish() }
                         }
                     case .profile:
-                        ProfileStep(email: email, onDone: finish)
+                        ProfileStep(onDone: finish)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -35,7 +35,8 @@ struct AuthSheet: View {
             .canvas()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(app.t("common.close")) { dismiss() }
+                    // Past the code the account is signed in, so closing at the name step still continues the action
+                    Button(app.t("common.close")) { if step == .profile { finish() } else { dismiss() } }
                 }
                 ToolbarItem(placement: .principal) {
                     Image("brand-logo").renderingMode(.template).resizable().scaledToFit()
@@ -293,43 +294,48 @@ private struct CodeStep: View {
 
 private struct ProfileStep: View {
     @Environment(AppModel.self) private var app
-    let email: String
     let onDone: () -> Void
-    @State private var displayName = ""
-    @State private var fieldError: String?
-    @State private var error: AuthErrorKey?
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var firstNameError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(app.t("onboarding.title")).displayHeading(32).padding(.bottom, 12)
             Text(app.t("onboarding.subtitle")).font(.vm(16)).foregroundStyle(Tokens.mutedForeground).padding(.bottom, 32)
-            VMTextField(
-                label: app.t("onboarding.displayName"), placeholder: "", text: $displayName,
-                hint: app.t("onboarding.displayNameHint"), error: fieldError, contentType: .nickname
-            )
+            VStack(alignment: .leading, spacing: 12) {
+                VMTextField(
+                    label: app.t("profile.firstName"), placeholder: "", text: limited($firstName), error: firstNameError,
+                    contentType: .givenName, submitLabel: .next
+                )
+                VMTextField(label: app.t("profile.lastName"), placeholder: "", text: limited($lastName), contentType: .familyName)
+            }
             .padding(.bottom, 20)
             LoadingButton(style: .vm(.default, fullWidth: true), action: save) { Text(app.t("onboarding.finish")) }
-                .padding(.bottom, 12)
-            Button(app.t("onboarding.skip"), action: onDone).buttonStyle(.vm(.ghost, fullWidth: true))
-            AuthErrorText(error: error).padding(.top, 12)
         }
-        .onAppear { if displayName.isEmpty { displayName = String(email.split(separator: "@").first ?? "") } }
+    }
+
+    /// The fields stop at the backend's cap, so it needs no message of its own.
+    private func limited(_ text: Binding<String>) -> Binding<String> {
+        Binding(get: { text.wrappedValue }, set: { text.wrappedValue = String($0.prefix(SignUpName.maxLength)) })
     }
 
     private func save() async {
-        let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard name.count <= 100 else {
-            fieldError = app.t("onboarding.displayNameTooLong")
+        guard let name = SignUpName(firstName: firstName, lastName: lastName) else {
+            firstNameError = app.t("common.required")
             return
         }
-        fieldError = nil
+        firstNameError = nil
         do {
-            try await app.service.updateProfile(displayName: name)
-            app.updateMe { $0.displayName = name }
-            onDone()
+            try await app.service.updateProfile(firstName: name.firstName, lastName: name.lastName)
+            app.updateMe {
+                $0.firstName = name.firstName
+                if let lastName = name.lastName { $0.lastName = lastName }
+            }
         } catch {
-            // The account already exists, so this isn't fatal
-            self.error = .serverError
+            // The account is already signed in, so a failed save mustn't hold the person here
+            app.showToast(app.t("onboarding.saveFailed"), isError: true)
         }
+        onDone()
     }
 }

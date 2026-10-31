@@ -16,8 +16,12 @@ struct ProfileVisibilityTests {
     }
 
     @Test func changesListOnlyTheFieldsWhoseVisibilityChanged() {
-        let changes = ProfileVisibility.changes(saved: ["bio": true], next: ["bio": true, "location": true, "displayName": false])
-        #expect(changes == ["location": true, "displayName": false])
+        let changes = ProfileVisibility.changes(saved: ["bio": true], next: ["bio": true, "firstName": true, "displayName": false])
+        #expect(changes == ["firstName": true, "displayName": false])
+    }
+
+    @Test func changesNeverSendTheFieldsNoPageShows() {
+        #expect(ProfileVisibility.changes(saved: [:], next: ["location": true, "points": true, "membershipLevel": true]).isEmpty)
     }
 
     @Test func changesAreEmptyWhenNothingChanged() {
@@ -27,11 +31,17 @@ struct ProfileVisibilityTests {
     // The web's OwnProfileView: the header locks hidden fields that have a value
     @Test func hiddenFieldsAreTheHiddenOnesWithAValue() {
         let profile = MyProfile(
-            id: "1", username: "klaus", displayName: "Klaus", bio: "", firstName: "Klaus", location: "Taipei",
-            points: 0, visibilitySettings: ["displayName": false, "bio": false, "location": true]
+            id: "1", username: "klaus", displayName: "Klaus", bio: "", firstName: "Klaus",
+            visibilitySettings: ["displayName": false, "bio": false, "location": true]
         )
-        #expect(profile.hiddenFields == ["displayName", "firstName", "points"])
-        #expect(profile.shownFieldCount == 1)
+        #expect(profile.hiddenFields == ["displayName", "firstName"])
+    }
+
+    // The web's AccountSettings: one per Edit profile setting, the real name shown when either half is
+    @Test func shownSettingsCountTheRealNameOnce() {
+        #expect(MyProfile(id: "1", username: "klaus").shownSettingCount == 2)
+        #expect(MyProfile(id: "1", username: "klaus", visibilitySettings: ["lastName": true, "bio": false]).shownSettingCount == 2)
+        #expect(ProfileVisibility.settings.count == 3)
     }
 }
 
