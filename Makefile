@@ -34,10 +34,10 @@ test: test-core build ## Everything CI runs
 formal: ## Model-check the Session refresh with TLC (.claude/skills/verify-session-refresh)
 	Formal/check-session.sh
 
-sync: ## Pull the API contract, strings, color tokens and avatars from ../vomatt-web
+sync: ## Pull the strings, color tokens and avatars from ../vomatt-web, the API contract from ../vomatt-api
 	scripts/sync.sh all
 
-sync-check: ## Fail when anything differs from ../vomatt-web
+sync-check: ## Fail when anything differs from ../vomatt-web or ../vomatt-api
 	scripts/sync.sh check
 
 api-diff: ## Compare the contract with the deployed API (API_URL=https://...)

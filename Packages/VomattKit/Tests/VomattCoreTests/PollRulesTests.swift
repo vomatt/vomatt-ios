@@ -180,8 +180,8 @@ struct AvatarTests {
     @Test func defaultKindMatchesTheWeb() {
         #expect(Avatars.defaultKind(for: "alice") == "banyan")
         #expect(Avatars.defaultKind(for: "chinssiang") == "pangolin")
-        #expect(Avatars.defaultKind(for: "Bob_42") == "tofu")
-        #expect(Avatars.defaultKind(for: "小明") == "boba")
+        #expect(Avatars.defaultKind(for: "Bob_42") == "blob")
+        #expect(Avatars.defaultKind(for: "小明") == "fold")
     }
 
     @Test func parseAcceptsOnlyKnownBots() {
@@ -198,8 +198,9 @@ struct AvatarTests {
         #expect(Avatars.parse("bot:none") == nil)
     }
 
-    @Test func castHas48WithTints() {
-        #expect(Avatars.kinds.count == 48)
+    @Test func castHas72WithTints() {
+        #expect(Avatars.kinds.count == 72)
+        #expect(Set(Avatars.kinds).count == 72)
         #expect(Avatars.kinds.allSatisfy { Avatars.tints[$0] != nil })
     }
 }

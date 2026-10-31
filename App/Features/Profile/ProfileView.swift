@@ -261,10 +261,7 @@ struct ProfileFollowButton: View {
                     .background(Tokens.secondary, in: RoundedRectangle(cornerRadius: Radius.lg))
                     .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Tokens.border))
             } else if app.isFollowing(id) {
-                Button { app.unfollow(id) } label: { Label(app.t("follows.following"), systemImage: "checkmark") }
-                    .buttonStyle(.vm(.outline, size: .sm, fullWidth: true))
-                    .accessibilityAddTraits(.isSelected)
-                    .accessibilityHint(app.t("follows.unfollow"))
+                FollowingButton(userId: id, username: profile.username, fullWidth: true)
             } else {
                 let followBack = profile.followsYou == true
                 Button {
@@ -295,7 +292,8 @@ struct ProfileSkeleton: View {
     }
 }
 
-/// Avatar, name, @username, bio and the public details line (the web's `ProfileHeader`).
+/// Avatar, name, @username, bio and when they joined (the web's `ProfileHeader`). The name leads with the
+/// real name, then the display name (`ProfileName`).
 struct ProfileHeader<Action: View>: View {
     @Environment(AppModel.self) private var app
     let profile: UserProfile
@@ -304,56 +302,72 @@ struct ProfileHeader<Action: View>: View {
     var hiddenFields: Set<String> = []
     @ViewBuilder var action: () -> Action
 
+    /// As on the web's phone layout, the name gets a row of its own under the avatar and actions, so it wraps instead of truncating.
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Group {
-                if let onAvatarTap {
-                    Button(action: onAvatarTap) {
-                        AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
-                            .overlay(alignment: .bottomTrailing) {
-                                Image(systemName: "pencil").font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Tokens.primaryForeground)
-                                    .frame(width: 22, height: 22).background(Tokens.primary, in: Circle())
-                                    .overlay(Circle().strokeBorder(Tokens.background, lineWidth: 2))
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(app.t("avatar.change"))
-                } else {
-                    AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                avatar
+                Spacer(minLength: 0)
+                action()
             }
-            VStack(alignment: .leading, spacing: 4) {
-                let name = profile.displayName ?? profile.username
-                marked(name, "displayName", lockSize: 14).displayHeading(28).lineLimit(1)
-                    .accessibilityLabel(spoken(name, "displayName"))
-                    .accessibilityAddTraits(.isHeader)
-                if profile.displayName != nil {
-                    Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-                if let bio = profile.bio, !bio.isEmpty {
-                    marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
-                        .accessibilityLabel(spoken(bio, "bio"))
-                }
-                details.dropFirst().reduce(details.first.map { marked($0.text, $0.field, lockSize: 9) } ?? Text(verbatim: "")) {
-                    $0 + Text(verbatim: " · ") + marked($1.text, $1.field, lockSize: 9)
-                }
-                .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-                .accessibilityLabel(details.map { spoken($0.text, $0.field) }.joined(separator: ", "))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            action()
+            details
         }
     }
 
-    /// "location · points · membership · joined"; fields the owner hid come back nil and drop out.
-    private var details: [(field: String, text: String)] {
-        [
-            profile.location.map { ("location", $0) },
-            profile.points.map { ("points", app.t("profile.points", ["count": app.t.number($0)])) },
-            profile.membershipLevel.map { ("membershipLevel", app.t("profile.membership", ["level": $0])) },
-            profile.joinedAt.map { ("joinedAt", app.t("profile.joined", ["date": app.dates.monthYear($0)])) },
-        ].compactMap { $0 }.filter { !$0.text.isEmpty }
+    @ViewBuilder private var avatar: some View {
+        if let onAvatarTap {
+            Button(action: onAvatarTap) {
+                AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil").font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Tokens.primaryForeground)
+                            .frame(width: 22, height: 22).background(Tokens.primary, in: Circle())
+                            .overlay(Circle().strokeBorder(Tokens.background, lineWidth: 2))
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(app.t("avatar.change"))
+        } else {
+            AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            nameLine.displayHeading(19).fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(nameSpoken)
+                .accessibilityAddTraits(.isHeader)
+            Text("@\(profile.username)").font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
+            if let bio = profile.bio, !bio.isEmpty {
+                marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
+                    .accessibilityLabel(spoken(bio, "bio"))
+            }
+            if let joinedAt = profile.joinedAt {
+                Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
+                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var name: ProfileName {
+        ProfileName(username: profile.username, displayName: profile.displayName, firstName: profile.firstName, lastName: profile.lastName)
+    }
+
+    /// The field whose lock the leading name carries: the real name's halves, or the display name.
+    private var primaryField: String {
+        guard ProfileName.realName(firstName: profile.firstName, lastName: profile.lastName) != nil else { return "displayName" }
+        return hiddenFields.contains("firstName") ? "firstName" : "lastName"
+    }
+
+    private var nameLine: Text {
+        let primary = marked(name.primary, primaryField, lockSize: 14)
+        guard let secondary = name.secondary else { return primary }
+        return primary + Text(verbatim: " ") + marked(secondary, "displayName", lockSize: 14).foregroundStyle(Tokens.mutedForeground)
+    }
+
+    private var nameSpoken: String {
+        [spoken(name.primary, primaryField), name.secondary.map { spoken($0, "displayName") }].compactMap { $0 }.joined(separator: ", ")
     }
 
     /// `text`, then a lock when only the owner sees `field`.
@@ -364,6 +378,27 @@ struct ProfileHeader<Action: View>: View {
 
     private func spoken(_ text: String, _ field: String) -> String {
         hiddenFields.contains(field) ? "\(text) (\(app.t("profile.onlyYou")))" : text
+    }
+}
+
+/// "Following", which asks before it unfollows (the web's `FollowButton` and `UnfollowDialog`).
+struct FollowingButton: View {
+    @Environment(AppModel.self) private var app
+    let userId: String
+    let username: String
+    var fullWidth = false
+    @State private var confirming = false
+
+    var body: some View {
+        Button { confirming = true } label: {
+            Label(app.t("follows.following"), systemImage: "checkmark").labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(.vm(.outline, size: .sm, fullWidth: fullWidth))
+        .accessibilityAddTraits(.isSelected)
+        .alert(app.t("follows.confirmUnfollow", ["username": username]), isPresented: $confirming) {
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(userId) }
+        }
     }
 }
 

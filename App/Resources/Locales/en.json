@@ -81,7 +81,8 @@
 		"accountDeleted": "This account was deleted. Logging in with that email starts a new account.",
 		"sessionExpired": "Your session expired. Please log in again.",
 		"dialogDescription": "Log in or sign up with your email to continue",
-		"sessionRevoked": "For your security, you were signed out on this device. Please log in again."
+		"sessionRevoked": "For your security, you were signed out on this device. Please log in again.",
+		"signedOutHere": "You were signed out on this device. Please log in again."
 	},
 	"verificationCode": {
 		"title": "Check your email",
@@ -118,7 +119,9 @@
 	},
 	"explore": {
 		"title": "Explore",
-		"searchPlaceholder": "Search poll titles and descriptions…",
+		"searchPlaceholder": "Search polls and topics…",
+		"topics": "Topics",
+		"moreOptions": "+{count} more",
 		"searchLabel": "Search",
 		"filterActive": "Open",
 		"filterEnded": "Ended",
@@ -126,6 +129,7 @@
 		"noResults": "No polls found.",
 		"noResultsHint": "Try other words, or switch to Ended polls.",
 		"noResultsHintEnded": "Try other words, or switch to Open polls.",
+		"noResultsHintTopic": "Try another topic, or tap it again to see every poll.",
 		"status": "Status",
 		"sort": "Sort",
 		"sortEnding": "Ending soon",
@@ -134,7 +138,6 @@
 		"sortTop": "Most voted"
 	},
 	"pollDetail": {
-		"backToFeed": "Back",
 		"about": "About this poll",
 		"share": "Share",
 		"notFound": "Poll not found.",
@@ -165,11 +168,8 @@
 		"noPollsYet": "No polls yet.",
 		"noPollsYetOwn": "Your polls show up here once they open.",
 		"pollsLoadFailed": "Couldn’t load polls.",
-		"points": "{count} points",
-		"points_one": "{count} point",
 		"cardFailed": "Couldn’t load this profile.",
 		"joined": "Joined {date}",
-		"membership": "{level} member",
 		"followers": "Followers",
 		"following": "Following",
 		"noFollowers": "No followers yet.",
@@ -237,7 +237,7 @@
 		"previewBack": "Back to your profile",
 		"moreFor": "More for @{username}",
 		"followingNoteTitle": "What following does",
-		"followingNoteBody": "Their polls join your Following feed. It never shows them how you voted, and you can undo it with one tap.",
+		"followingNoteBody": "Their polls join your Following feed. It never shows them how you voted, and you can undo it anytime.",
 		"mutualsOne": "Followed by @{name}",
 		"mutualsTwo": "Followed by @{name} and @{other}",
 		"mutualsMore": "Followed by @{name} and {count} others you follow",
@@ -246,17 +246,12 @@
 		"allFollowers": "All {count} followers",
 		"allFollowers_one": "All {count} follower",
 		"editIntro": "Each detail says who sees it. Change it right where you type.",
-		"groupOnProfile": "On your profile",
-		"groupAboutYou": "About you",
 		"alwaysShown": "Always shown",
 		"realName": "Real name",
 		"onlyYouShort": "Only you",
 		"everyone": "Everyone",
 		"visibilityPillEveryone": "{field}: everyone sees it. Change",
 		"visibilityPillOnlyYou": "{field}: only you see it. Change",
-		"visibilityPillEveryonePlural": "{field}: everyone sees them. Change",
-		"visibilityPillOnlyYouPlural": "{field}: only you see them. Change",
-		"notSet": "Not set",
 		"visibilitySavesHint": "Visibility changes save when you save.",
 		"visibilitySaveFailed": "Your details were saved, but who sees them wasn’t. Try again."
 	},
@@ -265,13 +260,9 @@
 		"empty": "No notifications yet.",
 		"emptyHint": "Results of polls you asked or voted in show up here.",
 		"unread": "Unread",
-		"intro": "Results, invitations, people who followed you, and comments on your polls.",
-		"markAllHint": "Opening a poll marks it read.",
 		"loadFailed": "Couldn’t load notifications.",
 		"ended": "Results are in",
 		"cancelled": "Cancelled",
-		"markAllRead": "Mark all read",
-		"caughtUp": "You’re all caught up.",
 		"day": {
 			"today": "Today",
 			"yesterday": "Yesterday",
@@ -283,13 +274,23 @@
 		"cancelledBy": "{title} was cancelled by {name}",
 		"railTitle": "Opening a poll marks it read",
 		"railBody": "Results rows stay until you open them, so a sealed promise is never lost in the list.",
-		"markAllFailed": "Couldn’t mark notifications read. Try again.",
 		"followedYou": "{name} followed you",
 		"followedYouGroup": "{name} and {count} others followed you",
 		"followedYouGroup_one": "{name} and {count} other followed you",
 		"seeFollowers": "See followers",
 		"commented": "{name} made the case under {title}",
 		"mentioned": "{name} mentioned you in {title}",
+		"liked": "{name} liked your comment in {title}",
+		"categoryLabel": "Category",
+		"category": {
+			"CONVERSATION": "Conversation",
+			"LIKE": "Likes",
+			"POLL_END": "Poll ends",
+			"INVITATION": "Invitations",
+			"FOLLOW": "Follows"
+		},
+		"categoryEmpty": "Nothing here yet.",
+		"categoryFailed": "Couldn’t load that tab. Try again.",
 		"excerpt": "“{text}”",
 		"endsIn": "{title} ends in {duration}",
 		"notVoted": "You haven’t voted",
@@ -300,6 +301,7 @@
 			"invitations": "invitations",
 			"comments": "comments",
 			"mentions": "mentions",
+			"likes": "likes",
 			"closingSoon": "closing soon"
 		},
 		"summaryOn": "{kinds} on",
@@ -546,13 +548,10 @@
 		"serverError": "Something went wrong. Please try again later."
 	},
 	"onboarding": {
-		"title": "What should we call you?",
-		"subtitle": "This is how other voters will see you.",
-		"displayName": "Display name",
-		"displayNameHint": "You can change it later in your account.",
-		"displayNameTooLong": "Keep it under 100 characters.",
-		"finish": "Finish",
-		"skip": "Skip for now"
+		"title": "What's your name?",
+		"subtitle": "You can change these, and who sees them, in Edit profile.",
+		"saveFailed": "Your name wasn’t saved. Add it in Edit profile.",
+		"finish": "Finish"
 	},
 	"comments": {
 		"title": "Discussion",
@@ -625,10 +624,7 @@
 		"anonymousDefaultOff": "New votes show your name by default.",
 		"field": {
 			"displayName": "Display name",
-			"bio": "Bio",
-			"location": "Location",
-			"points": "Points",
-			"membershipLevel": "Membership level"
+			"bio": "Bio"
 		},
 		"saveFailed": "Couldn’t save. Try again.",
 		"exportTitle": "Download your data",
@@ -648,6 +644,9 @@
 		"deleteLastAdmin": "You are the only active admin. Make someone else an admin before deleting your account.",
 		"tabGroups": "Invite lists",
 		"deleteCtaEllipsis": "Delete account…"
+	},
+	"page": {
+		"lastUpdated": "Last updated"
 	},
 	"cookieConsent": {
 		"label": "Cookie consent",
@@ -714,7 +713,9 @@
 			"bites": "Taiwan bites",
 			"guardians": "Temple guardians",
 			"visitors": "Visitors",
-			"animals": "Island animals"
+			"animals": "Island animals",
+			"cats": "Cats",
+			"dogs": "Dogs"
 		},
 		"none": {
 			"name": "Account icon",
@@ -912,6 +913,102 @@
 			"dog": {
 				"name": "Tugou",
 				"trait": "Taiwan dog, curly tail"
+			},
+			"fold": {
+				"name": "Fold",
+				"trait": "Silver tabby, unimpressed"
+			},
+			"munchkin": {
+				"name": "Munchkin",
+				"trait": "White, short legs, big plans"
+			},
+			"chinchilla": {
+				"name": "Chinchilla",
+				"trait": "White fluff, flat face"
+			},
+			"mainecoon": {
+				"name": "Maine Coon",
+				"trait": "Black, lynx tips, gentle giant"
+			},
+			"siamese": {
+				"name": "Siamese",
+				"trait": "Dark points, loud opinions"
+			},
+			"orange": {
+				"name": "Orange",
+				"trait": "Tabby, shares one brain cell"
+			},
+			"tuxedo": {
+				"name": "Tuxedo",
+				"trait": "Dressed for every vote"
+			},
+			"calico": {
+				"name": "Calico",
+				"trait": "Three colours, three moods"
+			},
+			"sphynx": {
+				"name": "Sphynx",
+				"trait": "No fur, all wrinkles"
+			},
+			"ragdoll": {
+				"name": "Ragdoll",
+				"trait": "Goes limp when held"
+			},
+			"british": {
+				"name": "British",
+				"trait": "Blue shorthair, chunky cheeks"
+			},
+			"bengal": {
+				"name": "Bengal",
+				"trait": "Rosettes, climbs everything"
+			},
+			"shiba": {
+				"name": "Shiba",
+				"trait": "Fox face, own agenda"
+			},
+			"corgi": {
+				"name": "Corgi",
+				"trait": "Big ears, no legs"
+			},
+			"golden": {
+				"name": "Golden",
+				"trait": "Loves everyone, equally"
+			},
+			"husky": {
+				"name": "Husky",
+				"trait": "Talks back, loudly"
+			},
+			"pug": {
+				"name": "Pug",
+				"trait": "Snores in every meeting"
+			},
+			"dachshund": {
+				"name": "Dachshund",
+				"trait": "Long story, short legs"
+			},
+			"poodle": {
+				"name": "Poodle",
+				"trait": "Fresh from the salon"
+			},
+			"frenchie": {
+				"name": "Frenchie",
+				"trait": "Bat ears, flat face"
+			},
+			"beagle": {
+				"name": "Beagle",
+				"trait": "Nose first, always"
+			},
+			"collie": {
+				"name": "Collie",
+				"trait": "Herds the whole group"
+			},
+			"dalmatian": {
+				"name": "Dalmatian",
+				"trait": "Counts its own spots"
+			},
+			"labrador": {
+				"name": "Lab",
+				"trait": "Black, tongue out, treats in"
 			}
 		}
 	},
@@ -986,6 +1083,8 @@
 			},
 			"email_not_verified": "This OAuth account’s email is not verified; cannot sign in or merge an existing account",
 			"account_banned": "This account has been banned and cannot sign in",
+			"session_revoked": "This device has been signed out. Please sign in again",
+			"session_not_found": "Signed-in device not found",
 			"passkey": {
 				"invalid": "Passkey verification failed. Please try again"
 			}
@@ -1117,6 +1216,7 @@
 	},
 	"follows": {
 		"unfollow": "Unfollow",
+		"confirmUnfollow": "Unfollow @{username}?",
 		"unfollowFailed": "Couldn’t unfollow. Try again.",
 		"follow": "Follow",
 		"followed": "Following @{username}",
@@ -1163,6 +1263,8 @@
 		"notifyCommentsBody": "When someone makes their case under a poll you asked.",
 		"notifyMentions": "Mentions",
 		"notifyMentionsBody": "When someone writes your @username in a comment.",
+		"notifyLikes": "Likes",
+		"notifyLikesBody": "When someone likes your comment or reply.",
 		"notifyClosingSoon": "Closing soon",
 		"notifyClosingSoonBody": "A nudge the day before a poll you haven’t voted in ends.",
 		"notifyOn": "{name} notifications on.",
@@ -1175,7 +1277,7 @@
 		"add": "Add passkey",
 		"added": "Passkey added",
 		"alreadyAdded": "This device already has a passkey for your account.",
-		"addFailed": "Couldn't add the passkey. Please try again.",
+		"addFailed": "Couldn’t add the passkey. Please try again.",
 		"unnamed": "Passkey",
 		"created": "Added {date}",
 		"lastUsed": "last used {date}",
@@ -1188,5 +1290,27 @@
 		"deleteConfirmBody": "{name} will no longer sign you in. It stays on the device until you remove it there.",
 		"deleted": "Passkey removed",
 		"deleteFailed": "Couldn’t remove the passkey. Please try again."
+	},
+	"sessions": {
+		"title": "Signed-in devices",
+		"body": "Where you’re logged in. Sign out any you don’t recognize.",
+		"thisDevice": "This device",
+		"unknownDevice": "Unknown device",
+		"adminConsole": "Admin console",
+		"lastActive": "active {time}",
+		"activityUnknown": "activity unknown",
+		"signedInOn": "signed in {date}",
+		"empty": "No other devices are signed in.",
+		"loadFailed": "Couldn’t load your devices.",
+		"signOut": "Sign out",
+		"signOutLabel": "Sign out {name}",
+		"signOutOthers": "Sign out other devices",
+		"signOutConfirmTitle": "Sign out this device?",
+		"signOutConfirmBody": "{name} will be signed out and will need a new code to log in.",
+		"signOutOthersConfirmTitle": "Sign out all other devices?",
+		"signOutOthersConfirmBody": "Every device except this one will be signed out and will need a new code to log in.",
+		"signedOut": "Device signed out",
+		"othersSignedOut": "Other devices signed out",
+		"signOutFailed": "Couldn’t sign out. Please try again."
 	}
 }

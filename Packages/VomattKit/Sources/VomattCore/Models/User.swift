@@ -5,14 +5,13 @@ public struct UserProfile: Hashable, Sendable {
     public var id: String?
     public var username: String
     public var displayName: String?
+    public var firstName: String?
+    public var lastName: String?
     public var bio: String?
     public var avatarUrl: String?
     public var joinedAt: Date?
     public var totalPolls: Int
     public var totalVotes: Int
-    public var location: String?
-    public var points: Int?
-    public var membershipLevel: String?
     /// Whether the viewer follows / has blocked this user; nil when signed out.
     public var isFollowing: Bool?
     public var isBlocked: Bool?
@@ -26,9 +25,9 @@ public struct UserProfile: Hashable, Sendable {
     public var mutualFollowersPreview: [UserSummary]
 
     public init(
-        id: String? = nil, username: String, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
-        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, location: String? = nil,
-        points: Int? = nil, membershipLevel: String? = nil, isFollowing: Bool? = nil, isBlocked: Bool? = nil,
+        id: String? = nil, username: String, displayName: String? = nil, firstName: String? = nil, lastName: String? = nil,
+        bio: String? = nil, avatarUrl: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0,
+        isFollowing: Bool? = nil, isBlocked: Bool? = nil,
         followersCount: Int = 0, followingCount: Int = 0, followsYou: Bool? = nil,
         mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = []
     ) {
@@ -42,14 +41,13 @@ public struct UserProfile: Hashable, Sendable {
         self.isBlocked = isBlocked
         self.username = username
         self.displayName = displayName
+        self.firstName = firstName
+        self.lastName = lastName
         self.bio = bio
         self.avatarUrl = avatarUrl
         self.joinedAt = joinedAt
         self.totalPolls = totalPolls
         self.totalVotes = totalVotes
-        self.location = location
-        self.points = points
-        self.membershipLevel = membershipLevel
     }
 }
 
@@ -63,11 +61,8 @@ public struct MyProfile: Hashable, Sendable {
     public var avatarUrl: String?
     public var firstName: String?
     public var lastName: String?
-    public var location: String?
     /// `yyyy-MM-dd`; once set it can be changed but not cleared.
     public var birthday: String?
-    public var points: Int
-    public var membershipLevel: String?
     public var joinedAt: Date?
     public var totalPolls: Int
     public var totalVotes: Int
@@ -79,9 +74,8 @@ public struct MyProfile: Hashable, Sendable {
 
     public init(
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
-        avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, location: String? = nil,
-        birthday: String? = nil, points: Int = 0,
-        membershipLevel: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, followersCount: Int = 0, followingCount: Int = 0,
+        avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil,
+        joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, followersCount: Int = 0, followingCount: Int = 0,
         visibilitySettings: [String: Bool] = [:], anonymousBallotByDefault: Bool = false
     ) {
         self.followersCount = followersCount
@@ -94,10 +88,7 @@ public struct MyProfile: Hashable, Sendable {
         self.avatarUrl = avatarUrl
         self.firstName = firstName
         self.lastName = lastName
-        self.location = location
         self.birthday = birthday
-        self.points = points
-        self.membershipLevel = membershipLevel
         self.joinedAt = joinedAt
         self.totalPolls = totalPolls
         self.totalVotes = totalVotes

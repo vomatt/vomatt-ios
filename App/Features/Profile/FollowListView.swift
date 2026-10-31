@@ -84,7 +84,7 @@ struct FollowListView: View {
     }
 }
 
-/// Follow, Follow back or Unfollow for a person in a list; nothing for yourself.
+/// Follow, Follow back or Following (which asks before it unfollows) for a person in a list; nothing for yourself.
 struct PersonFollowButton: View {
     @Environment(AppModel.self) private var app
     let user: UserSummary
@@ -92,7 +92,7 @@ struct PersonFollowButton: View {
     var body: some View {
         if app.isSignedIn, user.id != app.userId {
             if app.isFollowing(user.id) {
-                Button(app.t("ios.unfollowShort")) { app.unfollow(user.id) }.buttonStyle(.vm(.outline, size: .sm))
+                FollowingButton(userId: user.id, username: user.username)
             } else {
                 Button(app.t(user.followsYou == true ? "ios.followBack" : "ios.followShort")) { app.follow(user) }
                     .buttonStyle(.vm(.default, size: .sm))

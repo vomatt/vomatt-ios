@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Pulls what the iOS app shares with vomatt-web into this repo.
 #
-#   scripts/sync.sh api [--url https://api.example.com]   OpenAPI contract (prints a diff first)
+#   scripts/sync.sh api [--url https://api.example.com]   OpenAPI contract from vomatt-api (prints a diff first)
 #   scripts/sync.sh api --file path/to/openapi.json       the contract from a file (e.g. vomatt-api's docs/frontend/openapi.json)
 #   scripts/sync.sh locales                               en/zh strings
 #   scripts/sync.sh tokens                                color tokens -> asset catalog + Swift
 #   scripts/sync.sh avatars                               the bot avatar SVGs
-#   scripts/sync.sh all                                   everything above, the contract from the web repo
-#   scripts/sync.sh check                                 fails when anything differs from the web repo
+#   scripts/sync.sh all                                   everything above
+#   scripts/sync.sh check                                 fails when anything differs from vomatt-web or vomatt-api
 #
-# WEB_DIR points at the vomatt-web checkout (default: ../vomatt-web). Files are read from its commit
-# WEB_REF (default: origin/main, fetched first), not its working tree, so work in progress there never reaches the app.
+# WEB_DIR points at the vomatt-web checkout (default: ../vomatt-web), API_DIR at vomatt-api's (default:
+# ../vomatt-api). Files are read from their commits WEB_REF and API_REF (default: origin/main, fetched
+# first), not their working trees, so work in progress there never reaches the app. The contract comes
+# from vomatt-api's own snapshot (docs/frontend/openapi.json): the web's api-docs.json copy can lag
+# behind endpoints the web already calls.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,12 +24,26 @@ COLORS="$ROOT/App/Resources/Colors.xcassets"
 TOKENS_SWIFT="$ROOT/App/DesignSystem/Tokens.generated.swift"
 AVATARS="$ROOT/App/Resources/Avatars.xcassets"
 WEB_REF="${WEB_REF:-origin/main}"
+API_DIR="${API_DIR:-$ROOT/../vomatt-api}"
+API_REF="${API_REF:-origin/main}"
+API_SNAPSHOT=docs/frontend/openapi.json
 
 require_web() {
 	# Behind a stale local branch the app would copy strings the web already changed
 	[[ "$WEB_REF" == origin/* ]] && git -C "$WEB_DIR" fetch -q origin
 	git -C "$WEB_DIR" rev-parse --verify --quiet "$WEB_REF^{commit}" >/dev/null \
 		|| { echo "sync.sh: no commit $WEB_REF in vomatt-web at $WEB_DIR (set WEB_DIR, WEB_REF)" >&2; exit 1; }
+}
+
+require_api() {
+	[[ "$API_REF" == origin/* ]] && git -C "$API_DIR" fetch -q origin
+	git -C "$API_DIR" rev-parse --verify --quiet "$API_REF^{commit}" >/dev/null \
+		|| { echo "sync.sh: no commit $API_REF in vomatt-api at $API_DIR (set API_DIR, API_REF)" >&2; exit 1; }
+}
+
+# vomatt-api's contract snapshot as of API_REF.
+api_contract() {
+	git -C "$API_DIR" show "$API_REF:$API_SNAPSHOT"
 }
 
 # Prints a web file as of WEB_REF.
@@ -49,10 +66,10 @@ sync_api() {
 		if [[ "${1:-}" == "--file" ]]; then
 			source="${2:?--file needs a path}"
 		else
-			require_web
-			source="$WEB_DIR/api-docs.json at $WEB_REF"
+			require_api
+			source="$API_DIR/$API_SNAPSHOT at $API_REF"
 		fi
-		if [[ "${1:-}" == "--file" ]]; then cp "$2" "$tmp"; else web_file api-docs.json > "$tmp"; fi
+		if [[ "${1:-}" == "--file" ]]; then cp "$2" "$tmp"; else api_contract > "$tmp"; fi
 	fi
 	# Stable formatting keeps the git diff readable
 	python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$tmp"
@@ -106,13 +123,14 @@ check() {
 	local status=0
 	cmp -s <(web_file src/locales/en.json) "$LOCALES/en.json" || { echo "locales/en.json differs from the web"; status=1; }
 	cmp -s <(web_file src/locales/zh.json) "$LOCALES/zh.json" || { echo "locales/zh.json differs from the web"; status=1; }
+	require_api
 	local diff
-	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" <(web_file api-docs.json))"
-	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from the web:"; echo "$diff"; status=1; }
+	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" <(api_contract))"
+	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from vomatt-api:"; echo "$diff"; status=1; }
 	local ios_avatars
 	ios_avatars="$(ls "$AVATARS" | grep imageset | sed 's/^bot-//; s/\.imageset$//' | sort)"
 	[[ "$(web_avatars)" == "$ios_avatars" ]] || { echo "avatars differ from the web"; status=1; }
-	[[ $status -eq 0 ]] && echo "In sync with vomatt-web $WEB_REF ($(git -C "$WEB_DIR" rev-parse --short "$WEB_REF"))"
+	[[ $status -eq 0 ]] && echo "In sync with vomatt-web $WEB_REF ($(git -C "$WEB_DIR" rev-parse --short "$WEB_REF")) and vomatt-api $API_REF ($(git -C "$API_DIR" rev-parse --short "$API_REF"))"
 	return $status
 }
 
@@ -123,5 +141,5 @@ case "${1:-}" in
 	avatars) sync_avatars ;;
 	all) sync_api; sync_locales; sync_tokens; sync_avatars ;;
 	check) check ;;
-	*) sed -n '2,13p' "$0"; exit 1 ;;
+	*) sed -n '2,16p' "$0"; exit 1 ;;
 esac

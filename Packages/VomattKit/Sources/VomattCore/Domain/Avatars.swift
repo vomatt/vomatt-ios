@@ -1,7 +1,7 @@
 import Foundation
 
-/// The bot cast (port of vomatt-web `features/avatars/catalog.ts`): 48 characters
-/// in four families of twelve. A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
+/// The bot cast (port of vomatt-web `features/avatars/catalog.ts`): 72 characters
+/// in six families of twelve. A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
 public enum Avatars {
     public enum Tint: String, Sendable {
         case sand, stone, green, sky, peach, lavender
@@ -12,6 +12,8 @@ public enum Avatars {
         ("guardians", ["mazu", "tudi", "yuelao", "qiye", "baye", "shi", "long", "denglong", "ding", "jiaobei", "xiang", "banyan"]),
         ("visitors", ["gray", "nordic", "reptile", "mantis", "anu", "tallwhite", "moth", "blob", "cyclops", "probe", "saucer", "trio"]),
         ("animals", ["bear", "magpie", "pangolin", "shihu", "macaque", "deer", "pheasant", "firefly", "crab", "flyfish", "turtle", "dog"]),
+        ("cats", ["fold", "munchkin", "chinchilla", "mainecoon", "siamese", "orange", "tuxedo", "calico", "sphynx", "ragdoll", "british", "bengal"]),
+        ("dogs", ["shiba", "corgi", "golden", "husky", "pug", "dachshund", "poodle", "frenchie", "beagle", "collie", "dalmatian", "labrador"]),
     ]
 
     public static let kinds: [String] = families.flatMap(\.kinds)
@@ -25,6 +27,10 @@ public enum Avatars {
         "moth": .lavender, "blob": .green, "cyclops": .sky, "probe": .stone, "saucer": .sky, "trio": .green,
         "bear": .stone, "magpie": .sky, "pangolin": .sand, "shihu": .peach, "macaque": .lavender, "deer": .green,
         "pheasant": .sand, "firefly": .green, "crab": .peach, "flyfish": .sky, "turtle": .sky, "dog": .sand,
+        "fold": .stone, "munchkin": .peach, "chinchilla": .lavender, "mainecoon": .stone, "siamese": .sky, "orange": .sand,
+        "tuxedo": .stone, "calico": .peach, "sphynx": .peach, "ragdoll": .sky, "british": .stone, "bengal": .sand,
+        "shiba": .sand, "corgi": .sand, "golden": .sand, "husky": .sky, "pug": .sand, "dachshund": .sand,
+        "poodle": .peach, "frenchie": .stone, "beagle": .peach, "collie": .stone, "dalmatian": .stone, "labrador": .sand,
     ]
 
     private static let prefix = "bot:"
