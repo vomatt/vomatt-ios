@@ -71,6 +71,9 @@ struct FeedView: View {
     var following = false
     var header: AnyView?
     @State private var list: CursorList<Poll>?
+    /// Whether the signed-in viewer follows `tag`; nil until known.
+    @State private var followingTag: Bool?
+    @State private var togglingTag = false
 
     var body: some View {
         ScrollView {
@@ -87,10 +90,37 @@ struct FeedView: View {
         .canvas()
         .navigationTitle(tag.map { "#\($0.name)" } ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let tag, app.isSignedIn, let followingTag {
+                    Button(app.t(followingTag ? "ios.unfollowTag" : "ios.followTag")) { toggleTagFollow(tag, followingTag) }
+                }
+            }
+        }
+        .task(id: app.sessionGeneration) {
+            guard let tag, app.isSignedIn else { return followingTag = nil }
+            followingTag = (try? await app.service.followedTags())?.contains { $0.id == tag.id }
+        }
         .task(id: app.sessionGeneration) {
             let list = list ?? makeList()
             self.list = list
             await list.reload()
+        }
+    }
+
+    /// Shows the new state at once and puts the old one back when the API refuses.
+    private func toggleTagFollow(_ tag: Tag, _ current: Bool) {
+        guard !togglingTag else { return }
+        togglingTag = true
+        followingTag = !current
+        Task {
+            defer { togglingTag = false }
+            do {
+                try await app.service.setTagFollow(tagId: tag.id, following: !current)
+            } catch {
+                followingTag = current
+                app.showToast(app.t.message(for: error, fallback: "ios.followTagFailed"), isError: true)
+            }
         }
     }
 

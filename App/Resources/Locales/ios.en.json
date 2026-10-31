@@ -84,7 +84,28 @@
 		"notifPrefInvitations": "Invitations",
 		"notifPrefComments": "Comments and replies",
 		"notifPrefClosingSoon": "Polls closing soon",
-		"notifPrefFailed": "Couldn't save this setting. Try again."
+		"notifPrefFailed": "Couldn't save this setting. Try again.",
+		"reportPollTitle": "Report this poll",
+		"reportPollBody": "Tell us what's wrong. The owner isn't told, and the poll stays until a moderator looks at it.",
+		"reportPoll": "Report poll",
+		"followTag": "Follow topic",
+		"unfollowTag": "Unfollow topic",
+		"followTagFailed": "Couldn't update this topic. Try again.",
+		"bookmark": "Bookmark",
+		"bookmarked": "Bookmarked",
+		"bookmarkFailed": "Couldn't update your bookmark. Try again.",
+		"notifMentioned": "{name} mentioned you in {title}",
+		"notifTabConversation": "Conversation",
+		"notifTabLikes": "Likes",
+		"notifTabPolls": "Poll ends",
+		"notifTabInvitations": "Invitations",
+		"notifTabFollows": "Follows",
+		"notifPrefMentions": "Mentions",
+		"notifPrefLikes": "Likes on your comments",
+		"notifLiked": "{name} liked your comment in {title}",
+		"notifCategoryLabel": "Category",
+		"notifCategoryEmpty": "Nothing here yet.",
+		"notifCategoryFailed": "Couldn’t load that tab. Try again."
 	},
 	"apiError": {
 		"common.bad_request": "Bad request format",
@@ -240,5 +261,25 @@
 	},
 	"common": {
 		"tryAgain": "Try again"
+	},
+	"devices": {
+		"title": "Signed-in devices",
+		"body": "Where you’re signed in. Sign out any you don’t recognize.",
+		"current": "This device",
+		"admin": "Admin console",
+		"unknown": "Unknown device",
+		"signedInOn": "Signed in {date}",
+		"lastActive": "last active {date}",
+		"loadFailed": "Couldn’t load your devices.",
+		"signOut": "Sign out",
+		"signOutLabel": "Sign out {name}",
+		"signOutTitle": "Sign out this device?",
+		"signOutBody": "{name} will need to sign in again.",
+		"signedOut": "Device signed out",
+		"signOutFailed": "Couldn’t sign the device out. Please try again.",
+		"signOutOthers": "Sign out all other devices",
+		"signOutOthersTitle": "Sign out all other devices?",
+		"signOutOthersBody": "Every device except this one will need to sign in again.",
+		"othersSignedOut": "Other devices signed out"
 	}
 }

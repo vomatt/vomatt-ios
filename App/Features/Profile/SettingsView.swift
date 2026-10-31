@@ -22,7 +22,7 @@ struct SettingsView: View {
 /// Which kinds of notification show in the feed and the unread count.
 private struct NotificationPreferencesSection: View {
     @Environment(AppModel.self) private var app
-    private enum Switch: CaseIterable { case resultsIn, invitations, comments, closingSoon }
+    private enum Switch: CaseIterable { case resultsIn, invitations, comments, mentions, likes, closingSoon }
 
     @State private var preferences: NotificationPreferences?
     @State private var failed = false
@@ -54,7 +54,7 @@ private struct NotificationPreferencesSection: View {
             } else if failed {
                 LoadFailed(message: app.t("ios.notifPrefFailed")) { await load() }
             } else {
-                Skeleton(height: 208, radius: Radius.xl)
+                Skeleton(height: 312, radius: Radius.xl)
             }
         }
         .task(id: app.sessionGeneration) { await load() }
@@ -65,6 +65,8 @@ private struct NotificationPreferencesSection: View {
         case .resultsIn: app.t("ios.notifPrefResults")
         case .invitations: app.t("ios.notifPrefInvitations")
         case .comments: app.t("ios.notifPrefComments")
+        case .mentions: app.t("ios.notifPrefMentions")
+        case .likes: app.t("ios.notifPrefLikes")
         case .closingSoon: app.t("ios.notifPrefClosingSoon")
         }
     }
@@ -74,6 +76,8 @@ private struct NotificationPreferencesSection: View {
         case .resultsIn: preferences.resultsIn
         case .invitations: preferences.invitations
         case .comments: preferences.comments
+        case .mentions: preferences.mentions
+        case .likes: preferences.likes
         case .closingSoon: preferences.closingSoon
         }
     }
@@ -97,7 +101,8 @@ private struct NotificationPreferencesSection: View {
         do {
             let saved = try await app.service.updateNotificationPreferences(
                 resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
-                comments: item == .comments ? newValue : nil, closingSoon: item == .closingSoon ? newValue : nil
+                comments: item == .comments ? newValue : nil, mentions: item == .mentions ? newValue : nil, likes: item == .likes ? newValue : nil,
+                closingSoon: item == .closingSoon ? newValue : nil
             )
             // Another toggle still in flight: its answer carries the final state.
             if inFlight == 1 { preferences = saved }
@@ -113,6 +118,8 @@ private struct NotificationPreferencesSection: View {
         case .resultsIn: preferences?.resultsIn = newValue
         case .invitations: preferences?.invitations = newValue
         case .comments: preferences?.comments = newValue
+        case .mentions: preferences?.mentions = newValue
+        case .likes: preferences?.likes = newValue
         case .closingSoon: preferences?.closingSoon = newValue
         }
     }
@@ -179,6 +186,8 @@ private struct AccountSettings: View {
             }
 
             PasskeysSection(service: app.service)
+
+            DevicesSection(service: app.service)
 
             NotificationPreferencesSection()
 
@@ -365,6 +374,117 @@ private struct PasskeysSection: View {
 
     private func showError(_ failure: PasskeyFailure) {
         app.showToast(failure.error.map { app.t.message(for: $0, fallback: failure.key) } ?? app.t(failure.key), isError: true)
+    }
+}
+
+/// Devices signed in to the account: each other one can be signed out after confirmation, or all
+/// at once. This device signs out with Sign out below.
+private struct DevicesSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var model: DevicesModel
+    @State private var confirming: DeviceSession?
+    @State private var confirmingOthers = false
+
+    init(service: VomattService) {
+        _model = State(initialValue: DevicesModel(service: service))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("devices.title")).font(.vm(15, .medium))
+                Text(app.t("devices.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            if model.loadFailed {
+                HStack(spacing: 12) {
+                    Text(app.t("devices.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
+                }
+            } else if let devices = model.devices {
+                ForEach(devices) { device in row(device) }
+                if model.hasOthers {
+                    Button(app.t("devices.signOutOthers")) { confirmingOthers = true }
+                        .buttonStyle(.vm(.outline, fullWidth: true))
+                }
+            } else {
+                ProgressView().frame(maxWidth: .infinity)
+            }
+        }
+        .card()
+        .task { await model.load() }
+        .alert(
+            app.t("devices.signOutTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { device in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("devices.signOut"), role: .destructive) { Task { await signOut(device) } }
+        } message: { device in
+            Text(app.t("devices.signOutBody", ["name": name(device)]))
+        }
+        .alert(app.t("devices.signOutOthersTitle"), isPresented: $confirmingOthers) {
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("devices.signOut"), role: .destructive) { Task { await signOutOthers() } }
+        } message: {
+            Text(app.t("devices.signOutOthersBody"))
+        }
+    }
+
+    private func row(_ device: DeviceSession) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name(device)).font(.vm(14, .medium)).lineLimit(1)
+                if device.isCurrent || device.isAdminScope {
+                    HStack(spacing: 6) {
+                        if device.isCurrent { Chip(text: app.t("devices.current"), bordered: true) }
+                        if device.isAdminScope { Chip(text: app.t("devices.admin")) }
+                    }
+                }
+                if let dates = dates(device) {
+                    Text(dates).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !device.isCurrent {
+                Button(app.t("devices.signOut")) { confirming = device }
+                    .buttonStyle(.vm(.outline, size: .sm))
+                    .accessibilityLabel(app.t("devices.signOutLabel", ["name": name(device)]))
+            }
+        }
+        .padding(.top, 12)
+        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+    }
+
+    private func name(_ device: DeviceSession) -> String { device.deviceName ?? app.t("devices.unknown") }
+
+    private func dates(_ device: DeviceSession) -> String? {
+        let parts = [
+            device.createdAt.map { app.t("devices.signedInOn", ["date": app.dates.pollDate($0)]) },
+            device.lastSeenAt.map { app.t("devices.lastActive", ["date": app.dates.pollDate($0)]) },
+        ].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func signOut(_ device: DeviceSession) async {
+        if await model.signOut(device) {
+            app.showToast(app.t("devices.signedOut"))
+        } else {
+            showError()
+        }
+    }
+
+    private func signOutOthers() async {
+        if await model.signOutOthers() {
+            app.showToast(app.t("devices.othersSignedOut"))
+        } else {
+            showError()
+        }
+    }
+
+    private func showError() {
+        guard let error = model.failure else { return }
+        app.showToast(app.t.message(for: error, fallback: "devices.signOutFailed"), isError: true)
     }
 }
 
