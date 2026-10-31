@@ -100,24 +100,3 @@ struct PersonFollowButton: View {
         }
     }
 }
-
-/// Follow / unfollow, or unblock, for someone else's profile (signed in only).
-struct ProfileRelationButton: View {
-    @Environment(AppModel.self) private var app
-    let profile: UserProfile
-
-    var body: some View {
-        if app.isSignedIn, let id = profile.id, id != app.userId {
-            if app.isBlocked(profile.username) {
-                Button(app.t("ios.unblock")) { app.unblock(profile.username) }.buttonStyle(.vm(.outline, size: .sm))
-            } else if app.isFollowing(id) {
-                Button(app.t("ios.unfollowShort")) { app.unfollow(id) }.buttonStyle(.vm(.outline, size: .sm))
-            } else {
-                Button(app.t(profile.followsYou == true ? "ios.followBack" : "ios.followShort")) {
-                    app.follow(UserSummary(id: id, username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl))
-                }
-                .buttonStyle(.vm(.default, size: .sm))
-            }
-        }
-    }
-}

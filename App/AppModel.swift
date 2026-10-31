@@ -48,6 +48,7 @@ enum Route: Hashable {
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
     case settings
+    case inviteLists
 }
 
 struct Toast: Equatable, Identifiable {
@@ -91,6 +92,14 @@ final class AppModel {
     var pendingAuth: PendingAuth?
     var creator: CreatorRequest?
     var toast: Toast?
+    /// Non-nil while Block asks for confirmation; every Block entry point goes through it.
+    var blockRequest: BlockRequest?
+
+    struct BlockRequest: Identifiable {
+        let id = UUID()
+        let username: String
+        let userId: String?
+    }
 
     struct PendingAuth: Identifiable {
         let id = UUID()

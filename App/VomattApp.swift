@@ -27,16 +27,28 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The tab bar steps aside while typing, like UITabBar
     @State private var isKeyboardVisible = false
+    @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
 
     var body: some View {
         @Bindable var app = app
         tabs
         .toastHost(app)
+        .preferredColorScheme(theme.colorScheme)
         .sheet(item: $app.pendingAuth) { pending in
             AuthSheet(onSignedIn: pending.onSignedIn)
         }
         .fullScreenCover(item: $app.creator) { request in
             PollCreatorView(request: request)
+        }
+        .alert(
+            app.t("blocks.confirmTitle", ["username": app.blockRequest?.username ?? ""]),
+            isPresented: Binding(get: { app.blockRequest != nil }, set: { if !$0 { app.blockRequest = nil } }),
+            presenting: app.blockRequest
+        ) { request in
+            Button(app.t("blocks.block"), role: .destructive) { app.block(request.username, userId: request.userId) }
+            Button(app.t("common.cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(app.t("blocks.confirmBody"))
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await app.refreshUnread() } }
@@ -151,6 +163,7 @@ struct RouteView: View {
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)
         case .settings: SettingsView()
+        case .inviteLists: InviteListsView()
         }
     }
 }

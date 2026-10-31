@@ -28,8 +28,8 @@ struct AccountView: View {
         let votedSplit = ProfileLists.splitVoted(voted)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // The header leaves out fields hidden from visitors, as they see it
-                ProfileHeader(profile: profile.asPublicProfile, onAvatarTap: { showAvatar = true }) {
+                // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
+                ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
                     Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
                         .buttonStyle(.vm(.outline, size: .icon))
@@ -136,11 +136,11 @@ struct AccountView: View {
             }
             if !open.isEmpty {
                 ProfileSection(label: app.t("profile.sectionOpen"), count: open.count)
-                ForEach(open) { askedRow($0) }
+                ForEach(open) { AskedRow(poll: $0, isOwn: true) }
             }
             if !ended.isEmpty {
                 ProfileSection(label: app.t("myPolls.tabEnded"), count: ended.count)
-                ForEach(ended) { askedRow($0) }
+                ForEach(ended) { AskedRow(poll: $0, isOwn: true) }
             }
         }
     }
@@ -186,30 +186,6 @@ struct AccountView: View {
         .draftCard()
     }
 
-    /// An owner's poll: "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted" once ended.
-    private func askedRow(_ poll: Poll) -> some View {
-        let status = poll.status()
-        let unread = status == .ended && poll.unread == true
-        var parts: [Text] = []
-        if status == .ended {
-            if poll.isCancelled {
-                parts = [Text(app.t("notifications.cancelled"))]
-            } else {
-                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
-            }
-        } else {
-            let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
-            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
-            if let when { parts.append(Text(when)) }
-        }
-        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
-        return PollRow(poll: poll, unread: unread) {
-            joined(parts)
-        } aside: {
-            StatusChip(poll: poll, timeElsewhere: true)
-        }
-    }
-
     /// A Sealed Ballot: the pick and when the results open.
     private func sealedRow(_ poll: Poll) -> some View {
         PollRow(poll: poll, sealed: true) {
@@ -235,6 +211,55 @@ struct AccountView: View {
         }
     }
 
+    private func votedCount(_ poll: Poll) -> String {
+        app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
+    }
+
+    /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
+    private func load() async {
+        do {
+            async let open = app.service.allMyPolls(status: .open)
+            async let ended = app.service.allMyPolls(status: .ended)
+            let (openPolls, endedPolls) = try await (open, ended)
+            polls = openPolls + endedPolls
+            loadFailed = false
+        } catch {
+            loadFailed = polls == nil
+        }
+        await app.refreshAccount()
+    }
+}
+
+/// A poll in an Asked list (the web's `AskedRow`): "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted"
+/// once ended. Only the owner gets the unread dot on results they haven't opened.
+struct AskedRow: View {
+    @Environment(AppModel.self) private var app
+    let poll: Poll
+    var isOwn = false
+
+    var body: some View {
+        let status = poll.status()
+        let unread = isOwn && status == .ended && poll.unread == true
+        var parts: [Text] = []
+        if status == .ended {
+            if poll.isCancelled {
+                parts = [Text(app.t("notifications.cancelled"))]
+            } else {
+                parts = [decided(poll), Text(votedCount(poll))].compactMap { $0 }
+            }
+        } else {
+            let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
+            if status != .scheduled { parts.append(Text(votedCount(poll)).foregroundStyle(Tokens.foreground)) }
+            if let when { parts.append(Text(when)) }
+        }
+        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
+        return PollRow(poll: poll, unread: unread) {
+            joined(parts)
+        } aside: {
+            StatusChip(poll: poll, timeElsewhere: true)
+        }
+    }
+
     /// "**Yes** won" or "Tie between **A** and **B**"; nil when there is no winner to name.
     private func decided(_ poll: Poll) -> Text? {
         switch ProfileLists.endedSummary(poll) {
@@ -254,32 +279,19 @@ struct AccountView: View {
     private func votedCount(_ poll: Poll) -> String {
         app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])
     }
+}
 
-    private func strong(_ text: String) -> Text {
-        Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
-    }
+private func strong(_ text: String) -> Text {
+    Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
+}
 
-    private func joined(_ parts: [Text]) -> Text {
-        parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
-    }
-
-    /// Every Poll the user created or holds a Ballot in, so the record and both lists cover them all.
-    private func load() async {
-        do {
-            async let open = app.service.allMyPolls(status: .open)
-            async let ended = app.service.allMyPolls(status: .ended)
-            let (openPolls, endedPolls) = try await (open, ended)
-            polls = openPolls + endedPolls
-            loadFailed = false
-        } catch {
-            loadFailed = polls == nil
-        }
-        await app.refreshAccount()
-    }
+/// Meta parts set apart by " · ".
+private func joined(_ parts: [Text]) -> Text {
+    parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
 }
 
 /// A tab's count, in mono beside its label.
-private struct TabCount: View {
+struct TabCount: View {
     @Environment(AppModel.self) private var app
     let count: Int
 
@@ -289,17 +301,18 @@ private struct TabCount: View {
 }
 
 /// A small heading over a run of rows: "Open now · 2", with the lock on what only the owner sees.
-private struct ProfileSection: View {
+struct ProfileSection: View {
     @Environment(AppModel.self) private var app
     let label: String
-    let count: Int
+    /// Left out while more pages remain, when the number would be wrong.
+    let count: Int?
     var note: String?
     var onlyYou = false
 
     var body: some View {
         HStack(spacing: 6) {
             if onlyYou { OnlyYouMarker() }
-            Text([label, app.t.number(count), note].compactMap { $0 }.joined(separator: " · "))
+            Text([label, count.map { app.t.number($0) }, note].compactMap { $0 }.joined(separator: " · "))
         }
         .font(.vm(12, .medium))
         .foregroundStyle(Tokens.mutedForeground)
@@ -310,7 +323,8 @@ private struct ProfileSection: View {
     }
 }
 
-/// Username, display name and bio (the web's `EditProfileDialog`).
+/// Edit profile (the web's `EditProfileDialog`): each detail says who sees it, and the owner changes that
+/// right where they type. Details and visibility save together with Save.
 struct EditProfileSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
@@ -321,8 +335,17 @@ struct EditProfileSheet: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var birthday: Date?
-    @State private var error: String?
+    @State private var visibility: [String: Bool] = [:]
+    @State private var usernameError: String?
+    /// A new username breaks old links, so it takes a second step.
+    @State private var confirmingUsername = false
+    @State private var isSaving = false
+    @State private var showAvatar = false
+    @FocusState private var usernameFocused: Bool
 
+    private static let displayNameMax = 100
+    private static let bioMax = 500
+    private static let nameMax = 50
     private static let earliestBirthday = Calendar.current.date(from: DateComponents(year: 1900, month: 1, day: 1)) ?? .distantPast
     /// Yesterday as the API counts it: the earlier of the local and Taipei dates, minus a day.
     private static var latestBirthday: Date {
@@ -336,96 +359,326 @@ struct EditProfileSheet: View {
     }
     private static let birthdayFormat = Date.ISO8601FormatStyle(timeZone: .current).year().month().day()
 
-    private var usernameError: String? {
-        username == profile.username || Username.isValid(username) ? nil : app.t("account.usernameInvalid")
+    // The field lowercases, so a legacy mixed-case username isn't renamed by a case-only edit
+    private var usernameChanged: Bool { username.lowercased() != profile.username.lowercased() }
+    private var formattedBirthday: String? { birthday.map { $0.formatted(Self.birthdayFormat) } }
+    // A birthday can't be cleared, so only one the user set counts
+    private var birthdayChanged: Bool { formattedBirthday != nil && formattedBirthday != profile.birthday }
+    private var detailsChanged: Bool {
+        usernameChanged || birthdayChanged || displayName != (profile.displayName ?? "") || bio != (profile.bio ?? "")
+            || firstName != (profile.firstName ?? "") || lastName != (profile.lastName ?? "")
+    }
+    /// "Your profile moves to /new. Links to /old stop working…"
+    private var usernameMove: String {
+        let paths: [String: CustomStringConvertible] = ["newPath": "/" + username, "oldPath": "/" + profile.username]
+        return app.t("account.usernameConfirmBody", paths)
+    }
+    private var visibilityChanges: [String: Bool] {
+        ProfileVisibility.changes(saved: profile.visibilitySettings, next: visibility)
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VMTextField(label: app.t("account.usernameLabel"), placeholder: profile.username, text: $username,
-                                hint: app.t("account.usernameHint", ["path": app.config.profileURL(username).absoluteString]),
-                                error: usernameError, contentType: .username, autocapitalization: .never)
-                    VMTextField(label: app.t("profile.displayName"), placeholder: "", text: $displayName, contentType: .nickname)
-                    VMTextField(label: app.t("ios.firstName"), placeholder: "", text: $firstName, contentType: .givenName)
-                    VMTextField(label: app.t("ios.lastName"), placeholder: "", text: $lastName, contentType: .familyName)
-                    birthdayField
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(app.t("profile.bio")).font(.vm(14, .medium))
-                        VMTextEditor(placeholder: "", text: $bio, minHeight: 96)
-                    }
-                    if let error { Text(error).font(.vm(14)).foregroundStyle(Tokens.destructive) }
-                }
-                .padding(Metrics.gutter)
-            }
+            form
             .canvas()
             .navigationTitle(app.t("profile.editProfile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    LoadingButton(style: .vm(.link), action: save) { Text(app.t("common.save")).fontWeight(.semibold) }
-                        .disabled(usernameError != nil)
-                }
+                ToolbarItem(placement: .confirmationAction) { saveButton }
             }
+            .alert(app.t("account.usernameConfirmTitle"), isPresented: $confirmingUsername) {
+                // The safe choice comes first
+                Button(app.t("common.back"), role: .cancel) {}
+                Button(app.t("account.usernameConfirmCta"), action: confirmUsername)
+            } message: {
+                Text(usernameMove)
+            }
+            .sheet(isPresented: $showAvatar) { AvatarPickerSheet(username: profile.username, avatarUrl: profile.avatarUrl) }
         }
-        .onAppear {
-            username = profile.username
-            displayName = profile.displayName ?? ""
-            bio = profile.bio ?? ""
-            firstName = profile.firstName ?? ""
-            lastName = profile.lastName ?? ""
-            birthday = profile.birthday.flatMap { try? Date($0, strategy: Self.birthdayFormat) }
+        .onAppear(perform: start)
+    }
+
+    /// Each visit starts from the saved profile.
+    private func start() {
+        username = profile.username
+        displayName = profile.displayName ?? ""
+        bio = profile.bio ?? ""
+        firstName = profile.firstName ?? ""
+        lastName = profile.lastName ?? ""
+        birthday = profile.birthday.flatMap { try? Date($0, strategy: Self.birthdayFormat) }
+        visibility = profile.visibilitySettings
+    }
+
+    /// `text`, cut at `max` characters as the web's `maxLength` does.
+    private func limited(_ text: Binding<String>, _ max: Int) -> Binding<String> {
+        Binding(get: { text.wrappedValue }, set: { text.wrappedValue = String($0.prefix(max)) })
+    }
+
+    /// The username as typed, trimmed and lowercased like the web's field.
+    private var usernameInput: Binding<String> {
+        Binding(get: { username }, set: { value in
+            username = String(value.trimmingCharacters(in: .whitespaces).lowercased().prefix(Username.maxLength))
+            usernameError = nil
+        })
+    }
+
+    private var form: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 14) {
+                    AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 64)
+                    Button(app.t("avatar.change")) { showAvatar = true }.buttonStyle(.vm(.outline, size: .sm))
+                }
+
+                groupLabel(app.t("profile.groupOnProfile"))
+                VStack(alignment: .leading, spacing: 6) {
+                    labelRow(app.t("profile.displayName")) { pill(app.t("profile.displayName"), ["displayName"]) }
+                    VMTextField(label: nil, placeholder: app.t("profile.displayNamePlaceholder"), text: limited($displayName, Self.displayNameMax), contentType: .nickname)
+                }
+                .padding(.top, -8)
+                usernameField
+                VStack(alignment: .leading, spacing: 6) {
+                    labelRow(app.t("profile.bio")) { pill(app.t("profile.bio"), ["bio"]) }
+                    VMTextEditor(placeholder: app.t("profile.bioPlaceholder"), text: limited($bio, Self.bioMax), minHeight: 72)
+                    Text("\(bio.count) / \(Self.bioMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+
+                groupLabel(app.t("profile.groupAboutYou"))
+                HStack(alignment: .top, spacing: 10) {
+                    VMTextField(label: app.t("profile.firstName"), placeholder: "", text: limited($firstName, Self.nameMax), contentType: .givenName)
+                    VMTextField(label: app.t("profile.lastName"), placeholder: "", text: limited($lastName, Self.nameMax), contentType: .familyName)
+                }
+                .padding(.top, -8)
+                visibilityCard
+            }
+            .padding(Metrics.gutter)
         }
     }
 
-    private var birthdayField: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(app.t("ios.birthday")).font(.vm(14, .medium))
-            if birthday == nil {
-                Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }
-                    .buttonStyle(.vm(.outline))
-            } else {
-                DatePicker(
-                    app.t("ios.birthday"),
-                    selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
-                    in: Self.earliestBirthday...Self.latestBirthday,
-                    displayedComponents: .date
-                )
-                .labelsHidden()
+    private var saveButton: some View {
+        LoadingButton(style: .vm(.link), isLoading: isSaving, action: submit) {
+            Text(app.t("common.save")).fontWeight(.semibold)
+        }
+    }
+
+    /// Always shown, so no pill; a change warns that old links stop working.
+    private var usernameField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            labelRow(app.t("account.usernameLabel")) {
+                Text(app.t("profile.alwaysShown")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
+            }
+            HStack(spacing: 0) {
+                Text(verbatim: "@").foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
+                TextField("", text: usernameInput)
+                    .textContentType(.username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($usernameFocused)
+                    .accessibilityLabel(app.t("account.usernameLabel"))
+            }
+            .font(.vmMono(16))
+            .fieldChrome(isFocused: usernameFocused, isInvalid: usernameError != nil)
+            Group {
+                if let usernameError {
+                    Text(usernameError).foregroundStyle(Tokens.destructive)
+                } else if usernameChanged, !username.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle").foregroundStyle(Tokens.foreground).accessibilityHidden(true)
+                        Text(usernameMove)
+                    }
+                    .foregroundStyle(Tokens.mutedForeground)
+                } else {
+                    Text(app.t("account.usernameHint", ["path": "/\(username.isEmpty ? profile.username : username)"]))
+                        .foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            .font(.vm(12))
+        }
+    }
+
+    /// Real name, birthday, location, points and membership level, each with who sees it.
+    private var visibilityCard: some View {
+        VStack(spacing: 0) {
+            visibilityRow(app.t("profile.realName")) { pill(app.t("profile.realName"), ["firstName", "lastName"]) }
+            Rectangle().fill(Tokens.border).frame(height: 1)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(app.t("profile.birthday")).font(.vm(14))
+                    if birthday == nil {
+                        Button(app.t("ios.setBirthday")) { birthday = Self.latestBirthday }.buttonStyle(.vm(.link))
+                    } else {
+                        DatePicker(
+                            app.t("profile.birthday"),
+                            selection: Binding(get: { birthday ?? .now }, set: { birthday = $0 }),
+                            in: Self.earliestBirthday...Self.latestBirthday,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                    }
+                }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text(app.t("ios.birthdayHint")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                // The API never shows a birthday to anyone else
+                VisibilityPill(isPublic: false)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(minHeight: 52)
+            Rectangle().fill(Tokens.border).frame(height: 1)
+            visibilityRow(app.t("account.field.location"), value: profile.location) {
+                pill(app.t("account.field.location"), ["location"])
+            }
+            Rectangle().fill(Tokens.border).frame(height: 1)
+            visibilityRow(app.t("account.field.points"), value: app.t.number(profile.points), mono: true) {
+                pill(app.t("account.field.points"), ["points"], plural: true)
+            }
+            Rectangle().fill(Tokens.border).frame(height: 1)
+            visibilityRow(app.t("account.field.membershipLevel"), value: profile.membershipLevel) {
+                pill(app.t("account.field.membershipLevel"), ["membershipLevel"])
             }
         }
+        .card(padding: nil)
+    }
+
+    private func groupLabel(_ text: String) -> some View {
+        Text(text).font(.vm(12, .medium)).foregroundStyle(Tokens.mutedForeground)
+            .padding(.horizontal, 2)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func labelRow(_ label: String, @ViewBuilder trailing: () -> some View) -> some View {
+        HStack(spacing: 8) {
+            Text(label).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            trailing()
+        }
+        .frame(minHeight: 28)
+    }
+
+    /// A detail that isn't edited here: its label, then its value or "Not set".
+    private func visibilityRow(_ label: String, value: String?? = .none, mono: Bool = false, @ViewBuilder pill: () -> some View) -> some View {
+        HStack(spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label).font(.vm(14)).foregroundStyle(Tokens.foreground)
+                if let value {
+                    Text(value.flatMap { $0.isEmpty ? nil : $0 } ?? app.t("profile.notSet"))
+                        .font(mono ? .vmMono(12) : .vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            pill()
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 52)
+    }
+
+    /// Who sees `fields`, switching all of them between Everyone and Only you.
+    private func pill(_ label: String, _ fields: [String], plural: Bool = false) -> some View {
+        let isPublic = ProfileVisibility.isPublic(visibility, fields[0])
+        let key = switch (isPublic, plural) {
+        case (true, false): "profile.visibilityPillEveryone"
+        case (true, true): "profile.visibilityPillEveryonePlural"
+        case (false, false): "profile.visibilityPillOnlyYou"
+        case (false, true): "profile.visibilityPillOnlyYouPlural"
+        }
+        return Button {
+            for field in fields { visibility[field] = !isPublic }
+        } label: {
+            VisibilityPill(isPublic: isPublic, canChange: true)
+                .frame(minHeight: Metrics.minTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(app.t(key, ["field": label]))
+    }
+
+    private func showUsernameError(_ message: String) {
+        usernameError = message
+        usernameFocused = true
+    }
+
+    private func submit() async {
+        if usernameChanged, !Username.isValid(username) {
+            // A reserved name already fits the format, so it gets its own reason
+            showUsernameError(Username.reserved.contains(username)
+                ? app.t("account.usernameReserved", ["username": username])
+                : app.t("account.usernameInvalid"))
+            return
+        }
+        if !detailsChanged, visibilityChanges.isEmpty { dismiss(); return }
+        if usernameChanged { confirmingUsername = true } else { await save() }
+    }
+
+    private func confirmUsername() {
+        Task { await save() }
     }
 
     private func save() async {
-        error = nil
-        do {
-            let newUsername = username == profile.username ? nil : username
-            let first = firstName.trimmingCharacters(in: .whitespaces)
-            let last = lastName.trimmingCharacters(in: .whitespaces)
-            let formatted = birthday.map { $0.formatted(Self.birthdayFormat) }
-            // A birthday can't be cleared, so only send one the user changed.
-            let newBirthday = formatted == profile.birthday ? nil : formatted
-            try await app.service.updateProfile(
-                username: newUsername, displayName: displayName, bio: bio,
-                firstName: first, lastName: last, birthday: newBirthday
-            )
+        isSaving = true
+        defer { isSaving = false }
+        let savingDetails = detailsChanged
+        let changes = visibilityChanges
+        if savingDetails {
+            do {
+                try await app.service.updateProfile(
+                    username: usernameChanged ? username : nil, displayName: displayName, bio: bio,
+                    firstName: firstName != (profile.firstName ?? "") ? firstName : nil,
+                    lastName: lastName != (profile.lastName ?? "") ? lastName : nil,
+                    birthday: birthdayChanged ? formattedBirthday : nil
+                )
+            } catch {
+                // A refused username belongs next to its field; anything else is a toast
+                if usernameChanged, (error as? APIError)?.errorCode == "user.username.taken" {
+                    showUsernameError(app.t.message(for: error, fallback: "account.saveFailed"))
+                } else {
+                    app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+                }
+                return
+            }
             app.updateMe {
-                $0.firstName = first.isEmpty ? nil : first
-                $0.lastName = last.isEmpty ? nil : last
-                $0.birthday = formatted ?? $0.birthday
-                $0.username = username
+                if usernameChanged { $0.username = username }
                 $0.displayName = displayName.isEmpty ? nil : displayName
                 $0.bio = bio.isEmpty ? nil : bio
+                $0.firstName = firstName.isEmpty ? nil : firstName
+                $0.lastName = lastName.isEmpty ? nil : lastName
+                if birthdayChanged { $0.birthday = formattedBirthday }
             }
-            dismiss()
-        } catch {
-            // The API's message is localized and explains, e.g., a taken username
-            self.error = app.t.message(for: error, fallback: "account.saveFailed")
         }
+        if !changes.isEmpty {
+            do {
+                let settings = try await app.service.updateVisibility(changes)
+                app.updateMe { $0.visibilitySettings = settings }
+            } catch {
+                // Stays open so the visibility can be saved again; the details no longer count as changed
+                app.showToast(app.t(savingDetails ? "profile.visibilitySaveFailed" : "account.saveFailed"), isError: true)
+                return
+            }
+        }
+        app.showToast(app.t("profile.updated"))
+        dismiss()
+    }
+}
+
+/// Who sees a profile detail: Everyone (globe) or Only you (lock); a chevron when it can be changed.
+struct VisibilityPill: View {
+    @Environment(AppModel.self) private var app
+    let isPublic: Bool
+    var canChange = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: isPublic ? "globe" : "lock.fill").font(.system(size: 10, weight: .semibold))
+            Text(app.t(isPublic ? "profile.everyone" : "profile.onlyYouShort"))
+            if canChange { Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)) }
+        }
+        .font(.vm(12, .medium))
+        .foregroundStyle(isPublic ? Tokens.foreground : Tokens.mutedForeground)
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .background(isPublic ? Tokens.card : Tokens.secondary, in: Capsule())
+        .overlay(Capsule().strokeBorder(isPublic ? Tokens.borderStrong : Tokens.border))
+        .fixedSize()
     }
 }
 

@@ -1,7 +1,8 @@
 import SwiftUI
 import VomattCore
 
-/// Settings, pushed from the gear on the profile (the web's `/settings`).
+/// Settings, pushed from the gear on the profile (the web's `/settings`): Voting, Notifications,
+/// Appearance and language, Privacy and safety, Account, then Delete account and the legal links.
 struct SettingsView: View {
     @Environment(AppModel.self) private var app
 
@@ -19,117 +20,115 @@ struct SettingsView: View {
     }
 }
 
-/// Which kinds of notification show in the feed and the unread count.
-private struct NotificationPreferencesSection: View {
+/// Invite lists on a screen of their own, opened from Settings.
+struct InviteListsView: View {
     @Environment(AppModel.self) private var app
-    private enum Switch: CaseIterable { case resultsIn, invitations, comments, mentions, likes, closingSoon }
-
-    @State private var preferences: NotificationPreferences?
-    @State private var failed = false
-    @State private var inFlight = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                SectionTitle(text: app.t("ios.notifPrefsTitle"))
-                Text(app.t("ios.notifPrefsBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            if let preferences {
-                VStack(spacing: 0) {
-                    ForEach(Switch.allCases, id: \.self) { item in
-                        Toggle(label(item), isOn: Binding(
-                            get: { value(item, preferences) },
-                            set: { newValue in Task { await set(item, newValue) } }
-                        ))
-                        .font(.vm(14))
-                        .tint(Tokens.primary)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 52)
-                        .overlay(alignment: .bottom) {
-                            if item != Switch.allCases.last { Rectangle().fill(Tokens.border).frame(height: 1) }
-                        }
-                    }
-                }
-                .card(padding: nil)
-            } else if failed {
-                LoadFailed(message: app.t("ios.notifPrefFailed")) { await load() }
-            } else {
-                Skeleton(height: 312, radius: Radius.xl)
-            }
+        ScrollView {
+            GroupsPanel()
+                .pageColumn(768)
+                .padding(.vertical, 24)
         }
-        .task(id: app.sessionGeneration) { await load() }
+        .canvas()
+        .navigationTitle(app.t("account.tabGroups"))
+        .navigationBarTitleDisplayMode(.inline)
     }
+}
 
-    private func label(_ item: Switch) -> String {
-        switch item {
-        case .resultsIn: app.t("ios.notifPrefResults")
-        case .invitations: app.t("ios.notifPrefInvitations")
-        case .comments: app.t("ios.notifPrefComments")
-        case .mentions: app.t("ios.notifPrefMentions")
-        case .likes: app.t("ios.notifPrefLikes")
-        case .closingSoon: app.t("ios.notifPrefClosingSoon")
-        }
-    }
+/// The app's light or dark look; Auto follows the system (the web's theme choice).
+enum ThemeChoice: String, CaseIterable {
+    case system, light, dark
 
-    private func value(_ item: Switch, _ preferences: NotificationPreferences) -> Bool {
-        switch item {
-        case .resultsIn: preferences.resultsIn
-        case .invitations: preferences.invitations
-        case .comments: preferences.comments
-        case .mentions: preferences.mentions
-        case .likes: preferences.likes
-        case .closingSoon: preferences.closingSoon
-        }
-    }
+    static let storageKey = "theme"
 
-    private func load() async {
-        failed = false
-        do {
-            preferences = try await app.service.notificationPreferences()
-        } catch {
-            failed = preferences == nil
-        }
-    }
-
-    /// Shows the new value at once; the API's answer, or the old value after a failure, replaces it.
-    private func set(_ item: Switch, _ newValue: Bool) async {
-        guard let previous = preferences else { return }
-        let before = value(item, previous)
-        setValue(item, newValue)
-        inFlight += 1
-        defer { inFlight -= 1 }
-        do {
-            let saved = try await app.service.updateNotificationPreferences(
-                resultsIn: item == .resultsIn ? newValue : nil, invitations: item == .invitations ? newValue : nil,
-                comments: item == .comments ? newValue : nil, mentions: item == .mentions ? newValue : nil, likes: item == .likes ? newValue : nil,
-                closingSoon: item == .closingSoon ? newValue : nil
-            )
-            // Another toggle still in flight: its answer carries the final state.
-            if inFlight == 1 { preferences = saved }
-            await app.refreshUnread()
-        } catch {
-            setValue(item, before)
-            app.showToast(app.t.message(for: error, fallback: "ios.notifPrefFailed"), isError: true)
-        }
-    }
-
-    private func setValue(_ item: Switch, _ newValue: Bool) {
-        switch item {
-        case .resultsIn: preferences?.resultsIn = newValue
-        case .invitations: preferences?.invitations = newValue
-        case .comments: preferences?.comments = newValue
-        case .mentions: preferences?.mentions = newValue
-        case .likes: preferences?.likes = newValue
-        case .closingSoon: preferences?.closingSoon = newValue
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
         }
     }
 }
 
-/// Visibility switches, sign out, delete account.
+/// A titled run of cards (the web's settings `Section`).
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionTitle(text: title)
+            content()
+        }
+    }
+}
+
+/// A row's title and the muted line under it (the web's `RowText`).
+private struct RowText: View {
+    let title: String
+    var detail: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
+            if let detail {
+                Text(detail).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The hairline between rows of a settings card.
+private struct RowDivider: View {
+    var body: some View { Rectangle().fill(Tokens.border).frame(height: 1) }
+}
+
+private extension View {
+    /// A settings card row's inset and height.
+    func settingsRow() -> some View {
+        padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 60)
+    }
+}
+
+/// A row that opens something: its text, an optional value, and a chevron (or an outward arrow).
+private struct NavigationRow: View {
+    let title: String
+    var detail: String?
+    var value: String?
+    var monoValue = false
+    var external = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                RowText(title: title, detail: detail)
+                if let value {
+                    Text(value).font(monoValue ? .vmMono(14) : .vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
+                Image(systemName: external ? "arrow.up.right" : "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Tokens.mutedForeground)
+            }
+            .settingsRow()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// The settings page itself (the web's `AccountSettings`).
 private struct AccountSettings: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.openURL) private var openURL
     let profile: MyProfile
+    @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
     @State private var confirmingSignOut = false
+    @State private var editingProfile = false
+    /// How many invite lists the user has; nil until loaded or when they couldn't be.
+    @State private var inviteListCount: Int?
     /// The last Ballot default the server confirmed; quick toggles can answer out of order.
     @State private var savedAnonymousDefault: Bool
 
@@ -138,125 +137,113 @@ private struct AccountSettings: View {
         _savedAnonymousDefault = State(initialValue: profile.anonymousBallotByDefault)
     }
 
-    /// Fields whose labels are iOS-only strings.
-    private let extraFields: Set = ["firstName", "lastName"]
-    /// Profile fields other people can see, in the order shown.
-    private let fields = ["displayName", "firstName", "lastName", "bio", "location", "points", "membershipLevel"]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    SectionTitle(text: app.t("account.privacyTitle"))
-                    Text(app.t("account.privacyBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
+            SettingsSection(title: app.t("settings.voting")) {
                 VStack(spacing: 0) {
-                    ForEach(fields, id: \.self) { field in
-                        Toggle(app.t(extraFields.contains(field) ? "ios.field.\(field)" : "account.field.\(field)"), isOn: Binding(
-                            get: { profile.visibilitySettings[field] == true },
-                            set: { value in Task { await toggle(field, value) } }
-                        ))
-                        .font(.vm(14))
-                        .tint(Tokens.primary)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 52)
-                        .overlay(alignment: .bottom) {
-                            if field != fields.last { Rectangle().fill(Tokens.border).frame(height: 1) }
+                    Toggle(isOn: Binding(
+                        get: { profile.anonymousBallotByDefault },
+                        set: { value in Task { await toggleAnonymousDefault(value) } }
+                    )) {
+                        RowText(title: app.t("account.anonymousDefault"), detail: app.t("account.anonymousDefaultBody"))
+                    }
+                    .tint(Tokens.primary)
+                    .settingsRow()
+                    RowDivider()
+                    NavigationRow(
+                        title: app.t("account.tabGroups"),
+                        detail: app.t("settings.inviteListsBody"),
+                        value: inviteListCount.map { app.t.count("settings.inviteListCount", $0) },
+                        monoValue: true
+                    ) { app.push(.inviteLists) }
+                }
+                .card(padding: nil)
+            }
+
+            SettingsSection(title: app.t("notifications.title")) {
+                NotificationSwitches()
+            }
+
+            SettingsSection(title: app.t("settings.appearanceAndLanguage")) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        RowText(title: app.t("settings.theme"))
+                        Picker(app.t("settings.theme"), selection: $theme) {
+                            Text(app.t("navigation.themeAuto")).tag(ThemeChoice.system)
+                            Text(app.t("navigation.themeLight")).tag(ThemeChoice.light)
+                            Text(app.t("navigation.themeDark")).tag(ThemeChoice.dark)
                         }
+                        .pickerStyle(.segmented)
+                        .fixedSize()
+                    }
+                    .settingsRow()
+                    RowDivider()
+                    // The app's language follows the device; iOS Settings can set one for vomatt alone
+                    NavigationRow(
+                        title: app.t("settings.language"),
+                        detail: app.t("ios.languageBody"),
+                        value: languageName,
+                        external: true
+                    ) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                     }
                 }
                 .card(padding: nil)
             }
 
-            Toggle(isOn: Binding(
-                get: { profile.anonymousBallotByDefault },
-                set: { value in Task { await toggleAnonymousDefault(value) } }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("account.anonymousDefault")).font(.vm(15, .medium))
-                    Text(app.t("account.anonymousDefaultBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            SettingsSection(title: app.t("settings.privacy")) {
+                VStack(spacing: 0) {
+                    NavigationRow(
+                        title: app.t("account.privacyTitle"),
+                        detail: app.t("settings.whatOthersSeeBody"),
+                        value: app.t("settings.shownCount", ["shown": profile.shownFieldCount, "total": ProfileVisibility.fields.count])
+                    ) { editingProfile = true }
+                    RowDivider()
+                    BlockedPeople().padding(16)
                 }
-            }
-            .tint(Tokens.primary)
-            .card()
-
-            VStack(alignment: .leading, spacing: 12) {
-                SectionTitle(text: app.t("account.tabGroups"))
-                GroupsPanel()
+                .card(padding: nil)
+                FollowedPeople()
             }
 
-            PasskeysSection(service: app.service)
-
-            DevicesSection(service: app.service)
-
-            NotificationPreferencesSection()
-
-            if !app.following.isEmpty { followingSection }
-            if !app.blocked.isEmpty { blockedSection }
-
-            AppSettingsSection()
-
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("account.signOutTitle")).font(.vm(15, .medium))
-                    Text(profile.email ?? profile.username).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            SettingsSection(title: app.t("settings.account")) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        RowText(title: app.t("account.signOutTitle"), detail: profile.email ?? profile.username)
+                        Button(app.t("account.signOut")) { confirmingSignOut = true }.buttonStyle(.vm(.outline, size: .sm))
+                    }
+                    .settingsRow()
+                    .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
+                        Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
+                    }
+                    RowDivider()
+                    PasskeysSection(service: app.service).padding(16)
+                    RowDivider()
+                    DevicesSection(service: app.service).padding(16)
+                    RowDivider()
+                    ExportDataRow()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Button(app.t("account.signOut")) { confirmingSignOut = true }.buttonStyle(.vm(.outline))
-            }
-            .card()
-            .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
-                Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
+                .card(padding: nil)
+                FeedbackRow().card(padding: nil)
             }
 
-            FeedbackSection()
-
-            ExportDataSection()
-
+            // Kept apart, at the end, and quiet until opened
             DeleteAccountSection(username: profile.username)
+
+            LegalLinks()
         }
+        .task { await loadInviteListCount() }
+        .sheet(isPresented: $editingProfile) { EditProfileSheet(profile: profile) }
     }
 
-    private var followingSection: some View {
-        peopleSection(title: app.t("profile.following"), actionTitle: app.t("ios.unfollowShort"), people: app.following.map { user in
-            Person(id: user.id, username: user.username, avatarUrl: user.avatarUrl, link: true, action: { app.unfollow(user.id) })
-        })
+    /// The app's language in its own words: "English", "中文".
+    private var languageName: String {
+        let locale = Locale(identifier: app.language.localeIdentifier)
+        return locale.localizedString(forLanguageCode: app.language.rawValue) ?? app.language.rawValue
     }
 
-    private var blockedSection: some View {
-        peopleSection(title: app.t("ios.blockedTitle"), actionTitle: app.t("ios.unblock"), people: app.blocked.map { username in
-            Person(id: username, username: username, avatarUrl: nil, link: false, action: { app.unblock(username) })
-        })
-    }
-
-    private struct Person: Identifiable {
-        let id: String
-        let username: String
-        let avatarUrl: String?
-        let link: Bool
-        let action: () -> Void
-    }
-
-    /// A card of people, each with one outline button (unfollow, unblock).
-    private func peopleSection(title: String, actionTitle: String, people: [Person]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(text: title)
-            VStack(spacing: 0) {
-                ForEach(people) { person in
-                    HStack {
-                        UserChip(username: person.username, avatarUrl: person.avatarUrl, avatarSize: 28, link: person.link).font(.vm(15))
-                        Spacer()
-                        Button(actionTitle, action: person.action).buttonStyle(.vm(.outline, size: .sm))
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 56)
-                    .overlay(alignment: .bottom) {
-                        if person.id != people.last?.id { Rectangle().fill(Tokens.border).frame(height: 1) }
-                    }
-                }
-            }
-            .card(padding: nil)
-        }
+    /// Runs on every visit, so the count follows changes made on the Invite lists screen.
+    private func loadInviteListCount() async {
+        if let groups = try? await app.service.groups() { inviteListCount = groups.count }
     }
 
     private func toggleAnonymousDefault(_ value: Bool) async {
@@ -269,17 +256,176 @@ private struct AccountSettings: View {
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
     }
+}
 
-    private func toggle(_ field: String, _ value: Bool) async {
-        let previous = profile.visibilitySettings
-        app.updateMe { $0.visibilitySettings[field] = value }
+/// Which kinds the feed and the unread count include; each switch changes at once and goes back if the save fails.
+private struct NotificationSwitches: View {
+    @Environment(AppModel.self) private var app
+    private typealias Key = WritableKeyPath<NotificationPreferences, Bool>
+
+    /// The switches in the web's order (`NOTIFICATION_SWITCHES`): each row's title and body.
+    private static let switches: [(key: Key, title: String, body: String)] = [
+        (\.resultsIn, "settings.notifyResultsIn", "settings.notifyResultsInBody"),
+        (\.invitations, "settings.notifyInvitations", "settings.notifyInvitationsBody"),
+        (\.comments, "settings.notifyComments", "settings.notifyCommentsBody"),
+        (\.mentions, "ios.notifyMentions", "ios.notifyMentionsBody"),
+        (\.likes, "ios.notifyLikes", "ios.notifyLikesBody"),
+        (\.closingSoon, "settings.notifyClosingSoon", "settings.notifyClosingSoonBody"),
+    ]
+
+    @State private var preferences: NotificationPreferences?
+    @State private var failed = false
+    /// One save per switch at a time, so the server can't apply an older toggle after a newer one.
+    @State private var saving: Set<Key> = []
+
+    var body: some View {
+        Group {
+            if let preferences {
+                VStack(spacing: 0) {
+                    ForEach(Array(Self.switches.enumerated()), id: \.offset) { index, item in
+                        if index > 0 { RowDivider() }
+                        Toggle(isOn: Binding(
+                            get: { preferences[keyPath: item.key] },
+                            set: { value in Task { await set(item.key, value) } }
+                        )) {
+                            RowText(title: app.t(item.title), detail: app.t(item.body))
+                        }
+                        .tint(Tokens.primary)
+                        .disabled(saving.contains(item.key))
+                        .settingsRow()
+                    }
+                }
+                .card(padding: nil)
+            } else if failed {
+                HStack(spacing: 12) {
+                    Text(app.t("settings.notificationsFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LoadingButton(style: .vm(.outline, size: .sm), action: load) { Text(app.t("common.tryAgain")) }
+                }
+                .settingsRow()
+                .card(padding: nil)
+            } else {
+                Skeleton(height: 420, radius: Radius.card)
+            }
+        }
+        .task(id: app.sessionGeneration) { await load() }
+    }
+
+    private func load() async {
+        failed = false
         do {
-            let settings = try await app.service.updateVisibility([field: value])
-            app.updateMe { $0.visibilitySettings = settings }
+            preferences = try await app.service.notificationPreferences()
         } catch {
-            app.updateMe { $0.visibilitySettings = previous }
+            failed = preferences == nil
+        }
+    }
+
+    private func set(_ key: Key, _ value: Bool) async {
+        preferences?[keyPath: key] = value
+        saving.insert(key)
+        defer { saving.remove(key) }
+        do {
+            let saved = try await app.service.updateNotificationPreferences(
+                resultsIn: key == \.resultsIn ? value : nil, invitations: key == \.invitations ? value : nil,
+                comments: key == \.comments ? value : nil, mentions: key == \.mentions ? value : nil,
+                likes: key == \.likes ? value : nil, closingSoon: key == \.closingSoon ? value : nil
+            )
+            // Only this switch: another one may still be saving
+            preferences?[keyPath: key] = saved[keyPath: key]
+            // A kind switched off leaves the unread count
+            await app.refreshUnread()
+        } catch {
+            preferences?[keyPath: key] = !value
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
+    }
+}
+
+/// People the user blocked, each with Unblock: a row inside the Privacy card (the web's
+/// `BlockedUsersPanel`, `embedded`): the title with a mono count, then soft tiles.
+private struct BlockedPeople: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(app.t("blocks.title")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if !app.blocked.isEmpty {
+                    Text(app.t.number(app.blocked.count)).font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            if app.blocked.isEmpty {
+                Text(app.t("blocks.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+            }
+            ForEach(app.blocked, id: \.self) { username in
+                HStack(spacing: 10) {
+                    AvatarView(username: username, avatarUrl: nil, size: 28)
+                    Text("@\(username)").font(.vmMono(14)).foregroundStyle(Tokens.foreground).lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button(app.t("blocks.unblock")) {
+                        app.unblock(username)
+                        app.showToast(app.t("blocks.unblocked", ["username": username]))
+                    }
+                    .buttonStyle(.vm(.outline, size: .sm))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
+                .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+            }
+        }
+    }
+}
+
+/// People the user follows, each with Unfollow (the web's `FollowedUsersPanel`).
+private struct FollowedPeople: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("follows.title")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
+                Text(app.t("follows.intro")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            }
+            if app.following.isEmpty {
+                EmptyState { Text(app.t("follows.empty")) }
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(app.following.enumerated()), id: \.element.id) { index, user in
+                        if index > 0 { RowDivider() }
+                        row(user)
+                    }
+                }
+                .card(padding: nil)
+            }
+        }
+    }
+
+    private func row(_ user: UserSummary) -> some View {
+        HStack(spacing: 12) {
+            Button { app.push(.profile(user.username)) } label: {
+                HStack(spacing: 12) {
+                    AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 40)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(user.displayName ?? user.username).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+                        Text("@\(user.username)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                    }
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(app.t("ios.openProfile"))
+            Button(app.t("follows.unfollow")) {
+                app.unfollow(user.id)
+                app.showToast(app.t("follows.unfollowed", ["username": user.username]))
+            }
+            .buttonStyle(.vm(.outline, size: .sm))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
 
@@ -297,12 +443,8 @@ private struct PasskeysSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.t("passkey.title")).font(.vm(15, .medium))
-                    Text(app.t("passkey.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                LoadingButton(style: .vm(.outline), action: add) { Text(app.t("passkey.add")) }
+                RowText(title: app.t("passkey.title"), detail: app.t("passkey.body"))
+                LoadingButton(style: .vm(.outline, size: .sm), action: add) { Text(app.t("passkey.add")) }
             }
             if model.loadFailed {
                 HStack(spacing: 12) {
@@ -319,7 +461,6 @@ private struct PasskeysSection: View {
                 ProgressView().frame(maxWidth: .infinity)
             }
         }
-        .card()
         .task { await model.load() }
         .alert(
             app.t("passkey.deleteConfirmTitle"),
@@ -345,7 +486,7 @@ private struct PasskeysSection: View {
                 .accessibilityLabel(app.t("passkey.deleteLabel", ["name": name(passkey)]))
         }
         .padding(.top, 12)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { RowDivider() }
     }
 
     private func name(_ passkey: Passkey) -> String { passkey.name ?? app.t("passkey.unnamed") }
@@ -391,10 +532,7 @@ private struct DevicesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("devices.title")).font(.vm(15, .medium))
-                Text(app.t("devices.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
+            RowText(title: app.t("devices.title"), detail: app.t("devices.body"))
             if model.loadFailed {
                 HStack(spacing: 12) {
                     Text(app.t("devices.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
@@ -411,7 +549,6 @@ private struct DevicesSection: View {
                 ProgressView().frame(maxWidth: .infinity)
             }
         }
-        .card()
         .task { await model.load() }
         .alert(
             app.t("devices.signOutTitle"),
@@ -453,7 +590,7 @@ private struct DevicesSection: View {
             }
         }
         .padding(.top, 12)
-        .overlay(alignment: .top) { Rectangle().fill(Tokens.border).frame(height: 1) }
+        .overlay(alignment: .top) { RowDivider() }
     }
 
     private func name(_ device: DeviceSession) -> String { device.deviceName ?? app.t("devices.unknown") }
@@ -488,63 +625,55 @@ private struct DevicesSection: View {
     }
 }
 
-/// Legal links and the version; shown signed in or out.
-struct AppSettingsSection: View {
+/// Writes the export to a temporary file, then offers it through the share sheet.
+private struct ExportDataRow: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.openURL) private var openURL
+    @State private var file: URL?
 
     var body: some View {
-        let mail = app.config.supportEmail.isEmpty ? nil : URL(string: "mailto:\(app.config.supportEmail)")
-        VStack(spacing: 0) {
-            link(app.t("ios.terms"), url: app.config.siteURL.appending(path: "terms-of-service"))
-            link(app.t("ios.privacy"), url: app.config.siteURL.appending(path: "privacy-policy"), last: mail == nil)
-            if let mail {
-                link(app.t("ios.contact"), url: mail, last: true)
+        HStack(spacing: 12) {
+            RowText(title: app.t("account.exportTitle"), detail: app.t("account.exportBody"))
+            if let file {
+                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline, size: .sm))
+            } else {
+                LoadingButton(style: .vm(.outline, size: .sm), action: export) { Text(app.t("account.exportCta")) }
             }
         }
-        .card(padding: nil)
-        .overlay(alignment: .bottomTrailing) {
-            Text(version).font(.vmMono(11)).foregroundStyle(Tokens.mutedForeground).offset(y: 20)
-        }
-        .padding(.bottom, 12)
+        .settingsRow()
+        .onDisappear(perform: discard)
     }
 
-    private func link(_ title: String, url: URL, last: Bool = false) -> some View {
-        Button { openURL(url) } label: {
-            HStack {
-                Text(title).font(.vm(14)).foregroundStyle(Tokens.foreground)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.system(size: 12)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 52)
-            .contentShape(Rectangle())
+    private func export() async {
+        do {
+            let data = try await app.service.exportMyData()
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-data.json")
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            file = url
+        } catch {
+            let limited = (error as? APIError)?.isRateLimited == true
+            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "account.exportFailed"), isError: true)
         }
-        .buttonStyle(.plain)
-        .overlay(alignment: .bottom) { if !last { Rectangle().fill(Tokens.border).frame(height: 1) } }
     }
 
-    private var version: String {
-        let info = Bundle.main.infoDictionary
-        return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
+    /// The export holds everything about the account, so it doesn't outlive the screen.
+    private func discard() {
+        guard let file else { return }
+        try? FileManager.default.removeItem(at: file)
+        self.file = nil
     }
 }
 
-/// Opens the feedback sheet.
-private struct FeedbackSection: View {
+/// Opens the feedback sheet (iOS only; the web has no feedback form).
+private struct FeedbackRow: View {
     @Environment(AppModel.self) private var app
     @State private var isPresented = false
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("ios.feedbackTitle")).font(.vm(15, .medium))
-                Text(app.t("ios.feedbackBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline))
+            RowText(title: app.t("ios.feedbackTitle"), detail: app.t("ios.feedbackBody"))
+            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline, size: .sm))
         }
-        .card()
+        .settingsRow()
         .sheet(isPresented: $isPresented) { FeedbackSheet() }
     }
 }
@@ -595,48 +724,6 @@ private struct FeedbackSheet: View {
     }
 }
 
-/// Writes the export to a temporary file, then offers it through the share sheet.
-private struct ExportDataSection: View {
-    @Environment(AppModel.self) private var app
-    @State private var file: URL?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("ios.exportTitle")).font(.vm(15, .medium))
-                Text(app.t("ios.exportBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let file {
-                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline))
-            } else {
-                LoadingButton(style: .vm(.outline), action: export) { Text(app.t("ios.exportCta")) }
-            }
-        }
-        .card()
-        .onDisappear(perform: discard)
-    }
-
-    private func export() async {
-        do {
-            let data = try await app.service.exportMyData()
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-export.json")
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
-            file = url
-        } catch {
-            let limited = (error as? APIError)?.isRateLimited == true
-            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "ios.exportFailed"), isError: true)
-        }
-    }
-
-    /// The export holds everything about the account, so it doesn't outlive the screen.
-    private func discard() {
-        guard let file else { return }
-        try? FileManager.default.removeItem(at: file)
-        self.file = nil
-    }
-}
-
 /// Typing the username confirms a permanent delete (App Store guideline 5.1.1(v)).
 private struct DeleteAccountSection: View {
     @Environment(AppModel.self) private var app
@@ -644,36 +731,84 @@ private struct DeleteAccountSection: View {
     @State private var isPresented = false
     @State private var confirmation = ""
 
+    /// Deletion refusals with their own copy; anything else goes through `message(for:)`.
+    private static let errorKeys = ["admin.last_admin": "account.deleteLastAdmin"]
+
+    private var matches: Bool {
+        confirmation.trimmingCharacters(in: .whitespaces).lowercased() == username.lowercased()
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("account.deleteTitle")).font(.vm(15, .medium)).foregroundStyle(Tokens.destructive)
-                Text(app.t("account.deleteBody")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+        VStack(alignment: .leading, spacing: 8) {
+            Button { isPresented = true } label: {
+                Text(app.t("account.deleteCtaEllipsis")).font(.vm(15, .medium)).foregroundStyle(Tokens.destructive)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .contentShape(Rectangle())
             }
-            Button(app.t("account.deleteCta")) { isPresented = true }.buttonStyle(.vm(.destructive))
+            .buttonStyle(.plain)
+            .card(padding: nil, border: Tokens.destructive.opacity(0.3))
+            Text(app.t("account.deleteBody")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                .padding(.horizontal, 16)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card(border: Tokens.destructive.opacity(0.3))
         .alert(app.t("account.deleteConfirmTitle"), isPresented: $isPresented) {
             TextField(username, text: $confirmation)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .accessibilityLabel(app.t("account.deleteConfirmLabel"))
             Button(app.t("common.cancel"), role: .cancel) { confirmation = "" }
             Button(app.t("account.deleteCta"), role: .destructive) { Task { await delete() } }
-                .disabled(confirmation != username)
+                .disabled(!matches)
         } message: {
             Text(app.t("account.deleteConfirmBody", ["username": username]))
         }
     }
 
     private func delete() async {
-        guard confirmation == username else { return }
+        guard matches else { return }
         confirmation = ""
         do {
             try await app.service.deleteMyAccount()
             app.selectedTab = .home
         } catch {
-            app.showToast(app.t.message(for: error, fallback: "common.error"), isError: true)
+            let key = (error as? APIError)?.errorCode.flatMap { Self.errorKeys[$0] }
+            app.showToast(key.map { app.t($0) } ?? app.t.message(for: error, fallback: "account.deleteFailed"), isError: true)
         }
+    }
+}
+
+/// Terms, Privacy, Cookies and Contact, then the version (the web's `LegalLinks`); shown signed in or out.
+struct LegalLinks: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        let site = app.config.siteURL
+        VStack(spacing: 8) {
+            HStack(spacing: 18) {
+                link(app.t("settings.terms"), site.appending(path: "terms-of-service"))
+                link(app.t("settings.privacyPolicy"), site.appending(path: "privacy-policy"))
+                link(app.t("settings.cookies"), site.appending(path: "cookies-policy"))
+                if !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
+                    link(app.t("ios.contact"), mail)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(app.t("settings.legal"))
+            Text(version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func link(_ title: String, _ url: URL) -> some View {
+        Button(title) { openURL(url) }
+            .font(.vm(13))
+            .foregroundStyle(Tokens.mutedForeground)
+            .buttonStyle(.plain)
+            .frame(minHeight: Metrics.minTarget)
+    }
+
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
     }
 }
