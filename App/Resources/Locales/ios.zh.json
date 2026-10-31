@@ -49,7 +49,18 @@
 		"seeAll": "查看全部",
 		"rulesTitle": "投票者會看到的規則",
 		"rulesChange": "更改",
-		"rulesDone": "完成"
+		"rulesDone": "完成",
+		"notifTabConversation": "對話",
+		"notifTabLikes": "喜歡",
+		"notifTabPolls": "投票結束",
+		"notifTabInvitations": "邀請",
+		"notifTabFollows": "追蹤",
+		"notifLiked": "{name} 喜歡你在 {title} 的留言",
+		"notifCategoryLabel": "分類",
+		"notifCategoryEmpty": "這裡還沒有內容。",
+		"notifCategoryFailed": "無法載入這個分頁，請再試一次。",
+		"notifyLikes": "喜歡",
+		"notifyLikesBody": "有人喜歡你的留言或回覆時。"
 	},
 	"apiError": {
 		"auth.email_not_verified": "此 OAuth 帳號的 email 尚未驗證，無法登入或合併既有帳號",
@@ -75,5 +86,25 @@
 	},
 	"authError": {
 		"passkeyInvalid": "通行密鑰驗證失敗，請重新操作一次"
+	},
+	"devices": {
+		"title": "已登入的裝置",
+		"body": "你目前登入的地方。不認得的裝置可以登出。",
+		"current": "這個裝置",
+		"admin": "管理後台",
+		"unknown": "未知裝置",
+		"signedInOn": "{date} 登入",
+		"lastActive": "最近使用 {date}",
+		"loadFailed": "無法載入你的裝置。",
+		"signOut": "登出",
+		"signOutLabel": "登出 {name}",
+		"signOutTitle": "登出這個裝置？",
+		"signOutBody": "{name} 需要重新登入。",
+		"signedOut": "已登出該裝置",
+		"signOutFailed": "無法登出該裝置，請再試一次。",
+		"signOutOthers": "登出其他所有裝置",
+		"signOutOthersTitle": "登出其他所有裝置？",
+		"signOutOthersBody": "除了這個裝置，其他裝置都需要重新登入。",
+		"othersSignedOut": "已登出其他裝置"
 	}
 }

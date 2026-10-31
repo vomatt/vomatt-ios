@@ -2,13 +2,14 @@ import SwiftUI
 import VomattCore
 
 /// The Notifications tab, from the web's `NotificationList`: newest first, grouped by day, each run of
-/// follows as one row, with All / Unread pills. Results rows stay until opened, so a sealed promise is
+/// follows as one row, with a pill per category. Results rows stay until opened, so a sealed promise is
 /// never lost in the list. Opening a row reads it.
 struct NotificationsView: View {
     @Environment(AppModel.self) private var app
-    enum Filter: Hashable { case all, unread }
     @State private var list: CursorList<FeedNotification>?
-    @State private var filter = Filter.all
+    /// The tab `list` holds; nil is every category.
+    @State private var category: FeedNotification.Category?
+    @State private var isSwitching = false
     @State private var isMarking = false
 
     var body: some View {
@@ -53,7 +54,7 @@ struct NotificationsView: View {
     /// Nothing at all: unknown kinds are left out, so an empty page can still have more after it.
     private var isEmpty: Bool {
         guard let list else { return false }
-        return list.items.isEmpty && !list.hasMore && app.unreadCount == 0
+        return category == nil && list.items.isEmpty && !list.hasMore && app.unreadCount == 0
     }
 
     @ViewBuilder private var content: some View {
@@ -83,16 +84,18 @@ struct NotificationsView: View {
     }
 
     private func feed(_ list: CursorList<FeedNotification>) -> some View {
-        let shown = filter == .unread ? unread : list.items
-        return VStack(alignment: .leading, spacing: 16) {
-            FilterPills(label: app.t("profile.filterLabel"), selection: $filter, options: [
-                (.all, app.t("profile.filterAll"), nil),
-                (.unread, app.t("notifications.unread"), unread.count),
-            ])
-            if shown.isEmpty {
-                EmptyState { Text(app.t("notifications.caughtUp")) }
+        VStack(alignment: .leading, spacing: 16) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                FilterPills(
+                    label: app.t("ios.notifCategoryLabel"),
+                    selection: Binding(get: { category }, set: { next in Task { await changeCategory(next) } }),
+                    options: [(nil, app.t("profile.filterAll"), nil)] + FeedNotification.Category.allCases.map { ($0, categoryLabel($0), nil) }
+                )
             }
-            ForEach(ActivitySection.sections(shown)) { section in
+            if list.items.isEmpty {
+                EmptyState { Text(app.t("ios.notifCategoryEmpty")) }
+            }
+            ForEach(ActivitySection.sections(list.items)) { section in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(app.t("notifications.day.\(section.day.rawValue)"))
                         .font(.vm(12, .medium, relativeTo: .caption)).foregroundStyle(Tokens.mutedForeground)
@@ -109,14 +112,44 @@ struct NotificationsView: View {
         }
     }
 
+    private func categoryLabel(_ category: FeedNotification.Category) -> String {
+        switch category {
+        case .conversation: app.t("ios.notifTabConversation")
+        case .like: app.t("ios.notifTabLikes")
+        case .pollEnd: app.t("ios.notifTabPolls")
+        case .invitation: app.t("ios.notifTabInvitations")
+        case .follow: app.t("ios.notifTabFollows")
+        }
+    }
+
+    /// Refresh and retry keep the tab: the list pages with the category it was made for.
     private func load() async {
         guard app.isSignedIn else { return }
-        let service = app.service
-        let list = list ?? CursorList { try await service.notifications(cursor: $0) }
+        let list = list ?? makeList(nil)
         self.list = list
         async let unread: Void = app.refreshUnread()
         await list.reload()
         await unread
+    }
+
+    private func makeList(_ category: FeedNotification.Category?) -> CursorList<FeedNotification> {
+        let service = app.service
+        return CursorList { try await service.notifications(category: category, cursor: $0) }
+    }
+
+    /// A tab's first page loads before the tab shows; when it fails, the current tab stays.
+    private func changeCategory(_ next: FeedNotification.Category?) async {
+        // A Load more in flight would append the old tab's page after the switch
+        guard next != category, !isSwitching, list?.isLoadingMore != true else { return }
+        isSwitching = true
+        defer { isSwitching = false }
+        let fresh = makeList(next)
+        await fresh.reload()
+        guard fresh.phase == .loaded else {
+            return app.showToast(app.t("ios.notifCategoryFailed"), isError: true)
+        }
+        list = fresh
+        category = next
     }
 
     /// The dot clears at once; a failed request leaves it unread on the server, so the next visit shows it again.
@@ -224,7 +257,7 @@ private struct NotificationRow: View {
             disc("nosign")
         case .closingSoon:
             disc("clock", tint: Tokens.foreground)
-        case .invitation, .followed, .comment, .mention:
+        case .invitation, .followed, .comment, .mention, .like:
             if let actor = item.actor {
                 AvatarView(username: actor.username, avatarUrl: actor.avatarUrl, size: 36).accessibilityHidden(true)
             } else {
@@ -289,9 +322,13 @@ private struct NotificationRow: View {
                                tail: Part(text: title, emphasis: .titled))
             case .followed:
                 return Wording(template: app.t("notifications.followedYou"), parts: ["name": Part(text: actorName, emphasis: .strong)])
-            case .comment, .mention:
-                // A comment on the viewer's poll or reply, or a mention of them, read alike but for the verb
-                let key = item.kind == .mention ? "notifications.mentioned" : "notifications.commented"
+            case .comment, .mention, .like:
+                // A comment on the viewer's poll or reply, a mention of them, or a like of their comment, read alike but for the verb
+                let key = switch item.kind {
+                case .mention: "notifications.mentioned"
+                case .like: "ios.notifLiked"
+                default: "notifications.commented"
+                }
                 return Wording(template: app.t(key), parts: ["name": Part(text: actorName, emphasis: .strong), "title": Part(text: title, emphasis: .titled)])
             case .closingSoon:
                 guard let end = item.poll?.endTime, end > .now else {
@@ -342,7 +379,7 @@ private struct NotificationRow: View {
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
         case .followed:
             return [age, item.actor?.displayName].compactMap { $0 }
-        case .comment, .mention:
+        case .comment, .mention, .like:
             return [item.comment.map { app.t("notifications.excerpt", ["text": $0.excerpt]) }, age].compactMap { $0 }
         case .closingSoon:
             return [
@@ -390,7 +427,7 @@ private struct NotificationRow: View {
                     .buttonStyle(.vm(canVote ? .default : .outline, size: .sm))
             case .followed:
                 if let actor = item.actor { FollowBackButton(user: actor, onFollow: read) }
-            case .comment, .mention:
+            case .comment, .mention, .like:
                 Button(app.t("comments.reply"), action: open).buttonStyle(.vm(.outline, size: .sm))
             case .closingSoon:
                 if let end = item.poll?.endTime, end > .now {

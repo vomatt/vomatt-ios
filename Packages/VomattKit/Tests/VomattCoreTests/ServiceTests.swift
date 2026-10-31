@@ -541,9 +541,9 @@ struct ServiceTests {
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let page = try await service.notifications()
-        // A new kind, LIKE (no row on the web yet), an unknown category and an item without an id are each left out or ignored
-        #expect(page.items.map(\.id) == ["mention_c1", "comment_c2"])
-        #expect(page.items.map(\.kind) == [.mention, .comment])
+        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known
+        #expect(page.items.map(\.id) == ["mention_c1", "like_c1", "comment_c2"])
+        #expect(page.items.map(\.kind) == [.mention, .like, .comment])
         #expect(page.items[0].comment?.excerpt == "@mei try Nagi" && page.items[0].actor?.username == "bob")
         #expect(page.nextCursor == "n2")
     }
@@ -555,6 +555,26 @@ struct ServiceTests {
         try await service.markAllNotificationsRead()
         let calls = transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" }
         #expect(calls == ["POST /api/notifications/comment_1/read", "POST /api/notifications/read-all"])
+    }
+
+    @Test func likeNotificationsFilterByCategoryAndTheLikesSwitchRoundTrips() async throws {
+        let transport = StubTransport { request, _ in
+            if request.path?.hasPrefix("/api/notifications/unread-count") == true {
+                return (200, envelope(#"{"count":2}"#), [:])
+            }
+            if request.path?.hasPrefix("/api/notifications") == true {
+                return (200, envelope(#"{"items":[{"id":"like_1","kind":"LIKE","category":"LIKE","createdAt":"2026-10-29T00:00:00Z","read":false,"actor":{"id":"u1","username":"ann"},"poll":{"id":"p1","title":"T"},"comment":{"id":"c1","excerpt":"hi"}}]}"#), [:])
+            }
+            return (200, envelope(#"{"resultsIn":true,"invitations":true,"comments":true,"mentions":true,"likes":false,"closingSoon":false}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let page = try await service.notifications(category: .like, cursor: "n1")
+        let count = try await service.unreadCount(category: .like)
+        let saved = try await service.updateNotificationPreferences(likes: false)
+        #expect(page.items.map(\.kind) == [.like] && page.items[0].kind.category == .like)
+        #expect(transport.requests[0].path.contains("category=LIKE") && transport.requests[0].path.contains("cursor=n1"))
+        #expect(count == 2 && transport.requests[1].path.contains("category=LIKE"))
+        #expect(!saved.likes && transport.requests[2].body?.contains("likes") == true && transport.requests[2].body?.contains("mentions") == false)
     }
 
     @Test func notificationPreferencesChangeOnlyTheGivenSwitches() async throws {

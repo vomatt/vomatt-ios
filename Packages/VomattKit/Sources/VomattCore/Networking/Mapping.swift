@@ -262,11 +262,10 @@ extension UserSummary {
 }
 
 extension FeedNotification {
-    /// Throws for a kind the app has no row for, so the feed leaves it out like the web does.
     init(_ dto: Schemas.NotificationResponse) throws {
         self.init(
             id: try required(dto.id, "NotificationResponse.id"),
-            kind: try required(dto.kind.flatMap(FeedNotification.Kind.init), "NotificationResponse.kind"),
+            kind: FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")),
             createdAt: try required(dto.createdAt, "NotificationResponse.createdAt"),
             read: dto.read ?? false,
             actor: try dto.actor.map(UserSummary.init),
@@ -277,8 +276,7 @@ extension FeedNotification {
 }
 
 extension FeedNotification.Kind {
-    /// nil for LIKE: the web shows no row for it yet.
-    init?(_ value: Schemas.NotificationResponse.KindPayload) {
+    init(_ value: Schemas.NotificationResponse.KindPayload) {
         switch value {
         case .result: self = .result
         case .cancelled: self = .cancelled
@@ -287,7 +285,20 @@ extension FeedNotification.Kind {
         case .comment: self = .comment
         case .mention: self = .mention
         case .closingSoon: self = .closingSoon
-        case .like: return nil
+        case .like: self = .like
+        }
+    }
+}
+
+extension FeedNotification.Category {
+    /// The `category` query value (the generated payload enums of the two endpoints share it).
+    var apiValue: String {
+        switch self {
+        case .conversation: "CONVERSATION"
+        case .like: "LIKE"
+        case .pollEnd: "POLL_END"
+        case .invitation: "INVITATION"
+        case .follow: "FOLLOW"
         }
     }
 }
@@ -319,7 +330,7 @@ extension NotificationPreferences {
     init(_ dto: Schemas.NotificationPreferencesResponse) {
         self.init(
             resultsIn: dto.resultsIn ?? true, invitations: dto.invitations ?? true,
-            comments: dto.comments ?? true, mentions: dto.mentions ?? true, closingSoon: dto.closingSoon ?? false
+            comments: dto.comments ?? true, mentions: dto.mentions ?? true, likes: dto.likes ?? true, closingSoon: dto.closingSoon ?? false
         )
     }
 }
@@ -426,6 +437,19 @@ extension Passkey {
             name: dto.name,
             createdAt: try required(dto.createdAt, "PasskeyResponse.createdAt"),
             lastUsedAt: dto.lastUsedAt
+        )
+    }
+}
+
+extension DeviceSession {
+    init(_ dto: Schemas.SessionResponse) throws {
+        self.init(
+            id: try required(dto.sessionId, "SessionResponse.sessionId"),
+            userAgent: dto.userAgent,
+            createdAt: dto.createdAt,
+            lastSeenAt: dto.lastSeenAt,
+            isCurrent: dto.current ?? false,
+            isAdminScope: dto.adminScope ?? false
         )
     }
 }
