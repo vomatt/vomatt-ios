@@ -67,8 +67,11 @@ extension Poll {
     }
 
     /// Whether the viewer may see who chose what once it has Ended.
-    /// Whether hiding the viewer's name means anything: nobody sees a "nobody" Poll's voter list.
-    public var allowsAnonymousBallot: Bool { voterVisibility != .nobody }
+    /// Whether hiding the viewer's name means anything: nobody sees a "nobody" Poll's voter list, and
+    /// only its owner sees an "owner" one's, so its owner has no one to hide from.
+    public func canHideName(viewerId: String?) -> Bool {
+        voterVisibility != .nobody && !(voterVisibility == .owner && viewerId == creatorId)
+    }
 
     public func canSeeVoters(viewerId: String?) -> Bool {
         switch voterVisibility {
