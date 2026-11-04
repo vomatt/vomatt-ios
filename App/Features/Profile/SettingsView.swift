@@ -681,13 +681,18 @@ struct LegalLinks: View {
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
 
+    /// The about site serves the legal pages; vomatt.com only redirects there (the web's `aboutHref`).
+    private static let aboutSite = URL(string: "https://about.vomatt.com")!
+    static let terms = aboutSite.appending(path: "terms-of-service")
+    static let privacy = aboutSite.appending(path: "privacy-policy")
+    static let cookies = aboutSite.appending(path: "cookies-policy")
+
     var body: some View {
-        let site = app.config.siteURL
         VStack(spacing: 8) {
             HStack(spacing: 18) {
-                link(app.t("settings.terms"), site.appending(path: "terms-of-service"))
-                link(app.t("settings.privacyPolicy"), site.appending(path: "privacy-policy"))
-                link(app.t("settings.cookies"), site.appending(path: "cookies-policy"))
+                link(app.t("settings.terms"), Self.terms)
+                link(app.t("settings.privacyPolicy"), Self.privacy)
+                link(app.t("settings.cookies"), Self.cookies)
                 if !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
                     link(app.t("ios.contact"), mail)
                 }

@@ -1,5 +1,6 @@
 {
 	"ios": {
+		"signUpPolicy": "By signing up, you agree to the [Terms of Service]({terms}) and [Privacy Policy]({privacy}), including [Cookie Use]({cookies}).",
 		"anonymousToggle": "Hide my name from voter lists",
 		"openProfile": "Opens their profile",
 		"report": "Report",

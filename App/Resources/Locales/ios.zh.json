@@ -1,5 +1,6 @@
 {
 	"ios": {
+		"signUpPolicy": "註冊即表示你同意[服務條款]({terms})與[隱私權政策]({privacy})，包括 [Cookie 的使用]({cookies})。",
 		"anonymousToggle": "在投票者名單中隱藏我的名字",
 		"openProfile": "開啟個人檔案",
 		"report": "檢舉",
