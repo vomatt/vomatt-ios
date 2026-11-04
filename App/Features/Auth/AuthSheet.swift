@@ -97,8 +97,20 @@ private struct EmailStep: View {
             }
             .padding(.top, 8)
             AuthErrorText(error: error).padding(.top, 12)
+            Text(policy).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).tint(Tokens.mutedForeground)
+                .padding(.top, 20)
         }
         .animation(.easeOut(duration: 0.2), value: error)
+    }
+
+    /// The web's Sanity `policyMessage`, with its three links.
+    private var policy: AttributedString {
+        let markdown = app.t("ios.signUpPolicy", ["terms": LegalLinks.terms, "privacy": LegalLinks.privacy, "cookies": LegalLinks.cookies])
+        var text = (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
+        for run in text.runs where run.link != nil {
+            text[run.range].underlineStyle = .single
+        }
+        return text
     }
 
     private func submit() async {

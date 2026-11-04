@@ -17,7 +17,8 @@ public final class DevicesModel {
         self.service = service
     }
 
-    public var hasOthers: Bool { devices?.contains { !$0.isCurrent } ?? false }
+    public var current: DeviceSession? { devices?.first { $0.isCurrent } }
+    public var others: [DeviceSession] { devices?.filter { !$0.isCurrent } ?? [] }
 
     public func load() async {
         do {
