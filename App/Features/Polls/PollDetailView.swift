@@ -6,6 +6,13 @@ struct PollDetailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     let pollId: String
+    /// Opens the Reply composer under this Comment once the comments load.
+    @State private var replyTo: FeedNotification.CommentInfo?
+
+    init(pollId: String, replyTo: FeedNotification.CommentInfo? = nil) {
+        self.pollId = pollId
+        _replyTo = State(initialValue: replyTo)
+    }
 
     /// `notFound` carries the owner when the Poll is Invite-only and the viewer can't open it yet.
     enum Phase { case loading, ready(Poll), notFound(PollOwner?), failed }
@@ -93,6 +100,10 @@ struct PollDetailView: View {
             if reloadComments || commentsSession != app.sessionGeneration {
                 commentsSession = app.sessionGeneration
                 await comments.reload(app.service)
+            }
+            if let link = replyTo {
+                replyTo = nil
+                await comments.openReply(to: link, app.service)
             }
             await markReadIfNeeded(poll)
         } catch {

@@ -216,6 +216,13 @@ private struct NotificationRow: View {
         }
     }
 
+    /// The poll with the Reply composer open under the Comment.
+    private func reply() {
+        guard let poll = item.poll, let comment = item.comment else { return open() }
+        read()
+        app.push(.pollReply(poll.id, comment))
+    }
+
     // MARK: Icon
 
     @ViewBuilder private var icon: some View {
@@ -296,7 +303,8 @@ private struct NotificationRow: View {
                 let key = switch item.kind {
                 case .mention: "notifications.mentioned"
                 case .like: "notifications.liked"
-                default: "notifications.commented"
+                // The API doesn't say whose comment a reply answers: on the viewer's poll it may be someone else's
+                default: item.comment?.parentId != nil ? "notifications.replied" : "notifications.commented"
                 }
                 return Wording(template: app.t(key), parts: ["name": Part(text: actorName, emphasis: .strong), "title": Part(text: title, emphasis: .titled)])
             case .closingSoon:
@@ -397,7 +405,7 @@ private struct NotificationRow: View {
             case .followed:
                 if let actor = item.actor { FollowBackButton(user: actor, onFollow: read) }
             case .comment, .mention, .like:
-                Button(app.t("comments.reply"), action: open).buttonStyle(.vm(.outline, size: .sm))
+                Button(app.t("comments.reply"), action: reply).buttonStyle(.vm(.outline, size: .sm))
             case .closingSoon:
                 if let end = item.poll?.endTime, end > .now {
                     Button(app.t("poll.vote"), action: open).buttonStyle(.vm(.outline, size: .sm))
