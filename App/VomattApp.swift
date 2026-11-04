@@ -172,6 +172,7 @@ struct RouteView: View {
         case let .people(username, kind): FollowListView(username: username, kind: kind)
         case .settings: SettingsView()
         case .inviteLists: InviteListsView()
+        case .devices: DevicesView()
         }
     }
 }

@@ -49,7 +49,7 @@ struct DeviceSessionTests {
 
         #expect(await model.signOut(other))
         #expect(model.devices?.map(\.id) == ["s-1"])
-        #expect(!model.hasOthers)
+        #expect(model.others.isEmpty)
         #expect(transport.requests.last?.method == .delete)
         #expect(transport.requests.last?.path == "/api/users/me/sessions/s-2")
     }
@@ -86,7 +86,8 @@ struct DeviceSessionTests {
         }
         let model = DevicesModel(service: service)
         await model.load()
-        #expect(model.hasOthers)
+        #expect(model.current?.id == "s-1")
+        #expect(model.others.map(\.id) == ["s-2"])
 
         #expect(await model.signOutOthers())
         #expect(model.devices?.map(\.id) == ["s-1"])

@@ -36,6 +36,22 @@ struct InviteListsView: View {
     }
 }
 
+/// Signed-in devices on a screen of their own, opened from Settings (the web's `/settings/devices`).
+struct DevicesView: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        ScrollView {
+            DevicesSection(service: app.service)
+                .pageColumn(768)
+                .padding(.vertical, 24)
+        }
+        .canvas()
+        .navigationTitle(app.t("sessions.title"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 /// The app's light or dark look; Auto follows the system (the web's theme choice).
 enum ThemeChoice: String, CaseIterable {
     case system, light, dark
@@ -125,6 +141,8 @@ private struct AccountSettings: View {
     @State private var editingProfile = false
     /// How many invite lists the user has; nil until loaded or when they couldn't be.
     @State private var inviteListCount: Int?
+    /// How many devices the user is signed in on; nil until loaded or when they couldn't be.
+    @State private var deviceCount: Int?
     /// The last Ballot default the server confirmed; quick toggles can answer out of order.
     @State private var savedAnonymousDefault: Bool
 
@@ -213,7 +231,12 @@ private struct AccountSettings: View {
                     Hairline()
                     PasskeysSection(service: app.service).padding(16)
                     Hairline()
-                    DevicesSection(service: app.service).padding(16)
+                    NavigationRow(
+                        title: app.t("sessions.title"),
+                        detail: app.t("sessions.body"),
+                        value: deviceCount.map { app.t.count("settings.deviceCount", $0) },
+                        monoValue: true
+                    ) { app.push(.devices) }
                 }
                 .card(padding: nil)
                 FeedbackRow().card(padding: nil)
@@ -225,6 +248,7 @@ private struct AccountSettings: View {
             LegalLinks()
         }
         .task { await loadInviteListCount() }
+        .task { await loadDeviceCount() }
         .sheet(isPresented: $editingProfile) { EditProfileSheet(profile: profile) }
     }
 
@@ -237,6 +261,11 @@ private struct AccountSettings: View {
     /// Runs on every visit, so the count follows changes made on the Invite lists screen.
     private func loadInviteListCount() async {
         if let groups = try? await app.service.groups() { inviteListCount = groups.count }
+    }
+
+    /// Also every visit, so it follows sign-outs on the Devices screen.
+    private func loadDeviceCount() async {
+        if let devices = try? await app.service.deviceSessions() { deviceCount = devices.count }
     }
 
     private func toggleAnonymousDefault(_ value: Bool) async {
@@ -460,8 +489,8 @@ private struct PasskeysSection: View {
     }
 }
 
-/// Devices signed in to the account: each other one can be signed out after confirmation, or all
-/// at once. This device signs out with Sign out below.
+/// The Devices screen (the web's `SessionsPanel`): this device, then the others, each of which can be
+/// signed out after confirmation, or all at once. This device signs out with Sign out in Settings.
 private struct DevicesSection: View {
     @Environment(AppModel.self) private var app
     @State private var model: DevicesModel
@@ -473,22 +502,40 @@ private struct DevicesSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            RowText(title: app.t("sessions.title"), detail: app.t("sessions.body"))
+        VStack(alignment: .leading, spacing: 32) {
+            Text(app.t("sessions.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             if model.loadFailed {
                 HStack(spacing: 12) {
-                    Text(app.t("sessions.loadFailed")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                    Text(app.t("sessions.loadFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     LoadingButton(style: .vm(.outline, size: .sm), action: { await model.load() }) { Text(app.t("common.tryAgain")) }
                 }
-            } else if let devices = model.devices {
-                if devices.isEmpty {
-                    Text(app.t("sessions.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+            } else if model.devices != nil {
+                if let current = model.current {
+                    SettingsSection(title: app.t("sessions.thisDevice")) {
+                        row(current).card(padding: nil)
+                    }
                 }
-                ForEach(devices) { device in row(device) }
-                if model.hasOthers {
-                    Button(app.t("sessions.signOutOthers")) { confirmingOthers = true }
-                        .buttonStyle(.vm(.outline, fullWidth: true))
+                let others = model.others
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 12) {
+                        SectionTitle(text: app.t("sessions.otherDevices")).frame(maxWidth: .infinity, alignment: .leading)
+                        if !others.isEmpty {
+                            Button(app.t("sessions.signOutOthers")) { confirmingOthers = true }
+                                .buttonStyle(.vm(.outline, size: .sm))
+                        }
+                    }
+                    if others.isEmpty {
+                        EmptyState { Text(app.t("sessions.empty")) }
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(others) { device in
+                                if device.id != others.first?.id { Hairline() }
+                                row(device)
+                            }
+                        }
+                        .card(padding: nil)
+                    }
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity)
@@ -514,21 +561,15 @@ private struct DevicesSection: View {
     }
 
     private func row(_ device: DeviceSession) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(name(device)).font(.vm(14, .medium)).lineLimit(1)
-                if device.isCurrent { Chip(text: app.t("sessions.thisDevice"), bordered: true) }
-                Text(dates(device)).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 12) {
+            RowText(title: name(device), detail: dates(device))
             if !device.isCurrent {
                 Button(app.t("sessions.signOut")) { confirming = device }
                     .buttonStyle(.vm(.outline, size: .sm))
                     .accessibilityLabel(app.t("sessions.signOutLabel", ["name": name(device)]))
             }
         }
-        .padding(.top, 12)
-        .overlay(alignment: .top) { Hairline() }
+        .settingsRow()
     }
 
     private func name(_ device: DeviceSession) -> String {
