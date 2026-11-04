@@ -14,6 +14,8 @@ struct PollCardView: View {
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
     @State private var reporting = false
+    /// The status clock: it moves only when the Poll's status changes.
+    @State private var now = Date.now
 
     init(poll: Poll, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
@@ -23,11 +25,15 @@ struct PollCardView: View {
     }
 
     var body: some View {
-        // Re-evaluated every minute so the chip and Ballot follow the clock
+        // Re-evaluated every minute so the age and chip text follow the clock
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            card(status: poll.status(at: context.date), now: context.date)
+            card(status: poll.status(at: now), now: context.date)
         }
-        .onChange(of: initialPoll) { _, fresh in apply(fresh) }
+        .statusClock($now, for: poll, onEnded: refetch)
+        .onChange(of: initialPoll) { _, fresh in
+            now = .now
+            apply(fresh)
+        }
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
             if let fresh, fresh != poll { apply(fresh) }
         }
@@ -180,6 +186,23 @@ struct PollCardView: View {
         if let fresh = try? await app.service.poll(id: poll.id) {
             apply(fresh)
             app.didUpdate(fresh)
+        }
+    }
+}
+
+extension View {
+    /// Moves `now` on at the moment the clock next changes the Poll's status (the web's `usePollStatus`),
+    /// so a Poll left on screen past its end shows it Ended without a refresh. `onEnded` runs when the
+    /// clock, not a refetch, Ends it.
+    func statusClock(_ now: Binding<Date>, for poll: Poll, onEnded: @escaping () async -> Void) -> some View {
+        task(id: poll.nextStatusChange(at: now.wrappedValue)) {
+            guard let next = poll.nextStatusChange(at: now.wrappedValue) else { return }
+            // Without a tolerance the system coalesces a long sleep, waking it seconds late
+            do { try await Task.sleep(for: .seconds(next.timeIntervalSinceNow), tolerance: .milliseconds(100)) } catch { return }
+            // The sleep's clock can wake a moment before the wall clock reaches `next`
+            now.wrappedValue = max(.now, next)
+            // The new status cancels this task, so the refetch runs on its own
+            if poll.status(at: now.wrappedValue) == .ended { Task { await onEnded() } }
         }
     }
 }

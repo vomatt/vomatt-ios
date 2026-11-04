@@ -21,6 +21,8 @@ struct PollDetailView: View {
     /// The session the comments were loaded in; a sign-in or out reloads them.
     @State private var commentsSession: Int?
     @State private var showDiscussion = false
+    /// The status clock the card and About share: it moves only when the Poll's status changes.
+    @State private var now = Date.now
 
     var body: some View {
         ScrollView {
@@ -30,12 +32,13 @@ struct PollDetailView: View {
                     PollCardSkeleton(options: 4)
                 case let .ready(initial):
                     let poll = app.latest(initial)
-                    PollDetailCard(poll: initial, commentCount: comments?.total ?? poll.commentCount) { showDiscussion = true }
-                    PollAboutView(poll: poll)
+                    PollDetailCard(poll: initial, now: now, commentCount: comments?.total ?? poll.commentCount) { showDiscussion = true }
+                        .statusClock($now, for: poll, onEnded: refetch)
+                    PollAboutView(poll: poll, now: now)
                     if let comments {
                         CommentThreadView(model: comments) { showDiscussion = true }.card(padding: 20)
                     }
-                    if poll.status() != .ended { MoreFromAuthorView(poll: poll) }
+                    if poll.status(at: now) != .ended { MoreFromAuthorView(poll: poll) }
                 case let .notFound(owner):
                     notFound(owner)
                 case .failed:
@@ -95,6 +98,7 @@ struct PollDetailView: View {
             }
             let comments = comments ?? CommentsModel(pollId: poll.id, initialTotal: poll.commentCount)
             self.comments = comments
+            now = .now
             phase = .ready(poll)
             app.didUpdate(poll)
             if reloadComments || commentsSession != app.sessionGeneration {
@@ -135,6 +139,8 @@ struct PollDetailView: View {
 private struct PollDetailCard: View {
     @Environment(AppModel.self) private var app
     let initialPoll: Poll
+    /// The page's status clock.
+    let now: Date
     let commentCount: Int?
     let onOpenDiscussion: () -> Void
 
@@ -142,8 +148,9 @@ private struct PollDetailCard: View {
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
 
-    init(poll: Poll, commentCount: Int?, onOpenDiscussion: @escaping () -> Void) {
+    init(poll: Poll, now: Date, commentCount: Int?, onOpenDiscussion: @escaping () -> Void) {
         initialPoll = poll
+        self.now = now
         self.commentCount = commentCount
         self.onOpenDiscussion = onOpenDiscussion
         _poll = State(initialValue: poll)
@@ -151,9 +158,9 @@ private struct PollDetailCard: View {
     }
 
     var body: some View {
-        // Re-evaluated every minute so the chip and Ballot follow the clock
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            card(status: poll.status(at: context.date))
+        // Re-evaluated every minute so the age and chip text follow the clock
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            card(status: poll.status(at: now))
         }
         .onChange(of: initialPoll) { _, fresh in apply(fresh) }
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
@@ -313,9 +320,11 @@ private struct PollMenu: View {
 struct PollAboutView: View {
     @Environment(AppModel.self) private var app
     let poll: Poll
+    /// The page's status clock, so About turns with the card.
+    let now: Date
 
     var body: some View {
-        let status = poll.status()
+        let status = poll.status(at: now)
         VStack(alignment: .leading, spacing: 16) {
             RailHeading(text: app.t("pollDetail.about"))
             if status == .ended {
