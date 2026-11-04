@@ -122,7 +122,7 @@ struct BallotView: View {
     private func anonymityToggle(_ anonymous: Bool) -> some View {
         Toggle(isOn: Binding(get: { anonymous }, set: { setAnonymous($0) })) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(app.t("poll.anonymousToggle")).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+                Text(app.t("ios.anonymousToggle")).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
                 Text(anonymous ? app.t("poll.anonymousHidden") : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? "")
                     .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
             }
