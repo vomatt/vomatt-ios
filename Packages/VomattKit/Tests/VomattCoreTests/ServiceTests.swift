@@ -613,6 +613,14 @@ struct ServiceTests {
         #expect(transport.requests[0].path.hasPrefix("/api/notifications/unread-ids") && transport.requests[0].path.contains("category=LIKE"))
     }
 
+    @Test func unreadNotificationIdsWithoutCategoryOrDataAreEmpty() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"ids":[]}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = try await service.unreadNotificationIds()
+        #expect(ids.isEmpty)
+        #expect(!transport.requests[0].path.contains("category="))
+    }
+
     @Test func notificationPreferencesChangeOnlyTheGivenSwitches() async throws {
         let transport = StubTransport { _, _ in
             (200, envelope(#"{"resultsIn":true,"invitations":true,"comments":false,"mentions":false,"likes":true,"closingSoon":true}"#), [:])
