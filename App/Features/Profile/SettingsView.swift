@@ -728,26 +728,31 @@ struct LegalLinks: View {
     static let privacy = aboutSite.appending(path: "privacy-policy")
     static let cookies = aboutSite.appending(path: "cookies-policy")
 
+    /// Under Home's guest prompt: the three pages only, leading, as the web's `HomepageHeader` has them.
+    var pagesOnly = false
+
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 18) {
+            HStack(spacing: pagesOnly ? 20 : 18) {
                 link(app.t("settings.terms"), Self.terms)
                 link(app.t("settings.privacyPolicy"), Self.privacy)
                 link(app.t("settings.cookies"), Self.cookies)
-                if !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
+                if !pagesOnly, !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
                     link(app.t("ios.contact"), mail)
                 }
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(app.t("settings.legal"))
-            Text(version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+            if !pagesOnly {
+                Text(version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: pagesOnly ? .leading : .center)
     }
 
     private func link(_ title: String, _ url: URL) -> some View {
         Button(title) { openURL(url) }
-            .font(.vm(13))
+            .font(.vm(pagesOnly ? 12 : 13))
             .foregroundStyle(Tokens.mutedForeground)
             .buttonStyle(.plain)
             .frame(minHeight: Metrics.minTarget)
