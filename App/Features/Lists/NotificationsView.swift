@@ -2,19 +2,15 @@ import SwiftUI
 import VomattCore
 
 /// The Notifications tab, from the web's `NotificationList`: newest first, grouped by day, each run of
-/// follows as one row, with a pill per category. Opening a row reads it, and so does seeing it for a
-/// moment, but a seen row keeps its dot until the next visit so the list doesn't change under the reader.
-/// Results rows stay until opened, so a sealed promise is never lost in the list.
+/// follows as one row, with a pill per category. Opening the tab reads every notification. The rows it
+/// opened with keep their dots until opened, so the list shows what is new without changing under the
+/// reader; pages fetched after that (Load more, another category) come back read.
 struct NotificationsView: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.scenePhase) private var scenePhase
     @State private var list: CursorList<FeedNotification>?
     /// The tab `list` holds; nil is every category.
     @State private var category: FeedNotification.Category?
     @State private var isSwitching = false
-    @State private var reader = NotificationReader()
-    /// Read this visit by being seen: their dots stay until the next one.
-    @State private var seenIds: Set<String> = []
 
     var body: some View {
         Group {
@@ -29,10 +25,6 @@ struct NotificationsView: View {
                 }
                 .refreshable { await load() }
                 .task(id: app.sessionGeneration) { await load() }
-                .onDisappear(perform: endVisit)
-                .onChange(of: scenePhase) { _, phase in
-                    if phase != .active { reader.flush(app) }
-                }
             } else {
                 SignedOutPlaceholder(title: app.t("notifications.title"))
             }
@@ -97,11 +89,7 @@ struct NotificationsView: View {
                         .accessibilityAddTraits(.isHeader)
                     LazyVStack(spacing: 8) {
                         ForEach(section.entries) { entry in
-                            NotificationRow(
-                                entry: entry,
-                                read: { read(entry) },
-                                onSeen: entry.readsWhenSeen(seen: seenIds) ? { seen(entry) } : nil
-                            )
+                            NotificationRow(entry: entry, read: { read(entry) })
                         }
                     }
                 }
@@ -120,14 +108,15 @@ struct NotificationsView: View {
         }
     }
 
-    /// Refresh and retry keep the tab: the list pages with the category it was made for.
+    /// Refresh and retry keep the tab: the list pages with the category it was made for. Read whenever a
+    /// feed is shown, after its page arrived so those rows keep their dots; a failed request leaves the badge as it was.
     private func load() async {
         guard app.isSignedIn else { return }
         let list = list ?? makeList(nil)
         self.list = list
-        async let unread: Void = app.refreshUnread()
         await list.reload()
-        await unread
+        guard list.phase == .loaded, (try? await app.service.markAllNotificationsRead()) != nil else { return }
+        await app.refreshUnread()
     }
 
     private func makeList(_ category: FeedNotification.Category?) -> CursorList<FeedNotification> {
@@ -150,33 +139,14 @@ struct NotificationsView: View {
         category = next
     }
 
-    /// The dot clears at once; a failed request leaves it unread on the server, so the next visit shows it again.
+    /// Already read on the server: opening a row only clears its dot.
     private func read(_ entry: ActivityEntry) {
-        let ids = entry.unreadIds
-        guard !ids.isEmpty else { return }
-        setRead { ids.contains($0.id) }
-        reader.read(ids, app)
-    }
-
-    private func seen(_ entry: ActivityEntry) {
-        let ids = entry.unreadIds
-        seenIds.formUnion(ids)
-        reader.queue(ids, app)
-    }
-
-    /// Leaving sends what was seen; the rows seen this visit lose their dots by the next.
-    private func endVisit() {
-        reader.flush(app)
-        let seen = seenIds
-        setRead { seen.contains($0.id) }
-        seenIds = []
-    }
-
-    private func setRead(where matches: (FeedNotification) -> Bool) {
+        guard entry.isUnread else { return }
+        let ids = Set(entry.items.map(\.id))
         list?.update { items in
             items = items.map { item in
                 var item = item
-                if matches(item) { item.read = true }
+                if ids.contains(item.id) { item.read = true }
                 return item
             }
         }
@@ -188,13 +158,9 @@ struct NotificationsView: View {
 /// what it is about.
 private struct NotificationRow: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.scenePhase) private var scenePhase
     let entry: ActivityEntry
-    /// Marks the entry read: the person opened it or acted on it.
+    /// Clears the entry's dot: the person opened it or acted on it.
     let read: () -> Void
-    /// Called once the row has been at least half on screen for `NotificationReads.seenDelay`; nil when it shouldn't.
-    let onSeen: (() -> Void)?
-    @State private var isInView = false
 
     private var item: FeedNotification { entry.items[0] }
     private var unread: Bool { entry.isUnread }
@@ -234,16 +200,6 @@ private struct NotificationRow: View {
         // The padding and the space around the action open the row too; the row's buttons keep their own taps
         .contentShape(RoundedRectangle(cornerRadius: Radius.xl))
         .onTapGesture(perform: open)
-        .onGeometryChange(for: Bool.self) { proxy in
-            let viewport = proxy.bounds(of: .scrollView) ?? .zero
-            let fraction = NotificationReads.visibleFraction(of: CGRect(origin: .zero, size: proxy.size), in: viewport)
-            return fraction >= NotificationReads.seenFraction
-        } action: { isInView = $0 }
-        .task(id: onSeen != nil && isInView && scenePhase == .active) {
-            guard onSeen != nil, isInView, scenePhase == .active else { return }
-            try? await Task.sleep(for: NotificationReads.seenDelay)
-            if !Task.isCancelled { onSeen?() }
-        }
     }
 
     private func open() {
@@ -490,42 +446,6 @@ struct SignedOutPlaceholder: View {
             }
             .pageColumn()
             .padding(.vertical, 24)
-        }
-    }
-}
-
-/// Sends `NotificationReads`' ids to the server and recounts the unread badge after each request.
-private final class NotificationReader {
-    private var reads = NotificationReads()
-    private var timer: Task<Void, Never>?
-
-    /// Sends now: the person opened them.
-    func read(_ ids: [String], _ app: AppModel) {
-        send(reads.read(ids), app)
-    }
-
-    /// Waits for the batch: they were seen.
-    func queue(_ ids: [String], _ app: AppModel) {
-        reads.queue(ids, at: .now)
-        timer?.cancel()
-        guard let deadline = reads.deadline else { return }
-        timer = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
-            guard !Task.isCancelled else { return }
-            self?.flush(app)
-        }
-    }
-
-    func flush(_ app: AppModel) {
-        timer?.cancel()
-        send(reads.flush(), app)
-    }
-
-    private func send(_ ids: [String], _ app: AppModel) {
-        guard !ids.isEmpty else { return }
-        Task {
-            reads.requeue(await app.service.markNotificationsRead(ids: ids))
-            await app.refreshUnread()
         }
     }
 }
