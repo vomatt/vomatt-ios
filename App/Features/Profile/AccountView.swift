@@ -38,7 +38,8 @@ struct AccountView: View {
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
                     .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.createdPollCount ?? profile.totalPolls)),
-                    .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.votedPollCount ?? profile.totalVotes)),
+                    // Not votedPollCount: it counts Ballots on the owner's own polls, which the Voted tab leaves out (vomatt-web#121)
+                    .init(label: app.t("profile.recordVoted"), value: polls == nil ? "–" : app.t.number(voted.count)),
                     .init(
                         label: app.t("profile.recordReached"),
                         value: polls == nil ? "–" : app.t.number(asked.reduce(0) { $0 + ($1.turnout ?? 0) }),
