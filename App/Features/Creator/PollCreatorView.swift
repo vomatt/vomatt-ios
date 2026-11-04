@@ -184,36 +184,43 @@ struct PollCreatorView: View {
 
     private func optionRow(_ index: Int) -> some View {
         let label = "\(app.t("pollCreator.optionsPlaceholder")) \(index + 1)"
-        return HStack(spacing: 10) {
-            Text("\(index + 1)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
-            TextField("", text: optionBinding(index), prompt: Text(label).foregroundStyle(Tokens.mutedForeground))
-                .focused($focus, equals: .option(index))
-                .submitLabel(index == form.options.count - 1 && !form.canAddOption ? .done : .next)
-                .onSubmit {
-                    // Return moves to the next option, or adds one, instead of submitting
-                    if index < form.options.count - 1 {
-                        focus = .option(index + 1)
-                    } else if form.canAddOption {
-                        form.options.append("")
-                        focus = .option(index + 1)
+        let length = form.options.indices.contains(index) ? form.options[index].count : 0
+        return VStack(alignment: .trailing, spacing: 4) {
+            HStack(spacing: 10) {
+                Text("\(index + 1)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
+                TextField("", text: optionBinding(index), prompt: Text(label).foregroundStyle(Tokens.mutedForeground))
+                    .focused($focus, equals: .option(index))
+                    .submitLabel(index == form.options.count - 1 && !form.canAddOption ? .done : .next)
+                    .onSubmit {
+                        // Return moves to the next option, or adds one, instead of submitting
+                        if index < form.options.count - 1 {
+                            focus = .option(index + 1)
+                        } else if form.canAddOption {
+                            form.options.append("")
+                            focus = .option(index + 1)
+                        }
                     }
+                    .accessibilityLabel(label)
+                if form.options.count > pollOptionsMin {
+                    Button {
+                        form.options.remove(at: index)
+                        if !errors.isEmpty { errors = form.errors() }
+                        // The button leaves with its row: keep focus in the list
+                        focus = .option(max(index - 1, 0))
+                    } label: {
+                        Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(Tokens.mutedForeground)
+                    }
+                    .buttonStyle(.vm(.ghost, size: .icon))
+                    .padding(.trailing, -8)
+                    .accessibilityLabel("\(app.t("pollCreator.removeOption")) \(index + 1)")
                 }
-                .accessibilityLabel(label)
-            if form.options.count > pollOptionsMin {
-                Button {
-                    form.options.remove(at: index)
-                    if !errors.isEmpty { errors = form.errors() }
-                    // The button leaves with its row: keep focus in the list
-                    focus = .option(max(index - 1, 0))
-                } label: {
-                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(Tokens.mutedForeground)
-                }
-                .buttonStyle(.vm(.ghost, size: .icon))
-                .padding(.trailing, -8)
-                .accessibilityLabel("\(app.t("pollCreator.removeOption")) \(index + 1)")
+            }
+            .fieldChrome(isFocused: focus == .option(index), isInvalid: errors[.option(index)] != nil)
+            // The web's counter: only once an option nears the limit
+            if length > pollOptionMax - 20 {
+                Text("\(length)/\(pollOptionMax)").font(.vmMono(12)).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
             }
         }
-        .fieldChrome(isFocused: focus == .option(index), isInvalid: errors[.option(index)] != nil)
     }
 
     private func optionBinding(_ index: Int) -> Binding<String> {
