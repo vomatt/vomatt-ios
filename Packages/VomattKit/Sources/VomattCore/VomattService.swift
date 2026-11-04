@@ -673,6 +673,14 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Ids of the unread feed items, newest first, at most the newest 100; with `category`, that tab's only.
+    /// Fetch before `read-all` to keep highlighting what was unread.
+    public func unreadNotificationIds(category: FeedNotification.Category? = nil) async throws -> [String] {
+        try await call {
+            try await client.unreadIds(query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) })).ok.body.json.data?.ids ?? []
+        }
+    }
+
     /// The feed, newest first; with `category`, one tab (pass the same one with every cursor).
     /// Items can vanish or appear behind the cursor: de-duplicate by `id`.
     /// An item that doesn't fit its kind is left out rather than failing the page.
