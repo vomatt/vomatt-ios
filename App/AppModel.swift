@@ -44,6 +44,8 @@ enum FollowListKind: Hashable {
 /// Screens pushed inside a tab.
 enum Route: Hashable {
     case poll(String)
+    /// The poll page with the Reply composer open under this Comment (a notification's Reply).
+    case pollReply(String, FeedNotification.CommentInfo)
     case profile(String)
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
@@ -81,6 +83,7 @@ final class AppModel {
     private(set) var userId: String?
     private(set) var me: MyProfile?
     private(set) var unreadCount = 0
+    private var latestUnreadRequest = 0
     /// The unread count as shown on badges, nil when there is nothing unread.
     var unreadBadge: String? { unreadCount > 0 ? formatUnreadCount(unreadCount) : nil }
     /// Bumped on every sign-in and sign-out, so lists reload with the viewer's Ballots.
@@ -178,7 +181,7 @@ final class AppModel {
     }
 
     func refreshAccount() async {
-        async let unread = try? service.unreadCount()
+        async let unread: Void = refreshUnread()
         do {
             me = try await service.myProfile()
         } catch let error as APIError where error.isAccountGone {
@@ -187,15 +190,19 @@ final class AppModel {
             showToast(t("login.accountDeleted"))
             return
         } catch {}
-        if let unread = await unread { unreadCount = unread }
+        await unread
         await syncBlocked()
         let changes = followChanges
         // A follow or unfollow made while the fetch was in flight is newer than its snapshot
         if let followed = try? await service.allFollowedUsers(), changes == followChanges { following = followed }
     }
 
+    /// Only the latest request sets the count, so an older one can't bring back a count read since.
     func refreshUnread() async {
-        if isSignedIn, let count = try? await service.unreadCount() { unreadCount = count }
+        guard isSignedIn else { return }
+        latestUnreadRequest += 1
+        let request = latestUnreadRequest
+        if let count = try? await service.unreadCount(), request == latestUnreadRequest { unreadCount = count }
     }
 
     func updateMe(_ change: (inout MyProfile) -> Void) {

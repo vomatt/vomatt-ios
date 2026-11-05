@@ -1,5 +1,4 @@
 import Foundation
-import os
 import HTTPTypes
 import OpenAPIRuntime
 import Testing
@@ -532,39 +531,19 @@ struct ServiceTests {
         #expect(page.nextCursor == "n2")
     }
 
-    // markNotificationsRead() cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
-    @Test func markNotificationsReadPostsEachIdToItsReadEndpoint() async {
+    // markAllNotificationsRead() cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
+    @Test func markAllNotificationsReadPostsToReadAll() async throws {
         let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
-        let unread = await service.markNotificationsRead(ids: ["comment_1", "follow_2"])
-        let calls = Set(transport.requests.map { "\($0.method.rawValue) \($0.path)" })
-        #expect(unread.isEmpty)
-        #expect(calls == ["POST /api/notifications/comment_1/read", "POST /api/notifications/follow_2/read"])
+        try await service.markAllNotificationsRead()
+        #expect(transport.requests.map { "\($0.method.rawValue) \($0.path ?? "")" } == ["POST /api/notifications/read-all"])
     }
 
-    @Test func markNotificationsReadReturnsTheIdsWhoseRequestFailed() async {
-        let transport = StubTransport { request, _ in
-            if request.path?.contains("follow_2") == true { return (503, failure("common.unavailable"), [:]) }
-            if request.path?.contains("gone_3") == true { return (404, failure("notification.not_found"), [:]) }
-            return (200, envelope(#"{"success":true}"#), [:])
-        }
+    @Test func markAllNotificationsReadThrowsTheFailure() async {
+        let transport = StubTransport { _, _ in (503, failure("common.unavailable"), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
-        #expect(await service.markNotificationsRead(ids: ["comment_1", "follow_2", "gone_3"]) == ["follow_2"])
-    }
-
-    @Test func markNotificationsReadReadsAtMostTheMaxAFewAtATimeAndReturnsTheRest() async {
-        let open = OSAllocatedUnfairLock(initialState: (now: 0, most: 0))
-        let transport = StubTransport { _, _ in
-            open.withLock { $0.now += 1; $0.most = max($0.most, $0.now) }
-            try await Task.sleep(for: .milliseconds(2))
-            open.withLock { $0.now -= 1 }
-            return (200, envelope(#"{"success":true}"#), [:])
-        }
-        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
-        let ids = (0..<(VomattService.markReadMax + 2)).map { "follow_\($0)" }
-        #expect(await service.markNotificationsRead(ids: ids) == Array(ids.suffix(2)))
-        #expect(transport.requests.count == VomattService.markReadMax)
-        #expect(open.withLock { $0.most } <= 5)
+        let error = await #expect(throws: APIError.self) { try await service.markAllNotificationsRead() }
+        #expect(error?.status == 503)
     }
 
     @Test func likeNotificationsFilterByCategoryAndTheLikesSwitchRoundTrips() async throws {
@@ -585,6 +564,22 @@ struct ServiceTests {
         #expect(transport.requests[0].path.contains("category=LIKE") && transport.requests[0].path.contains("cursor=n1"))
         #expect(count == 2 && transport.requests[1].path.contains("category=LIKE"))
         #expect(!saved.likes && transport.requests[2].body?.contains("likes") == true && transport.requests[2].body?.contains("mentions") == false)
+    }
+
+    @Test func unreadNotificationIdsKeepTheOrderAndTheCategory() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"ids":["comment_1","result_2"]}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = try await service.unreadNotificationIds(category: .like)
+        #expect(ids == ["comment_1", "result_2"])
+        #expect(transport.requests[0].path.hasPrefix("/api/notifications/unread-ids") && transport.requests[0].path.contains("category=LIKE"))
+    }
+
+    @Test func unreadNotificationIdsWithoutCategoryOrDataAreEmpty() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"ids":[]}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = try await service.unreadNotificationIds()
+        #expect(ids.isEmpty)
+        #expect(!transport.requests[0].path.contains("category="))
     }
 
     @Test func notificationPreferencesChangeOnlyTheGivenSwitches() async throws {

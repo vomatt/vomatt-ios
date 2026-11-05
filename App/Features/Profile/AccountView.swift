@@ -197,13 +197,16 @@ struct AccountView: View {
         }
     }
 
-    /// A decided Ballot: the pick, how it fared, and the unread dot until the results are opened.
+    /// A decided Ballot: the pick, how it fared, and the unread dot until the results are opened. An Anonymous
+    /// Ballot is sealed once the Poll Ends: it took part, but its option is gone.
     private func decidedRow(_ poll: Poll) -> some View {
         let unread = poll.unread == true
         let outcome = poll.isCancelled ? nil : poll.myOptionId.map { AccountInsights.outcome(of: poll, optionId: $0) }
         return PollRow(poll: poll, unread: unread) {
             joined([
-                Text(app.t("myPolls.youChose")) + Text(" ") + strong(AccountInsights.choice(of: poll)),
+                poll.myOptionId == nil
+                    ? Text(app.t("myPolls.votedAnonymously"))
+                    : Text(app.t("myPolls.youChose")) + Text(" ") + strong(AccountInsights.choice(of: poll)),
                 Text(poll.isCancelled ? app.t("notifications.cancelled") : votedCount(poll, app.t)),
                 unread ? Text(app.t("profile.new")).foregroundStyle(Tokens.alert) : nil,
             ].compactMap { $0 })

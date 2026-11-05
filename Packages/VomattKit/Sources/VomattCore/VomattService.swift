@@ -661,6 +661,14 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Ids of the unread feed items, newest first, at most the newest 100; with `category`, that tab's only.
+    /// Fetch before `read-all` to keep highlighting what was unread.
+    public func unreadNotificationIds(category: FeedNotification.Category? = nil) async throws -> [String] {
+        try await call {
+            try await client.unreadIds(query: .init(category: category.flatMap { .init(rawValue: $0.apiValue) })).ok.body.json.data?.ids ?? []
+        }
+    }
+
     /// The feed, newest first; with `category`, one tab (pass the same one with every cursor).
     /// Items can vanish or appear behind the cursor: de-duplicate by `id`.
     /// An item that doesn't fit its kind is left out rather than failing the page.
@@ -675,43 +683,13 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Marks one feed item read. Idempotent.
-    public func markNotificationRead(id: String) async throws {
-        _ = try await call { try await client.markRead(path: .init(id: id)).ok }
-    }
-
-    /// The most ids one `markNotificationsRead` call reads.
-    public static let markReadMax = 50
-
-    /// Marks several feed items read, a few requests at a time, and returns the ids left unread: those
-    /// whose request failed, and any past `markReadMax`. One that is gone (its Comment deleted, the
-    /// follow undone) counts as read.
-    public func markNotificationsRead(ids: [String]) async -> [String] {
-        var unread = Array(ids.dropFirst(Self.markReadMax))
-        let taken = Array(ids.prefix(Self.markReadMax))
-        for start in stride(from: 0, to: taken.count, by: 5) {
-            let chunk = Array(taken[start..<min(start + 5, taken.count)])
-            let failed = await withTaskGroup(of: String?.self) { group in
-                for id in chunk {
-                    group.addTask {
-                        do {
-                            try await self.markNotificationRead(id: id)
-                        } catch let error as APIError where error.errorCode == "notification.not_found" {
-                        } catch {
-                            return id
-                        }
-                        return nil
-                    }
-                }
-                return await group.reduce(into: Set<String>()) { if let id = $1 { $0.insert(id) } }
-            }
-            unread += chunk.filter(failed.contains)
-        }
-        return unread
+    /// Marks read every feed item created up to now, of every kind; the unread count becomes 0. Idempotent.
+    public func markAllNotificationsRead() async throws {
+        _ = try await call { try await client.markAllRead().ok }
     }
 
     /// Marks the Poll's current notification read through the deprecated Poll-id form of
-    /// `markNotificationRead`. Idempotent; nothing to read is ignored.
+    /// `POST /notifications/{id}/read`. Idempotent; nothing to read is ignored.
     public func markNotificationRead(pollId: String) async {
         _ = try? await call { try await client.markRead(path: .init(id: pollId)).ok }
     }
