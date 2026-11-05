@@ -17,6 +17,12 @@ final class BallotModel {
     private(set) var turnout: Int?
     private(set) var pendingAction: Action?
     var isPending: Bool { pendingAction != nil }
+    /// The option the server had when the pending action started.
+    private var optionBeforeAction: String?
+    /// The option the server has; differs from myOptionId only while a change is in flight.
+    var savedOptionId: String? { isPending ? optionBeforeAction : myOptionId }
+    /// After a saved cast: whether it replaced the viewer's earlier Ballot.
+    private(set) var replacedBallot = false
 
     init(poll: Poll) {
         pollId = poll.id
@@ -98,6 +104,7 @@ final class BallotModel {
         // An anonymity recast keeps an option the voter selected but hasn't submitted
         let keepsSelection = action == .anonymous
         pendingAction = action
+        optionBeforeAction = previous
         myOptionId = next
         if !keepsSelection { selected = next }
         if let nextAnonymous { anonymity.ballot = nextAnonymous }
@@ -105,6 +112,7 @@ final class BallotModel {
         do {
             try await request()
             pendingAction = nil
+            replacedBallot = previous != nil && next != nil
             return .saved
         } catch {
             pendingAction = nil

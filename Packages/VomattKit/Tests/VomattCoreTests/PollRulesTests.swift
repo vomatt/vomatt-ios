@@ -89,11 +89,16 @@ struct PollHelperTests {
         #expect(!poll(visibility: .nobody).canSeeVoters(viewerId: "owner"))
     }
 
-    // vomatt-web's Ballot: no anonymity switch on Polls whose voters nobody can see
-    @Test func anonymityOnlyWhereSomeoneSeesVoters() {
-        #expect(!poll(visibility: .nobody).allowsAnonymousBallot)
-        #expect(poll(visibility: .owner).allowsAnonymousBallot)
-        #expect(poll(visibility: .signedIn).allowsAnonymousBallot)
+    // vomatt-web's Ballot: no Hide my name on Polls whose voters nobody else can see
+    @Test func hideNameOnlyWhereSomeoneElseSeesVoters() {
+        #expect(!poll(visibility: .nobody).canHideName(viewerId: "voter"))
+        #expect(poll(visibility: .owner).canHideName(viewerId: "voter"))
+        #expect(poll(visibility: .signedIn).canHideName(viewerId: "voter"))
+    }
+
+    @Test func ownerCannotHideFromThemself() {
+        #expect(!poll(visibility: .owner).canHideName(viewerId: "owner"))
+        #expect(poll(visibility: .signedIn).canHideName(viewerId: "owner"))
     }
 }
 

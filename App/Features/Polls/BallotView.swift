@@ -42,11 +42,14 @@ struct BallotView: View {
         }
     }
 
-    /// Signed out there is no Ballot to hide; nobody sees a "nobody" Poll's voter list, so nothing to hide from.
+    /// Signed out there is no Ballot to hide; on some Polls nobody else sees the voter list, so nothing to hide from.
     private var anonymous: Bool? {
-        guard app.isSignedIn, !isScheduled, poll.allowsAnonymousBallot else { return nil }
+        guard app.isSignedIn, !isScheduled, poll.canHideName(viewerId: app.userId) else { return nil }
         return ballot.anonymous(accountDefault: app.me?.anonymousBallotByDefault)
     }
+
+    /// A pick waits on Vote or Update vote; that row stays on screen until it is pressed.
+    private var awaitsConfirm: Bool { (stage == .vote && ballot.selected != nil) || stage == .updating }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -57,9 +60,17 @@ struct BallotView: View {
             .animation(.linear(duration: 0.4), value: shake)
             .disabled(isScheduled || ballot.isPending)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(poll.title)
+            // A short name: the question is the heading right above
+            .accessibilityLabel(app.t("poll.options"))
 
-            if let anonymous, [.vote, .moment, .row].contains(stage) { anonymityToggle(anonymous) }
+            // Before the vote the choice only rides along with it, so the line says what the vote will do
+            if let anonymous, stage == .vote {
+                nameLine(hidden: anonymous, status: anonymous
+                    ? app.t("poll.anonymousHidden")
+                    : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? "")
+                    .foregroundStyle(Tokens.mutedForeground)
+                    .padding(.vertical, -4)
+            }
 
             VStack {
                 actions
@@ -69,15 +80,17 @@ struct BallotView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 16)
             .overlay(alignment: .top) { Hairline() }
+            .modifier(FollowsTabBar(isOn: awaitsConfirm))
         }
+        .coordinateSpace(.named(FollowsTabBar.space))
         .animation(.easeOut(duration: 0.2), value: stage)
         .sensoryFeedback(.impact(weight: .light), trigger: ballot.myOptionId) { _, new in new != nil }
     }
 
     private func optionRow(_ option: PollOption) -> some View {
         let isSelected = ballot.selected == option.id
-        let isMine = ballot.myOptionId == option.id
-        let dimmed = (ballot.myOptionId != nil && !isSelected) || isScheduled
+        // Waits for the cast to land, so it never shows on a vote that rolls back
+        let isCast = ballot.savedOptionId == option.id
         return Button {
             choose(option.id)
         } label: {
@@ -85,10 +98,10 @@ struct BallotView: View {
                 BallotMark(checked: isSelected)
                 Text(option.text)
                     .font(.vm(16, .medium))
-                    .foregroundStyle(dimmed ? Tokens.mutedForeground : Tokens.foreground)
+                    .foregroundStyle(isScheduled ? Tokens.mutedForeground : Tokens.foreground)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .multilineTextAlignment(.leading)
-                if isMine {
+                if isCast {
                     VotedStamp(label: app.t("poll.votedPill")).transition(.scale(scale: 0.85).combined(with: .opacity))
                 }
             }
@@ -114,22 +127,22 @@ struct BallotView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(option.text)
         .accessibilityIdentifier("ballot-option")
-        .accessibilityValue(isMine ? app.t("poll.yourVote") : "")
+        .accessibilityValue(isCast ? app.t("poll.yourVote") : "")
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
-    /// Before a vote the choice rides along with it; once cast it applies at once.
-    private func anonymityToggle(_ anonymous: Bool) -> some View {
-        Toggle(isOn: Binding(get: { anonymous }, set: { setAnonymous($0) })) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(app.t("ios.anonymousToggle")).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
-                Text(anonymous ? app.t("poll.anonymousHidden") : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? "")
-                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-            }
+    /// Where the viewer's name stands on the voter list, with the one action that flips it (the web's `NameLine`).
+    private func nameLine(hidden: Bool, status: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: hidden ? "eye.slash" : "eye")
+                .font(.system(size: 14)).foregroundStyle(Tokens.tide).frame(width: 18)
+                .accessibilityHidden(true)
+            Text(status).font(.vmMeta).frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t(hidden ? "poll.showMyName" : "poll.hideMyName")) { setAnonymous(!hidden) }
+                .buttonStyle(.vm(.ghost, size: .sm))
+                .fixedSize()
+                .disabled(ballot.isPending)
         }
-        .tint(Tokens.primary)
-        .frame(minHeight: Metrics.minTarget)
-        .disabled(ballot.isPending)
     }
 
     @ViewBuilder private var actions: some View {
@@ -176,6 +189,7 @@ struct BallotView: View {
                     SealMark(size: 72).padding(.bottom, 4)
                     title.font(.vm(21, .medium, relativeTo: .title3)).tracking(-0.42)
                     line.font(.vm(14))
+                    Text(app.t("poll.changeHint")).font(.vm(14))
                 }
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -186,21 +200,26 @@ struct BallotView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         title.font(.vm(14, .medium))
                         line.font(.vmMeta)
+                        Text(app.t("poll.changeHint")).font(.vmMeta)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            HStack(spacing: 6) {
-                Button { mode = .withdrawing } label: {
-                    Text(app.t("poll.withdrawVote")).foregroundStyle(Tokens.tideForeground)
-                }
-                .buttonStyle(.vm(.ghost, fullWidth: true))
-                Button(app.t("poll.updateVote")) { startUpdate() }
-                    .buttonStyle(.vm(.outline, fullWidth: true))
+            Button { mode = .withdrawing } label: {
+                Text(app.t("poll.withdrawVote")).foregroundStyle(Tokens.tideForeground)
             }
+            .buttonStyle(.vm(.ghost, fullWidth: true))
             .disabled(ballot.isPending)
         }
         .padding(14)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Once cast, the choice applies at once, so it reads as where the name stands
+            if let anonymous {
+                nameLine(hidden: anonymous, status: app.t(anonymous ? "poll.nameHidden" : "poll.nameListed"))
+                    .padding(.leading, 16).padding(.trailing, 8).padding(.vertical, 4)
+                    .overlay(alignment: .top) { Rectangle().fill(Tokens.tideLine).frame(height: 1) }
+            }
+        }
         .tidePanel()
         .accessibilityElement(children: .contain)
     }
@@ -262,11 +281,6 @@ struct BallotView: View {
         }
     }
 
-    private func startUpdate() {
-        guard let mine = ballot.myOptionId else { return }
-        mode = .updating(from: mine)
-    }
-
     private func cancelUpdate() {
         ballot.selected = ballot.myOptionId
         mode = .row
@@ -278,9 +292,8 @@ struct BallotView: View {
             Task {
                 let outcome = await ballot.cast(selected, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
                 if outcome == .saved {
-                    // The Seal replaces the "Vote cast." toast
                     mode = .moment
-                    AccessibilityNotification.Announcement(app.t("poll.sealedTitle")).post()
+                    announce(app.t(ballot.replacedBallot ? "poll.voteUpdated" : "poll.voteCast"))
                 }
                 if outcome == .failed { shake += 1 }
             }
@@ -290,6 +303,9 @@ struct BallotView: View {
     private func setAnonymous(_ value: Bool) {
         Task {
             let outcome = await ballot.setAnonymous(value, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
+            if outcome == .saved, ballot.myOptionId != nil {
+                announce(app.t(value ? "poll.nameHidden" : "poll.nameListed"))
+            }
             if outcome == .failed { shake += 1 }
         }
     }
@@ -297,8 +313,50 @@ struct BallotView: View {
     private func withdraw() {
         mode = .row
         Task {
-            if await ballot.retract(app: app, onPollEnded: onPollEnded) == .failed { shake += 1 }
+            let outcome = await ballot.retract(app: app, onPollEnded: onPollEnded)
+            if outcome == .saved { announce(app.t("poll.voteWithdrawn")) }
+            if outcome == .failed { shake += 1 }
         }
+    }
+
+    private func announce(_ message: String) {
+        AccessibilityNotification.Announcement(message).post()
+    }
+}
+
+/// Holds the confirm row at the bottom of the scroll view while the rest of the Ballot is on screen (the web's
+/// `follow-tabbar`), so a pick never leaves Vote off-screen. It lets go once the Ballot scrolls past. Card-colored
+/// to the card's edges; the bottom padding reaches into the card's own padding, so nothing moves.
+private struct FollowsTabBar: ViewModifier {
+    nonisolated static let space = "ballot"
+    let isOn: Bool
+    @State private var isStuck = false
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.bottom, 12)
+            .background {
+                Tokens.card
+                    .padding(.horizontal, -20)
+                    .overlay(alignment: .top) {
+                        // Once stuck, fades into the options scrolling under it
+                        LinearGradient(colors: [Tokens.card.opacity(0), Tokens.card], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 24)
+                            .offset(y: -24)
+                            .opacity(isStuck ? 1 : 0)
+                    }
+            }
+            .visualEffect { [isOn] content, proxy in content.offset(y: -Self.lift(proxy, isOn: isOn)) }
+            .onGeometryChange(for: Bool.self) { [isOn] proxy in Self.lift(proxy, isOn: isOn) > 0 } action: { isStuck = $0 }
+            .padding(.bottom, -12)
+    }
+
+    /// How far the row rises: up to the bottom of the visible scroll area, but never above the Ballot's top.
+    nonisolated private static func lift(_ proxy: GeometryProxy, isOn: Bool) -> CGFloat {
+        guard isOn, let visible = proxy.bounds(of: .scrollView) else { return 0 }
+        let below = proxy.size.height - visible.maxY
+        let room = proxy.frame(in: .named(space)).minY
+        return max(0, min(below, room))
     }
 }
 
@@ -315,8 +373,9 @@ nonisolated struct ShakeEffect: GeometryEffect {
     }
 }
 
-/// The 22pt radio circle (the web's `BallotMark`): a 2pt `input` ring at rest; once chosen, ink
-/// around an 8pt Volt dot.
+/// The 22pt radio circle (the web's `BallotMark`): a 2pt `input` ring at rest; once chosen, ink filled
+/// around a Volt check. The ink is `highlight-foreground`, not `primary`: in dark `primary` is off-white and
+/// the check would vanish into it.
 struct BallotMark: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let checked: Bool
@@ -324,8 +383,10 @@ struct BallotMark: View {
     var body: some View {
         ZStack {
             if checked {
-                Circle().fill(Tokens.primary)
-                Circle().fill(Tokens.highlight).frame(width: 8, height: 8)
+                Circle().fill(Tokens.highlightForeground)
+                CheckShape()
+                    .stroke(Tokens.highlight, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .frame(width: 12, height: 12)
                     .transition(reduceMotion ? .opacity : .scale)
             } else {
                 Circle().fill(Tokens.card).overlay(Circle().strokeBorder(Tokens.input, lineWidth: 2))
