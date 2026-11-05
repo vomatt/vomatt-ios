@@ -127,6 +127,14 @@ struct AuthErrorKeyTests {
         #expect(AuthErrorKey(APIError(.network)) == .serverError)
         #expect(AuthErrorKey.codeExpired.translationKey == "authError.codeExpired")
     }
+
+    // vomatt-web#119: the API states the seconds left only inside its translated message
+    @Test func aResendCooldownCarriesTheSecondsLeft() {
+        #expect(APIError(.http(400), errorCode: "auth.otp.resend_cooldown", message: "Please wait 65 seconds before resending").cooldownSeconds == 65)
+        #expect(APIError(.http(400), errorCode: "auth.otp.resend_cooldown", message: "請等 42 秒後再重新發送").cooldownSeconds == 42)
+        #expect(APIError(.http(400), errorCode: "auth.otp.resend_cooldown", message: nil).cooldownSeconds == nil)
+        #expect(APIError(.http(400), errorCode: "auth.invalid_otp", message: "Wait 3 seconds").cooldownSeconds == nil)
+    }
 }
 
 // Cases ported from vomatt-web's UnreadCount.test.tsx (formatUnreadCount)
