@@ -47,6 +47,12 @@ struct ProfileListsTests {
         #expect(ProfileLists.voted(polls, viewerId: "me").map(\.id) == ["voted"])
     }
 
+    @Test func votedKeepsAnEndedPollWhoseAnonymousBallotWasSealedWhichHasNoOptionLeft() {
+        var sealed = poll("sealed", state: .ended)
+        sealed.myBallotAnonymous = true
+        #expect(ProfileLists.voted([sealed, poll("invited")], viewerId: "me").map(\.id) == ["sealed"])
+    }
+
     @Test func askedKeepsTheOwnersPollsMostRecentlyOpenedFirst() {
         let older = poll("older", creatorId: "me", startTime: "2026-09-01T00:00:00Z")
         let polls = [older, poll("voted", myOptionId: "b"), poll("mine", myOptionId: "a", creatorId: "me")]
