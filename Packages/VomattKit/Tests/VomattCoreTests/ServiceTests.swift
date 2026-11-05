@@ -587,6 +587,22 @@ struct ServiceTests {
         #expect(!saved.likes && transport.requests[2].body?.contains("likes") == true && transport.requests[2].body?.contains("mentions") == false)
     }
 
+    @Test func unreadNotificationIdsKeepTheOrderAndTheCategory() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"ids":["comment_1","result_2"]}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = try await service.unreadNotificationIds(category: .like)
+        #expect(ids == ["comment_1", "result_2"])
+        #expect(transport.requests[0].path.hasPrefix("/api/notifications/unread-ids") && transport.requests[0].path.contains("category=LIKE"))
+    }
+
+    @Test func unreadNotificationIdsWithoutCategoryOrDataAreEmpty() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"ids":[]}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let ids = try await service.unreadNotificationIds()
+        #expect(ids.isEmpty)
+        #expect(!transport.requests[0].path.contains("category="))
+    }
+
     @Test func notificationPreferencesChangeOnlyTheGivenSwitches() async throws {
         let transport = StubTransport { _, _ in
             (200, envelope(#"{"resultsIn":true,"invitations":true,"comments":false,"mentions":false,"likes":true,"closingSoon":true}"#), [:])
