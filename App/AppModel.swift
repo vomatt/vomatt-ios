@@ -44,6 +44,8 @@ enum FollowListKind: Hashable {
 /// Screens pushed inside a tab.
 enum Route: Hashable {
     case poll(String)
+    /// The poll page with the Reply composer open under this Comment (a notification's Reply).
+    case pollReply(String, FeedNotification.CommentInfo)
     case profile(String)
     case topic(Tag)
     case people(username: String, kind: FollowListKind)

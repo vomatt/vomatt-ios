@@ -159,6 +159,7 @@ struct RouteView: View {
     var body: some View {
         switch route {
         case let .poll(id): PollDetailView(pollId: id)
+        case let .pollReply(id, comment): PollDetailView(pollId: id, replyTo: comment)
         case let .profile(username): ProfileView(username: username)
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)

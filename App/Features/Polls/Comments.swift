@@ -29,6 +29,10 @@ final class CommentsModel {
     private(set) var isLoadingMore = false
     /// What the docked composer answers; nil while it is closed.
     var replyTarget: ReplyTarget?
+    /// Threads folded back to the Replies they came with ("Hide replies"); showing them again needs no refetch.
+    private(set) var folded: Set<String> = []
+    /// How many Replies each Comment came with in the list.
+    private var previewCounts: [String: Int] = [:]
     private var nextCursor: String?
     var hasMore: Bool { nextCursor != nil }
 
@@ -44,6 +48,8 @@ final class CommentsModel {
             let page = try await service.comments(pollId: pollId)
             comments = page.items
             replies = [:]
+            folded = []
+            previewCounts = [:]
             seedReplies(page.items)
             nextCursor = page.nextCursor
             status = .ready
@@ -64,9 +70,27 @@ final class CommentsModel {
 
     /// The list carries each Comment's first Replies; "Show more" continues after them.
     private func seedReplies(_ page: [Comment]) {
-        for comment in page where !comment.replies.isEmpty && replies[comment.id] == nil {
+        for comment in page where replies[comment.id] == nil {
+            previewCounts[comment.id] = comment.replies.count
+            guard !comment.replies.isEmpty else { continue }
             replies[comment.id] = ReplyList(items: comment.replies, nextCursor: comment.repliesNextCursor)
         }
+    }
+
+    /// The Replies on screen under a Comment: all loaded, or only its previews while folded.
+    func shownReplies(_ rootId: String) -> [Comment] {
+        let items = replies[rootId]?.items ?? []
+        return folded.contains(rootId) ? Array(items.prefix(previewCounts[rootId] ?? 0)) : items
+    }
+
+    /// Hide replies is offered once Replies past the previews have loaded.
+    func canFold(_ rootId: String) -> Bool {
+        guard !folded.contains(rootId), let list = replies[rootId], list.status == .ready else { return false }
+        return list.items.count > previewCounts[rootId] ?? 0
+    }
+
+    func setFolded(_ rootId: String, _ isFolded: Bool) {
+        if isFolded { folded.insert(rootId) } else { folded.remove(rootId) }
     }
 
     /// First call loads the Replies; later calls load the next page.
@@ -78,7 +102,7 @@ final class CommentsModel {
         replies[rootId, default: ReplyList()].status = .loading
         do {
             let page = try await service.replies(pollId: pollId, commentId: rootId, cursor: current?.nextCursor)
-            // One read, one write: an optional-chained write would read `replies` while modifying it
+            // One read, one write, as in `replace`
             var list = replies[rootId] ?? ReplyList()
             list.items = mergeById(list.items, page.items)
             list.nextCursor = page.nextCursor
@@ -120,6 +144,7 @@ final class CommentsModel {
     func reply(_ body: String, to target: ReplyTarget, author: String, avatarUrl: String?, _ service: VomattService) async throws {
         let rootId = target.rootId
         // Show the thread the Reply lands in
+        folded.remove(rootId)
         if replies[rootId] == nil, comments.contains(where: { $0.id == rootId && $0.replyCount > 0 }) {
             await loadReplies(rootId, service)
         }
@@ -133,7 +158,11 @@ final class CommentsModel {
 
     /// A top-level Comment with Replies becomes a placeholder; anything else leaves the list.
     func remove(_ comment: Comment, _ service: VomattService) async throws {
-        try await service.deleteComment(pollId: pollId, commentId: comment.id)
+        do {
+            try await service.deleteComment(pollId: pollId, commentId: comment.id)
+        } catch let error as APIError where error.errorCode == "comment.not_found" {
+            // Already deleted, e.g. on another device: it leaves the list all the same
+        }
         // The dock can't answer a Comment that is gone, or one in a thread that is
         defer {
             if let target = replyTarget, target.comment.id == comment.id || target.rootId == comment.id
@@ -161,6 +190,23 @@ final class CommentsModel {
         shiftReplyCount(rootId, by: -1)
         // A placeholder with no Replies left isn't listed by the API either
         comments.removeAll { $0.id == rootId && $0.deleted && $0.replyCount == 0 }
+    }
+
+    /// A notification's Reply (the web's `#reply-` link): opens the composer under the Comment it names,
+    /// loading Replies past the previews until it finds the one named. Nothing opens when the Comment isn't listed.
+    func openReply(to link: FeedNotification.CommentInfo, _ service: VomattService) async {
+        let rootId = link.parentId ?? link.id
+        guard let root = comments.first(where: { $0.id == rootId }) else { return }
+        var target = root
+        if link.parentId != nil {
+            while replies[rootId]?.items.contains(where: { $0.id == link.id }) != true {
+                if let list = replies[rootId], list.status != .ready || list.nextCursor == nil { break }
+                await loadReplies(rootId, service)
+            }
+            target = replies[rootId]?.items.first { $0.id == link.id } ?? root
+        }
+        folded.remove(rootId)
+        replyTarget = ReplyTarget(comment: target)
     }
 
     func toggleLike(_ comment: Comment, _ service: VomattService) async {
@@ -292,45 +338,86 @@ private struct CommentItemView: View {
     @Environment(AppModel.self) private var app
     let comment: Comment
     let model: CommentsModel
+    /// View and Hide replace each other, and the row leaves while a page loads; VoiceOver lands back on it.
+    @AccessibilityFocusState private var repliesRowFocused: Bool
+
+    private struct RepliesAction {
+        let label: String
+        let perform: () async -> Void
+    }
 
     var body: some View {
         let replyList = model.replies[comment.id]
-        let replies = (replyList?.items ?? []).filter { !app.isBlocked($0.author) }
+        let shown = model.shownReplies(comment.id)
+        let replies = shown.filter { !app.isBlocked($0.author) }
         let loading = replyList?.status == .loading
-        let action = repliesAction(replyList)
-        let hasRail = !replies.isEmpty || loading || action != nil
+        let action = repliesAction(replyList, shown: shown.count)
+        let canFold = model.canFold(comment.id)
+        let hasRow = action != nil || canFold
+        let hasRail = !replies.isEmpty || loading || hasRow
         VStack(alignment: .leading, spacing: 0) {
             CommentRow(comment: comment, model: model, rail: hasRail ? .root : .none)
             ForEach(Array(replies.enumerated()), id: \.element.id) { index, reply in
                 CommentRow(comment: reply, model: model,
-                           rail: .reply(continues: index < replies.count - 1 || loading || action != nil))
+                           rail: .reply(continues: index < replies.count - 1 || loading || hasRow))
             }
             if loading {
-                RailRow(continues: action != nil) { Skeleton(height: 40, radius: Radius.lg).padding(.vertical, 6) }
+                RailRow(continues: hasRow) { Skeleton(height: 40, radius: Radius.lg).padding(.vertical, 6) }
             }
-            if let action {
+            if hasRow {
                 RailRow(continues: false) {
-                    Button(action) { Task { await model.loadReplies(comment.id, app.service) } }
-                        .font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
-                        .frame(minHeight: 36)
-                        .padding(.top, 2)
+                    HStack(spacing: 16) {
+                        if let action {
+                            repliesButton(action.label, isFirst: true, perform: action.perform)
+                        }
+                        if canFold {
+                            repliesButton(app.t("comments.hideReplies"), isFirst: action == nil) {
+                                model.setFolded(comment.id, true)
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
                 }
             }
         }
     }
 
-    /// One button walks the Replies: view them, retry a failed page, or load more.
-    private func repliesAction(_ list: CommentsModel.ReplyList?) -> String? {
+    /// The row's first button takes VoiceOver focus back once the row is redrawn.
+    @ViewBuilder private func repliesButton(_ label: String, isFirst: Bool, perform: @escaping () async -> Void) -> some View {
+        let button = Button(label) {
+            Task {
+                await perform()
+                repliesRowFocused = true
+            }
+        }
+        .font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
+        .frame(minHeight: 36)
+        if isFirst { button.accessibilityFocused($repliesRowFocused) } else { button }
+    }
+
+    /// One button walks the Replies: view them, show the folded ones again, retry a failed page, or load more.
+    private func repliesAction(_ list: CommentsModel.ReplyList?, shown: Int) -> RepliesAction? {
+        let load = { await model.loadReplies(comment.id, app.service) }
+        if model.folded.contains(comment.id) {
+            return RepliesAction(label: viewLabel(max(1, comment.replyCount - shown), more: shown > 0)) {
+                model.setFolded(comment.id, false)
+            }
+        }
         guard let list else {
             guard comment.replyCount > 0 else { return nil }
-            return app.t(comment.replyCount == 1 ? "comments.viewReply" : "comments.viewReplies", ["count": comment.replyCount])
+            return RepliesAction(label: viewLabel(comment.replyCount, more: false), perform: load)
         }
-        if list.status == .error { return app.t("comments.retry") }
+        if list.status == .error { return RepliesAction(label: app.t("comments.retry"), perform: load) }
         if list.status == .ready, list.nextCursor != nil {
-            let more = max(1, comment.replyCount - list.items.count)
-            return app.t(more == 1 ? "comments.moreReply" : "comments.moreReplies", ["count": more])
+            return RepliesAction(label: viewLabel(max(1, comment.replyCount - list.items.count), more: true), perform: load)
         }
         return nil
+    }
+
+    private func viewLabel(_ count: Int, more: Bool) -> String {
+        let key = more ? (count == 1 ? "comments.moreReply" : "comments.moreReplies")
+            : (count == 1 ? "comments.viewReply" : "comments.viewReplies")
+        return app.t(key, ["count": count])
     }
 }
 
@@ -590,6 +677,10 @@ private struct CommentRow: View {
             UIPasteboard.general.string = comment.bodyText
             app.showToast(app.t("ios.copied"))
         } label: { Label(app.t("ios.copyText"), systemImage: "doc.on.doc") }
+        Button {
+            UIPasteboard.general.url = commentURL
+            app.showToast(app.t("comments.linkCopied"))
+        } label: { Label(app.t("comments.copyLink"), systemImage: "link") }
         if isOwn {
             Divider()
             Button(role: .destructive) { confirmingDelete = true } label: { Label(app.t("common.delete"), systemImage: "trash") }
@@ -599,6 +690,13 @@ private struct CommentRow: View {
             } label: { Label(app.t("ios.report"), systemImage: "flag") }
             if let author = comment.author { BlockButton(username: author, userId: comment.userId) }
         }
+    }
+
+    /// The poll page's link to this Comment (the web's `commentHash`), which scrolls to it there.
+    private var commentURL: URL? {
+        var components = URLComponents(url: app.config.pollURL(model.pollId), resolvingAgainstBaseURL: false)
+        components?.fragment = "comment-" + (comment.parentId.map { "\($0)/\(comment.id)" } ?? comment.id)
+        return components?.url
     }
 
     private func saveEdit() async {
@@ -790,6 +888,7 @@ private struct CommentComposer: View {
                     .padding(.vertical, 10)
                     .fieldChrome(isFocused: isFocused, isInvalid: tooLong, minHeight: 44)
                     .accessibilityLabel(placeholder)
+                    .mentionSuggestions(text: $text, opens: .bottom)
             }
             if isFocused || !text.isEmpty {
                 HStack(spacing: 12) {
@@ -873,6 +972,7 @@ private struct ReplyDockBody: View {
             HStack(alignment: .bottom, spacing: 10) {
                 VMTextEditor(placeholder: app.t("comments.replyPlaceholder"), text: $text, minHeight: 44, font: .vm(16),
                              isInvalid: tooLong, autoFocus: true)
+                    .mentionSuggestions(text: $text, opens: .top)
                 Button(app.t("comments.reply"), action: submit)
                     .buttonStyle(.vm(.default, size: .sm))
                     .accessibilityIdentifier("reply-send")
@@ -904,5 +1004,127 @@ private struct ReplyDockBody: View {
                 isPosting = false
             }
         }
+    }
+}
+
+/// Suggests people while an `@handle` is typed (the web's `MentionTextarea`): the people the viewer follows on
+/// a bare `@`, a username search once letters follow. A tap, or Return or Tab on a hardware keyboard, puts in
+/// `@username `; the arrows move and Escape closes it. Guests get no list.
+private struct MentionSuggestions: ViewModifier {
+    @Environment(AppModel.self) private var app
+    @Binding var text: String
+    /// Under the field, or over it where the field is docked at the bottom.
+    let opens: VerticalEdge
+
+    private struct Results {
+        let term: String
+        let users: [UserSummary]
+    }
+
+    @State private var results: Results?
+    @State private var highlighted = 0
+    /// Escape closes the list for the handle starting here until another one is started.
+    @State private var dismissedAt: Int?
+
+    // A SwiftUI TextField doesn't report its caret on iOS 17, so the handle is the one the text ends in
+    private var mention: ActiveMention? {
+        guard app.me != nil, let mention = Mention.active(in: text, caret: text.count), mention.start != dismissedAt else { return nil }
+        return mention
+    }
+
+    private var users: [UserSummary] {
+        guard let mention, let results, results.term == mention.term else { return [] }
+        return results.users
+    }
+
+    func body(content: Content) -> some View {
+        let users = users
+        let active = min(highlighted, max(0, users.count - 1))
+        VStack(spacing: 4) {
+            if opens == .top, !users.isEmpty { list(users, active: active) }
+            content.onKeyPress(phases: .down) { press in handle(press, users: users, active: active) }
+            if opens == .bottom, !users.isEmpty { list(users, active: active) }
+        }
+        .task(id: mention?.term) { await lookUp(mention?.term) }
+        .onChange(of: users.isEmpty) { _, isEmpty in
+            if !isEmpty { AccessibilityNotification.Announcement(app.t("comments.mentionSuggestions")).post() }
+        }
+    }
+
+    private func list(_ users: [UserSummary], active: Int) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(users.enumerated()), id: \.element.id) { index, user in
+                Button { choose(user) } label: {
+                    HStack(spacing: 12) {
+                        AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 32)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(user.username).font(.vm(14, .medium)).foregroundStyle(Tokens.popoverForeground)
+                            if let name = user.displayName {
+                                Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
+                            }
+                        }
+                        .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .frame(minHeight: Metrics.minTarget)
+                    .background(index == active ? Tokens.muted : .clear, in: RoundedRectangle(cornerRadius: Radius.lg))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(index == active ? .isSelected : [])
+            }
+        }
+        .padding(6)
+        .background(Tokens.popover, in: RoundedRectangle(cornerRadius: Radius.xl))
+        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(app.t("comments.mentionSuggestions"))
+        .transition(.opacity)
+    }
+
+    private func handle(_ press: KeyPress, users: [UserSummary], active: Int) -> KeyPress.Result {
+        guard !users.isEmpty else { return .ignored }
+        switch press.key {
+        case .downArrow, .upArrow:
+            highlighted = (active + (press.key == .downArrow ? 1 : -1) + users.count) % users.count
+        case .return where press.modifiers.isDisjoint(with: [.command, .control]), .tab:
+            choose(users[active])
+        case .escape:
+            dismissedAt = mention?.start
+        default:
+            return .ignored
+        }
+        return .handled
+    }
+
+    private func choose(_ user: UserSummary) {
+        guard let mention else { return }
+        text = Mention.insert(user.username, into: text, replacing: mention).text
+    }
+
+    private func lookUp(_ term: String?) async {
+        guard let term, let viewer = app.me?.username else { return }
+        if !term.isEmpty {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+        }
+        var found: [UserSummary] = []
+        do {
+            found = term.isEmpty
+                ? try await app.service.following(username: viewer).items
+                : try await app.service.searchUsers(term, limit: Mention.maxSuggestions + 1).items
+        } catch {
+            // A failed lookup just shows no suggestions; the text is still a valid mention
+        }
+        guard !Task.isCancelled else { return }
+        results = Results(term: term, users: Mention.suggestions(found, viewer: viewer))
+        highlighted = 0
+    }
+}
+
+private extension View {
+    func mentionSuggestions(text: Binding<String>, opens: VerticalEdge) -> some View {
+        modifier(MentionSuggestions(text: text, opens: opens))
     }
 }
