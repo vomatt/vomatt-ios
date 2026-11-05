@@ -35,6 +35,28 @@ struct PollStatusTests {
     @Test func noEndTimeIsOpen() { #expect(poll(end: nil).status(at: now) == .open) }
 }
 
+@Suite("Next status change")
+struct NextStatusChangeTests {
+    @Test func openPollChangesWhenItStartsClosingADayBeforeItsEnd() {
+        #expect(poll().nextStatusChange(at: now) == hours(48))
+    }
+
+    @Test func closingPollChangesAtItsEnd() {
+        #expect(poll(end: hours(5)).nextStatusChange(at: now) == hours(5))
+    }
+
+    @Test func scheduledCopyChangesOnlyAtItsEnd() {
+        // Until a refetch, a Scheduled copy can only say when voting ends
+        #expect(poll(votingActive: false, start: hours(1), end: hours(72)).nextStatusChange(at: now) == hours(72))
+    }
+
+    @Test func endedPollOrOneWithoutAnEndNeverChanges() {
+        #expect(poll(end: hours(-1)).nextStatusChange(at: now) == nil)
+        #expect(poll(active: false).nextStatusChange(at: now) == nil)
+        #expect(poll(end: nil).nextStatusChange(at: now) == nil)
+    }
+}
+
 @Suite("Poll helpers")
 struct PollHelperTests {
     @Test func turnoutIsTheParticipantCount() {
