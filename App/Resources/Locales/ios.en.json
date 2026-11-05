@@ -1,5 +1,6 @@
 {
 	"ios": {
+		"anonymousToggle": "Hide my name from voter lists",
 		"openProfile": "Opens their profile",
 		"report": "Report",
 		"more": "More",
@@ -31,7 +32,6 @@
 		"feedbackSent": "Thanks, we got your feedback.",
 		"feedbackFailed": "Couldn't send your feedback. Try again.",
 		"feedbackLimited": "You've sent a lot of feedback today. Try again tomorrow (UTC).",
-		"exportLimited": "You've already exported today. Try again tomorrow (UTC).",
 		"follow": "Follow {name}",
 		"unfollow": "Unfollow {name}",
 		"followShort": "Follow",

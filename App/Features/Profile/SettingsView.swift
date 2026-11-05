@@ -214,8 +214,6 @@ private struct AccountSettings: View {
                     PasskeysSection(service: app.service).padding(16)
                     Hairline()
                     DevicesSection(service: app.service).padding(16)
-                    Hairline()
-                    ExportDataRow()
                 }
                 .card(padding: nil)
                 FeedbackRow().card(padding: nil)
@@ -562,44 +560,6 @@ private struct DevicesSection: View {
     private func showError() {
         guard let error = model.failure else { return }
         app.showToast(app.t.message(for: error, fallback: "sessions.signOutFailed"), isError: true)
-    }
-}
-
-/// Writes the export to a temporary file, then offers it through the share sheet.
-private struct ExportDataRow: View {
-    @Environment(AppModel.self) private var app
-    @State private var file: URL?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RowText(title: app.t("account.exportTitle"), detail: app.t("account.exportBody"))
-            if let file {
-                ShareLink(item: file) { Text(app.t("poll.share")) }.buttonStyle(.vm(.outline, size: .sm))
-            } else {
-                LoadingButton(style: .vm(.outline, size: .sm), action: export) { Text(app.t("account.exportCta")) }
-            }
-        }
-        .settingsRow()
-        .onDisappear(perform: discard)
-    }
-
-    private func export() async {
-        do {
-            let data = try await app.service.exportMyData()
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("vomatt-data.json")
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
-            file = url
-        } catch {
-            let limited = (error as? APIError)?.isRateLimited == true
-            app.showToast(app.t.message(for: error, fallback: limited ? "ios.exportLimited" : "account.exportFailed"), isError: true)
-        }
-    }
-
-    /// The export holds everything about the account, so it doesn't outlive the screen.
-    private func discard() {
-        guard let file else { return }
-        try? FileManager.default.removeItem(at: file)
-        self.file = nil
     }
 }
 
