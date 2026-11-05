@@ -23,6 +23,15 @@ extension Poll {
         return .open
     }
 
+    /// When the clock next changes the Poll's status: the start of its last day, then its end. Nil once
+    /// Ended or without an end. A Scheduled copy says `votingActive: false`, which would read as Ended
+    /// once the start passes, so only its end counts; it shows as Open once fetched again.
+    public func nextStatusChange(at now: Date) -> Date? {
+        guard let endTime, status(at: now) != .ended else { return nil }
+        let closing = endTime.addingTimeInterval(-closingWindow)
+        return votingActive && closing > now ? closing : endTime
+    }
+
     /// Closed before it opened, so it never took a Ballot or sent a notification.
     public var isCancelled: Bool {
         guard let endTime else { return false }
