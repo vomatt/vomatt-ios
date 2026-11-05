@@ -78,9 +78,12 @@ final class CommentsModel {
         replies[rootId, default: ReplyList()].status = .loading
         do {
             let page = try await service.replies(pollId: pollId, commentId: rootId, cursor: current?.nextCursor)
-            replies[rootId]?.items = mergeById(replies[rootId]?.items ?? [], page.items)
-            replies[rootId]?.nextCursor = page.nextCursor
-            replies[rootId]?.status = .ready
+            // One read, one write: an optional-chained write would read `replies` while modifying it
+            var list = replies[rootId] ?? ReplyList()
+            list.items = mergeById(list.items, page.items)
+            list.nextCursor = page.nextCursor
+            list.status = .ready
+            replies[rootId] = list
         } catch {
             replies[rootId]?.status = .error
         }
