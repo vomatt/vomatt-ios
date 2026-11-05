@@ -51,6 +51,7 @@ enum Route: Hashable {
     case people(username: String, kind: FollowListKind)
     case settings
     case inviteLists
+    case devices
 }
 
 struct Toast: Equatable, Identifiable {
@@ -97,11 +98,18 @@ final class AppModel {
     var toast: Toast?
     /// Non-nil while Block asks for confirmation; every Block entry point goes through it.
     var blockRequest: BlockRequest?
+    /// Non-nil while Unfollow asks for confirmation; every Unfollow entry point goes through it.
+    var unfollowRequest: UnfollowRequest?
 
     struct BlockRequest: Identifiable {
         let id = UUID()
         let username: String
         let userId: String?
+    }
+
+    struct UnfollowRequest {
+        let userId: String
+        let username: String
     }
 
     struct PendingAuth: Identifiable {

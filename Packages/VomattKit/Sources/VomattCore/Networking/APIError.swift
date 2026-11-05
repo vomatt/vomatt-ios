@@ -45,6 +45,12 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
     public var isNotFound: Bool { status == 404 }
     /// The token still verifies but its account was deleted (on another device, say): treat it as signed out.
     public var isAccountGone: Bool { errorCode == "user.not_found" }
+    /// A code was sent to this email moments ago and still works; the API states the seconds left only in its message.
+    public var cooldownSeconds: Int? {
+        guard errorCode == "auth.otp.resend_cooldown", let message,
+              let digits = message.firstMatch(of: /\d+/) else { return nil }
+        return Int(digits.output)
+    }
 }
 
 /// Keys under `authError.*` in the locale files.

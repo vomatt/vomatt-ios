@@ -50,6 +50,14 @@ struct RootView: View {
         } message: { _ in
             Text(app.t("blocks.confirmBody"))
         }
+        .alert(
+            app.t("follows.confirmUnfollow", ["username": app.unfollowRequest?.username ?? ""]),
+            isPresented: Binding(get: { app.unfollowRequest != nil }, set: { if !$0 { app.unfollowRequest = nil } }),
+            presenting: app.unfollowRequest
+        ) { request in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(request.userId) }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await app.refreshUnread() } }
         }
@@ -165,6 +173,7 @@ struct RouteView: View {
         case let .people(username, kind): FollowListView(username: username, kind: kind)
         case .settings: SettingsView()
         case .inviteLists: InviteListsView()
+        case .devices: DevicesView()
         }
     }
 }

@@ -10,6 +10,7 @@ struct AuthSheet: View {
     enum Step { case email, code, profile }
     @State private var step = Step.email
     @State private var email = ""
+    @State private var cooldown = resendCooldown
 
     var body: some View {
         NavigationStack {
@@ -17,9 +18,12 @@ struct AuthSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     switch step {
                     case .email:
-                        EmailStep(email: $email, onSent: { withAnimation { step = .code } }, onPasskeySignedIn: finish)
+                        EmailStep(email: $email, onSent: { seconds in
+                            cooldown = seconds
+                            withAnimation { step = .code }
+                        }, onPasskeySignedIn: finish)
                     case .code:
-                        CodeStep(email: email, onEditEmail: { withAnimation { step = .email } }) { isNewUser in
+                        CodeStep(email: email, cooldown: cooldown, onEditEmail: { withAnimation { step = .email } }) { isNewUser in
                             if isNewUser { withAnimation { step = .profile } } else { finish() }
                         }
                     case .profile:
@@ -73,7 +77,8 @@ private struct AuthErrorText: View {
 private struct EmailStep: View {
     @Environment(AppModel.self) private var app
     @Binding var email: String
-    let onSent: () -> Void
+    /// Called with the seconds until another code can be requested.
+    let onSent: (Int) -> Void
     /// A passkey account is already set up, so there is no profile step.
     let onPasskeySignedIn: () -> Void
     @State private var fieldError: String?
@@ -97,8 +102,20 @@ private struct EmailStep: View {
             }
             .padding(.top, 8)
             AuthErrorText(error: error).padding(.top, 12)
+            Text(policy).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).tint(Tokens.mutedForeground)
+                .padding(.top, 20)
         }
         .animation(.easeOut(duration: 0.2), value: error)
+    }
+
+    /// The web's Sanity `policyMessage`, with its three links.
+    private var policy: AttributedString {
+        let markdown = app.t("ios.signUpPolicy", ["terms": LegalLinks.terms, "privacy": LegalLinks.privacy, "cookies": LegalLinks.cookies])
+        var text = (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
+        for run in text.runs where run.link != nil {
+            text[run.range].underlineStyle = .single
+        }
+        return text
     }
 
     private func submit() async {
@@ -111,9 +128,15 @@ private struct EmailStep: View {
         do {
             try await app.service.requestOtp(email: email)
             email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            onSent()
+            onSent(resendCooldown)
         } catch {
-            self.error = AuthErrorKey(error)
+            if let seconds = (error as? APIError)?.cooldownSeconds {
+                // The code sent moments ago still works, so go on to enter it (vomatt-web#119)
+                email = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                onSent(seconds)
+            } else {
+                self.error = AuthErrorKey(error)
+            }
         }
     }
 
@@ -140,10 +163,17 @@ private struct CodeStep: View {
     let onEditEmail: () -> Void
     let onVerified: (_ isNewUser: Bool) -> Void
 
+    init(email: String, cooldown: Int, onEditEmail: @escaping () -> Void, onVerified: @escaping (_ isNewUser: Bool) -> Void) {
+        self.email = email
+        self.onEditEmail = onEditEmail
+        self.onVerified = onVerified
+        _cooldown = State(initialValue: cooldown)
+    }
+
     @State private var code = ""
     @State private var error: AuthErrorKey?
     @State private var isVerifying = false
-    @State private var cooldown = resendCooldown
+    @State private var cooldown: Int
     @State private var resent = false
     /// The server discarded the code (expired or too many tries): only a new one can succeed.
     /// Kept apart from `error`, so a failed resend doesn't unlock the field.
@@ -287,7 +317,11 @@ private struct CodeStep: View {
             code = ""
             cooldown = resendCooldown
         } catch {
-            self.error = AuthErrorKey(error)
+            if let seconds = (error as? APIError)?.cooldownSeconds {
+                cooldown = seconds
+            } else {
+                self.error = AuthErrorKey(error)
+            }
         }
     }
 }

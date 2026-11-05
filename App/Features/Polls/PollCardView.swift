@@ -364,7 +364,7 @@ struct FollowButton: View {
     var body: some View {
         if app.isSignedIn {
             if app.isFollowing(user.id) {
-                Button { app.unfollow(user.id) } label: {
+                Button { app.unfollowRequest = .init(userId: user.id, username: user.username) } label: {
                     Label(app.t("ios.unfollow", ["name": user.username]), systemImage: "person.badge.minus")
                 }
             } else {

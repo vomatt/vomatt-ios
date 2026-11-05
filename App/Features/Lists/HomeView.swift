@@ -73,7 +73,10 @@ struct FeedView: View {
         ScrollView {
             VStack(spacing: 0) {
                 // Guests get the login prompt above the topics
-                if !app.isSignedIn { LoginPromptCard().pageColumn(560).padding(.top, 8) }
+                if !app.isSignedIn {
+                    LoginPromptCard().pageColumn(560).padding(.top, 8)
+                    LegalLinks(pagesOnly: true).padding(.horizontal, 4).pageColumn(560).padding(.bottom, 8)
+                }
                 LazyVStack(alignment: .leading, spacing: 16, pinnedViews: [.sectionHeaders]) {
                     Section {
                         content.pageColumn(560)

@@ -387,18 +387,13 @@ struct FollowingButton: View {
     let userId: String
     let username: String
     var fullWidth = false
-    @State private var confirming = false
 
     var body: some View {
-        Button { confirming = true } label: {
+        Button { app.unfollowRequest = .init(userId: userId, username: username) } label: {
             Label(app.t("follows.following"), systemImage: "checkmark").labelStyle(.titleAndIcon)
         }
         .buttonStyle(.vm(.outline, size: .sm, fullWidth: fullWidth))
         .accessibilityAddTraits(.isSelected)
-        .alert(app.t("follows.confirmUnfollow", ["username": username]), isPresented: $confirming) {
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(userId) }
-        }
     }
 }
 
