@@ -637,9 +637,11 @@ struct AvatarPickerSheet: View {
     @State private var selected = ""
     @State private var photo: PhotosPickerItem?
     @State private var isUploading = false
+    /// Whether the user chose a bot since opening: only then does Save change anything.
+    @State private var picked = false
     private var initial: String { Avatars.resolve(username: username, avatarUrl: avatarUrl) }
     /// Saving the picker as it opened must change nothing: `bot:none` and a photo aren't bots in the grid.
-    private var untouched: Bool { selected == initial && (Avatars.isNone(avatarUrl) || Avatars.isUploaded(avatarUrl)) }
+    private var untouched: Bool { !picked }
 
     var body: some View {
         NavigationStack {
@@ -652,7 +654,7 @@ struct AvatarPickerSheet: View {
                             Text(app.t("avatar.bots.\(selected).trait")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                         }
                         Spacer()
-                        Button(app.t("avatar.surprise")) { selected = Avatars.kinds.randomElement() ?? selected }
+                        Button(app.t("avatar.surprise")) { picked = true; selected = Avatars.kinds.randomElement() ?? selected }
                             .buttonStyle(.vm(.outline, size: .sm))
                     }
                     Text(app.t("avatar.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
@@ -670,7 +672,7 @@ struct AvatarPickerSheet: View {
                             Text(app.t("avatar.families.\(family.name)")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
                                 ForEach(family.kinds, id: \.self) { kind in
-                                    Button { selected = kind } label: {
+                                    Button { picked = true; selected = kind } label: {
                                         AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: kind), size: 48)
                                             .overlay(Circle().strokeBorder(Tokens.foreground, lineWidth: selected == kind ? 2 : 0).padding(-3))
                                     }
@@ -688,9 +690,10 @@ struct AvatarPickerSheet: View {
             .navigationTitle(app.t("avatar.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() }.disabled(isUploading) }
                 ToolbarItem(placement: .confirmationAction) {
                     LoadingButton(style: .vm(.link), action: save) { Text(app.t("avatar.save")).fontWeight(.semibold) }
+                        .disabled(isUploading)
                 }
             }
         }
@@ -715,7 +718,8 @@ struct AvatarPickerSheet: View {
         isUploading = true
         defer { isUploading = false; photo = nil }
         do {
-            guard let data = try await item.loadTransferable(type: Data.self), let jpeg = Self.jpeg(from: data) else {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let jpeg = await Task.detached(priority: .userInitiated, operation: { Self.jpeg(from: data) }).value else {
                 throw APIError(.http(400), errorCode: "user.avatar.unsupported_image", message: "")
             }
             let updated = try await app.service.uploadAvatar(jpeg)
@@ -727,10 +731,12 @@ struct AvatarPickerSheet: View {
         }
     }
 
-    private static func jpeg(from data: Data, maxSide: CGFloat = 1024) -> Data? {
-        guard let image = UIImage(data: data) else { return nil }
-        let scale = min(1, maxSide / max(image.size.width, image.size.height))
-        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+    nonisolated private static func jpeg(from data: Data, maxSide: CGFloat = 1024) -> Data? {
+        guard let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else { return nil }
+        // `size` is in points and the renderer below is 1x, so pixels = points * image.scale
+        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+        let scale = min(1, maxSide / max(pixels.width, pixels.height))
+        let size = CGSize(width: max(1, (pixels.width * scale).rounded()), height: max(1, (pixels.height * scale).rounded()))
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1
         return UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.85) { _ in
