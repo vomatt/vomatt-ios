@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import VomattCore
 
@@ -634,14 +635,18 @@ struct AvatarPickerSheet: View {
     let username: String
     let avatarUrl: String?
     @State private var selected = ""
+    @State private var photo: PhotosPickerItem?
+    @State private var isUploading = false
     private var initial: String { Avatars.resolve(username: username, avatarUrl: avatarUrl) }
+    /// Saving the picker as it opened must change nothing: `bot:none` and a photo aren't bots in the grid.
+    private var untouched: Bool { selected == initial && (Avatars.isNone(avatarUrl) || Avatars.isUploaded(avatarUrl)) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     HStack(spacing: 16) {
-                        AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: selected), size: 72)
+                        AvatarView(username: username, avatarUrl: untouched ? avatarUrl : Avatars.avatarUrl(for: selected), size: 72)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(app.t("avatar.bots.\(selected).name")).font(.vm(17, .medium))
                             Text(app.t("avatar.bots.\(selected).trait")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
@@ -651,6 +656,15 @@ struct AvatarPickerSheet: View {
                             .buttonStyle(.vm(.outline, size: .sm))
                     }
                     Text(app.t("avatar.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                    PhotosPicker(selection: $photo, matching: .images) {
+                        Label(app.t(isUploading ? "ios.avatarUploading" : "ios.avatarUpload"), systemImage: "photo")
+                    }
+                    .buttonStyle(.vm(.outline, size: .sm))
+                    .disabled(isUploading)
+                    .onChange(of: photo) { _, item in
+                        guard let item else { return }
+                        Task { await upload(item) }
+                    }
                     ForEach(Avatars.families, id: \.name) { family in
                         VStack(alignment: .leading, spacing: 10) {
                             Text(app.t("avatar.families.\(family.name)")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
@@ -685,7 +699,7 @@ struct AvatarPickerSheet: View {
 
     private func save() async {
         // Saving an untouched picker must not turn `bot:none` into the hash-derived bot.
-        if Avatars.isNone(avatarUrl), selected == initial { dismiss(); return }
+        if untouched { dismiss(); return }
         do {
             try await app.service.chooseAvatar(kind: selected)
             app.updateMe { $0.avatarUrl = Avatars.avatarUrl(for: selected) }
@@ -693,6 +707,34 @@ struct AvatarPickerSheet: View {
             dismiss()
         } catch {
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+        }
+    }
+
+    /// Sends a JPEG no wider than 1024 px: the API keeps 512 px, crops to a square itself, and takes at most 2 MB.
+    private func upload(_ item: PhotosPickerItem) async {
+        isUploading = true
+        defer { isUploading = false; photo = nil }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self), let jpeg = Self.jpeg(from: data) else {
+                throw APIError(.http(400), errorCode: "user.avatar.unsupported_image", message: "")
+            }
+            let updated = try await app.service.uploadAvatar(jpeg)
+            app.updateMe { $0.avatarUrl = updated.avatarUrl }
+            app.showToast(app.t("avatar.savedToast"))
+            dismiss()
+        } catch {
+            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+        }
+    }
+
+    private static func jpeg(from data: Data, maxSide: CGFloat = 1024) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let scale = min(1, maxSide / max(image.size.width, image.size.height))
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.85) { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
         }
     }
 }

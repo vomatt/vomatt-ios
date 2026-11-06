@@ -262,6 +262,29 @@ struct ServiceTests {
         #expect(json["lastName"] as? String == "")
     }
 
+    @Test func uploadingAnAvatarSendsTheFileAsMultipartAndReturnsTheProfile() async throws {
+        let transport = StubTransport { request, _ in
+            if request.method == .put {
+                return (200, envelope(#"{"id":"u1","username":"alice","avatarUrl":"/api/avatars/a1.jpg"}"#), [:])
+            }
+            return (500, failure("x"), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let profile = try await service.uploadAvatar(Data("jpegbytes".utf8))
+        #expect(profile.avatarUrl == "/api/avatars/a1.jpg")
+        let sent = try #require(transport.requests.last)
+        #expect(sent.method == .put && sent.path == "/api/users/me/avatar")
+        let body = try #require(sent.body)
+        #expect(body.contains(#"name="file""#) && body.contains("jpegbytes"))
+    }
+
+    @Test func anOversizedAvatarFailsWithTheAPIsCode() async throws {
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en },
+                                    transport: StubTransport { _, _ in (413, failure("common.file_too_large"), [:]) })
+        let error = await #expect(throws: APIError.self) { try await service.uploadAvatar(Data([1])) }
+        #expect(error?.errorCode == "common.file_too_large")
+    }
+
     @Test func signInSaysWhetherTheAccountIsNew() async throws {
         let store = InMemoryTokenStore()
         let transport = StubTransport { request, _ in

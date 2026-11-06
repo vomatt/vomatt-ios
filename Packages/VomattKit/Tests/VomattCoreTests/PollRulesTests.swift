@@ -218,6 +218,17 @@ struct AvatarTests {
         #expect(Avatars.resolve(username: "alice", avatarUrl: "https://x/y.png") == "banyan")
     }
 
+    @Test func anUploadedPhotoIsAPathOnTheAPIOrigin() throws {
+        let api = try #require(URL(string: "https://api.test"))
+        let path = "/api/avatars/019a5e3c-2f1d-7b6a-8c4e-5d7f9a1b3c2e.jpg"
+        #expect(Avatars.isUploaded(path))
+        #expect(Avatars.uploadedURL(path, apiURL: api)?.absoluteString == "https://api.test" + path)
+        #expect(Avatars.uploadedURL("bot:boba", apiURL: api) == nil)
+        #expect(Avatars.uploadedURL("/api/avatars/", apiURL: api) == nil)
+        #expect(Avatars.uploadedURL(nil, apiURL: api) == nil)
+        #expect(Avatars.resolve(username: "alice", avatarUrl: path) == "banyan")
+    }
+
     @Test func botNoneIsAPlainIconNotABot() {
         #expect(Avatars.isNone("bot:none"))
         #expect(!Avatars.isNone("bot:boba"))
