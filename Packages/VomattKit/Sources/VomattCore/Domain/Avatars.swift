@@ -51,13 +51,13 @@ public enum Avatars {
 
     /// An uploaded photo: `/api/avatars/<id>.jpg`, a path on the API origin (not a full URL).
     public static func isUploaded(_ avatarUrl: String?) -> Bool {
-        guard let avatarUrl, avatarUrl.hasPrefix(uploadedPrefix) else { return false }
-        return avatarUrl.count > uploadedPrefix.count
+        guard let avatarUrl else { return false }
+        return avatarUrl.hasPrefix(uploadedPrefix) && avatarUrl.count > uploadedPrefix.count
     }
 
     /// Where to load an uploaded photo from: the path joined to the API origin; nil for a bot or no avatar.
     public static func uploadedURL(_ avatarUrl: String?, apiURL: URL) -> URL? {
-        guard isUploaded(avatarUrl), let avatarUrl else { return nil }
+        guard let avatarUrl, isUploaded(avatarUrl) else { return nil }
         return URL(string: avatarUrl, relativeTo: apiURL)?.absoluteURL
     }
 

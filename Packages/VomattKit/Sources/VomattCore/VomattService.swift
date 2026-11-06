@@ -492,9 +492,10 @@ public final class VomattService: Sendable {
 
     /// Uploads a photo (JPEG, PNG, GIF or BMP, at most 2 MB) as the avatar; the API crops and resizes it.
     /// Resolves to the profile with its new `/api/avatars/<id>.jpg` avatarUrl.
-    public func uploadAvatar(_ image: Data, filename: String = "avatar.jpg") async throws -> UserProfile {
+    public func uploadAvatar(_ image: Data) async throws -> UserProfile {
         try await call {
-            let part = MultipartPart(payload: Operations.UploadAvatar.Input.Body.MultipartFormPayload.FilePayload(body: HTTPBody(image)), filename: filename)
+            let payload = Operations.UploadAvatar.Input.Body.MultipartFormPayload.FilePayload(body: HTTPBody(image))
+            let part = MultipartPart(payload: payload, filename: "avatar.jpg")
             let body = Operations.UploadAvatar.Input.Body.multipartForm(MultipartBody([.file(part)]))
             return try await UserProfile(required(client.uploadAvatar(body: body).ok.body.json.data, "uploadAvatar.data"))
         }
