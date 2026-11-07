@@ -717,7 +717,7 @@ private struct DeleteAccountSection: View {
     }
 }
 
-/// Terms, Privacy, Cookies and Contact, then the version (the web's `LegalLinks`); shown signed in or out.
+/// Terms, Privacy and Contact, then the version (the web's `LegalLinks`); shown signed in or out.
 struct LegalLinks: View {
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
@@ -726,9 +726,8 @@ struct LegalLinks: View {
     private static let aboutSite = URL(string: "https://about.vomatt.com")!
     static let terms = aboutSite.appending(path: "terms-of-service")
     static let privacy = aboutSite.appending(path: "privacy-policy")
-    static let cookies = aboutSite.appending(path: "cookies-policy")
 
-    /// Under Home's guest prompt: the three pages only, leading, as the web's `HomepageHeader` has them.
+    /// Under Home's guest prompt: the two pages only, leading, as the web's `HomepageHeader` has them.
     var pagesOnly = false
 
     var body: some View {
@@ -736,7 +735,6 @@ struct LegalLinks: View {
             HStack(spacing: pagesOnly ? 20 : 18) {
                 link(app.t("settings.terms"), Self.terms)
                 link(app.t("settings.privacyPolicy"), Self.privacy)
-                link(app.t("settings.cookies"), Self.cookies)
                 if !pagesOnly, !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
                     link(app.t("ios.contact"), mail)
                 }

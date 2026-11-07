@@ -108,9 +108,9 @@ private struct EmailStep: View {
         .animation(.easeOut(duration: 0.2), value: error)
     }
 
-    /// The web's Sanity `policyMessage`, with its three links.
+    /// The web's Sanity `policyMessage`, with its two links.
     private var policy: AttributedString {
-        let markdown = app.t("ios.signUpPolicy", ["terms": LegalLinks.terms, "privacy": LegalLinks.privacy, "cookies": LegalLinks.cookies])
+        let markdown = app.t("ios.signUpPolicy", ["terms": LegalLinks.terms, "privacy": LegalLinks.privacy])
         var text = (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
         for run in text.runs where run.link != nil {
             text[run.range].underlineStyle = .single
