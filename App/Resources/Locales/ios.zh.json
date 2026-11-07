@@ -2,7 +2,7 @@
 	"ios": {
 		"avatarUpload": "上傳照片",
 		"avatarUploading": "上傳中…",
-		"signUpPolicy": "註冊即表示你同意[服務條款]({terms})與[隱私權政策]({privacy})，包括 [Cookie 的使用]({cookies})。",
+		"signUpPolicy": "註冊即表示你同意[服務條款]({terms})與[隱私權政策]({privacy})。",
 		"openProfile": "開啟個人檔案",
 		"report": "檢舉",
 		"more": "更多",
