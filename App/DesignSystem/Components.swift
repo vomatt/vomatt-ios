@@ -264,8 +264,9 @@ struct PollRowSkeleton: View {
     }
 }
 
-/// A person's bot in its tinted circle (`UserAvatar`).
+/// A person's avatar in a circle: their uploaded photo, else their bot in its tint (`UserAvatar`).
 struct AvatarView: View {
+    @Environment(AppModel.self) private var app
     let username: String
     let avatarUrl: String?
     var size: CGFloat = 32
@@ -281,17 +282,33 @@ struct AvatarView: View {
                 .background(Tokens.avatarStone, in: Circle())
                 .clipShape(Circle())
                 .accessibilityHidden(true)
+        } else if let url = Avatars.uploadedURL(avatarUrl, apiURL: app.config.apiURL) {
+            // The bot stands in while the photo loads, or if it can't (replaced, storage down)
+            AsyncImage(url: url) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else {
+                    bot
+                }
+            }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .accessibilityHidden(true)
         } else {
-            let kind = Avatars.resolve(username: username, avatarUrl: avatarUrl)
-            Image("bot-\(kind)")
-                .resizable()
-                .scaledToFit()
-                .padding(size * 0.06)
-                .frame(width: size, height: size)
-                .background(tint(Avatars.tints[kind] ?? .stone), in: Circle())
-                .clipShape(Circle())
-                .accessibilityHidden(true)
+            bot
         }
+    }
+
+    private var bot: some View {
+        let kind = Avatars.resolve(username: username, avatarUrl: avatarUrl)
+        return Image("bot-\(kind)")
+            .resizable()
+            .scaledToFit()
+            .padding(size * 0.06)
+            .frame(width: size, height: size)
+            .background(tint(Avatars.tints[kind] ?? .stone), in: Circle())
+            .clipShape(Circle())
+            .accessibilityHidden(true)
     }
 
     private func tint(_ tint: Avatars.Tint) -> Color {

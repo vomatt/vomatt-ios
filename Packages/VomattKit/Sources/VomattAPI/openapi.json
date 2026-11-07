@@ -2462,7 +2462,7 @@
             "type": "string"
           },
           "authorAvatarUrl": {
-            "description": "Avatar of the author as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set, and on a deleted placeholder (`deleted` = true)",
+            "description": "Avatar of the author as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set, and on a deleted placeholder (`deleted` = true)",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -3085,7 +3085,7 @@
         "nullable": true,
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -3145,7 +3145,7 @@
             "type": "string"
           },
           "avatarUrl": {
-            "description": "Avatar of a member added by ID as `bot:<kind>` (the bot cast); older accounts may hold an image URL. Null if never set, and always null for one added by email",
+            "description": "Avatar of a member added by ID as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin); older accounts may hold an image URL. Null if never set, and always null for one added by email",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -3262,7 +3262,7 @@
         "nullable": true,
         "properties": {
           "avatarUrl": {
-            "description": "Avatar of an Invitee added by ID as `bot:<kind>` (the bot cast); older accounts may hold an image URL. Null if never set, and always null for one added by email",
+            "description": "Avatar of an Invitee added by ID as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin); older accounts may hold an image URL. Null if never set, and always null for one added by email",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -3472,7 +3472,7 @@
             "type": "boolean"
           },
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast); always public. Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin); always public. Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5013,7 +5013,7 @@
             "type": "boolean"
           },
           "avatarUrl": {
-            "description": "New avatar, one of the bot cast as `bot:<kind>`, or `bot:none` for no character; any other value is rejected. null or omitted keeps the current value",
+            "description": "New avatar, one of the bot cast as `bot:<kind>`, or `bot:none` for no character; any other value is rejected (an uploaded `/api/avatars/<id>.jpg` is set only through `PUT /api/users/me/avatar`). null or omitted keeps the current value",
             "example": "bot:boba",
             "nullable": true,
             "pattern": "^bot:(boba|bao|oolong|su|egg|ice|youtiao|tofu|sausage|chip|tower|lumen|mazu|tudi|yuelao|qiye|baye|shi|long|denglong|ding|jiaobei|xiang|banyan|gray|nordic|reptile|mantis|anu|tallwhite|moth|blob|cyclops|probe|saucer|trio|bear|magpie|pangolin|shihu|macaque|deer|pheasant|firefly|crab|flyfish|turtle|dog|fold|munchkin|chinchilla|mainecoon|siamese|orange|tuxedo|calico|sphynx|ragdoll|british|bengal|shiba|corgi|golden|husky|pug|dachshund|poodle|frenchie|beagle|collie|dalmatian|labrador|none)$",
@@ -5246,7 +5246,7 @@
         "description": "User search result item; only public profile fields, masked by the owner's visibility settings",
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5275,13 +5275,13 @@
         "nullable": true,
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast), assigned at random on sign-up. Older accounts may hold an image URL or null",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin), assigned at random on sign-up. Older accounts may hold an image URL or null",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
           },
           "displayName": {
-            "description": "Display name. Set at signup (email local part, provider name, or the phone number); null only if the column is empty",
+            "description": "Display name; null until the user sets one (never set at signup). Show the username when null",
             "example": "Ming Wang",
             "nullable": true,
             "type": "string"
@@ -5338,7 +5338,7 @@
         "nullable": true,
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast); always public. Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin); always public. Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5512,7 +5512,7 @@
         "nullable": true,
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5710,7 +5710,7 @@
             "type": "string"
           },
           "creatorAvatarUrl": {
-            "description": "Avatar of the owner as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar of the owner as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5868,7 +5868,7 @@
             "type": "string"
           },
           "creatorAvatarUrl": {
-            "description": "Avatar of the owner as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar of the owner as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -5960,7 +5960,7 @@
         "description": "A Participant of an Ended Poll and, when the Poll holds no Anonymous Ballot, the option they chose",
         "properties": {
           "avatarUrl": {
-            "description": "Avatar as `bot:<kind>` (the bot cast). Older accounts may hold an image URL; null if never set",
+            "description": "Avatar as `bot:<kind>` (the bot cast) or `/api/avatars/<id>.jpg` (an uploaded image, a path on the API origin). Older accounts may hold an image URL; null if never set",
             "example": "bot:boba",
             "nullable": true,
             "type": "string"
@@ -11975,6 +11975,91 @@
         ]
       }
     },
+    "/api/avatars/{file}": {
+      "get": {
+        "description": "**Auth**: none\n**Precondition**: `file` is `<id>.jpg` as in an `avatarUrl` of `/api/avatars/<id>.jpg`; other shapes are not served. Such an `avatarUrl` is a path relative to the API origin, not a full URL: web, iOS and Android clients must prefix their API base URL (the web app runs on a different origin, so using the path as is would request it from the web host)\n**Behavior**: streams the image as `image/jpeg` with `Cache-Control: public, max-age=31536000, immutable`: a path never changes content, since every upload gets a new one\n**Side effects**: none\n**Errors**:\n- 404 `common.not_found`: no image at this path (the owner replaced or removed it, or deleted the account)\n- 503 `common.storage_unavailable`: image storage is not configured or unreachable; retry later",
+        "operationId": "getAvatar",
+        "parameters": [
+          {
+            "description": "Image file name, `<id>.jpg`",
+            "example": "019a5e3c-2f1d-7b6a-8c4e-5d7f9a1b3c2e.jpg",
+            "in": "path",
+            "name": "file",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found (errorCode e.g. `vote.not_found`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "Image storage is temporarily unavailable, please try again later",
+                  "errorCode": "common.storage_unavailable",
+                  "message": "Image storage is temporarily unavailable, please try again later",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Image storage not configured or unreachable (errorCode `common.storage_unavailable`)"
+          }
+        },
+        "summary": "Get an uploaded avatar",
+        "tags": [
+          "User"
+        ]
+      }
+    },
     "/api/feedback": {
       "post": {
         "description": "**Auth**: required\n**Precondition**: under the daily feedback limit (UTC day; 10 unless an admin set lookup `config` / `feedback_daily_limit`, a positive number or numeric string)\n**Behavior**: stores the text as feedback from the caller. Responds 201 with the new feedback id\n**Side effects**: counts toward the caller's daily feedback limit (only once stored)\n**Errors**:\n- 400 `common.validation_failed`: `content` is blank or longer than 2000 characters\n- 404 `user.not_found`: the signed-in user no longer exists\n- 429 `common.rate_limited`: daily feedback limit reached, or too many write requests from this IP",
@@ -14726,7 +14811,7 @@
         ]
       },
       "patch": {
-        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `firstName`, `lastName`, `birthday`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds, or `bot:none` for no character. `firstName` and `lastName` are stored without surrounding whitespace, and a blank value clears them. `birthday` is an ISO date (`yyyy-MM-dd`) from 1900-01-01 to yesterday in Asia/Taipei. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl` and `birthday`, which cannot be cleared). Returns the caller's profile after the update: optional fields the caller explicitly hid are `null`, fields whose visibility was never set are shown.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `firstName` or `lastName` exceeds 50 characters, `birthday` is before 1900-01-01 or not before today (Asia/Taipei), `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>` or `bot:none`\n- 400 `common.bad_request`: `birthday` is not a valid `yyyy-MM-dd` date\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
+        "description": "**Auth**: required\n**Precondition**: none\n**Behavior**: updates `username`, `displayName`, `firstName`, `lastName`, `birthday`, `bio`, `avatarUrl` and/or `anonymousBallotByDefault` (the default for Ballots that omit `anonymous`; existing Ballots are unchanged). `avatarUrl` must be `bot:<kind>` with one of the bot cast kinds, or `bot:none` for no character; an uploaded image is set only through `PUT /api/users/me/avatar`, and switching to a bot avatar deletes the uploaded image once the change commits. `firstName` and `lastName` are stored without surrounding whitespace, and a blank value clears them. `birthday` is an ISO date (`yyyy-MM-dd`) from 1900-01-01 to yesterday in Asia/Taipei. Sending the current `username` is a no-op, except that an older account holding a reserved name gets 400 (omit `username` when unchanged). A field that is omitted or `null` is left unchanged (`null` cannot be used to clear a value; send an empty string instead, except `avatarUrl` and `birthday`, which cannot be cleared). Returns the caller's profile after the update: optional fields the caller explicitly hid are `null`, fields whose visibility was never set are shown.\n**Side effects**: persists the new values; after a `username` change the old public profile path returns 404\n**Errors**:\n- 400 `common.validation_failed`: `username` is not 3-50 characters of [a-z0-9_] or is a reserved name (see the `username` schema), `displayName` exceeds 100 characters, `firstName` or `lastName` exceeds 50 characters, `birthday` is before 1900-01-01 or not before today (Asia/Taipei), `bio` exceeds 500 characters, or `avatarUrl` is not a known `bot:<kind>` or `bot:none`\n- 400 `common.bad_request`: `birthday` is not a valid `yyyy-MM-dd` date\n- 404 `user.not_found`: the account no longer exists\n- 409 `user.username.taken`: another account already uses `username`",
         "operationId": "updateMyProfile",
         "requestBody": {
           "content": {
@@ -14852,6 +14937,146 @@
           }
         },
         "summary": "Update my profile",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/me/avatar": {
+      "put": {
+        "description": "**Auth**: required\n**Precondition**: multipart/form-data with the image in part `file`, at most 2 MB; JPEG, PNG, GIF (first frame) or BMP of at most 40 megapixels; fewer than the daily upload limit attempted today (UTC)\n**Behavior**: center-crops the image to a square, resizes it to 512x512 and re-encodes it as JPEG (transparent pixels become white; EXIF metadata, GPS included, is dropped). Each upload is a new image with a new path: `avatarUrl` becomes `/api/avatars/<id>.jpg`, a path on the API origin served by `GET /api/avatars/{file}`. Returns the caller's profile after the update, as `PATCH /api/users/me` does. To go back to a bot avatar, send `avatarUrl` = `bot:<kind>` to `PATCH /api/users/me`.\n**Side effects**: counts one attempt toward the daily upload limit (before the image is checked); stores the image; once the change commits, the previously uploaded image (if any) is deleted and its path returns 404\n**Errors**:\n- 400 `common.file_required`: part `file` is missing or empty\n- 400 `common.file_read_failed`: the uploaded file could not be read\n- 400 `user.avatar.unsupported_image`: the file is not a decodable JPEG, PNG, GIF or BMP, or exceeds 40 megapixels\n- 413 `common.file_too_large`: the file exceeds 2 MB\n- 429 `common.rate_limited`: the caller already attempted the daily number of avatar uploads (20 by default, counted per UTC day, failed attempts included); retry the next UTC day\n- 404 `user.not_found`: the account no longer exists\n- 503 `common.storage_unavailable`: image storage is not configured or unreachable; retry later",
+        "operationId": "uploadAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "Image file (JPEG, PNG, GIF or BMP), at most 2 MB",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "avatarUrl": "/api/avatars/019a5e3c-2f1d-7b6a-8c4e-5d7f9a1b3c2e.jpg",
+                    "bio": "Poll enthusiast",
+                    "displayName": "Alice C.",
+                    "firstName": "Alice",
+                    "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d47",
+                    "isBlocked": false,
+                    "isFollowing": false,
+                    "joinedAt": "2026-08-01T10:00:00+08:00",
+                    "lastName": null,
+                    "location": null,
+                    "membershipLevel": null,
+                    "points": null,
+                    "totalPolls": 4,
+                    "totalVotes": 17,
+                    "username": "alice"
+                  },
+                  "error": null,
+                  "errorCode": null,
+                  "message": null,
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserProfileResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "File size exceeds the limit (2 MB). Please compress and re-upload",
+                  "errorCode": "common.file_too_large",
+                  "message": "File size exceeds the limit (2 MB). Please compress and re-upload",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "File larger than 2 MB (errorCode `common.file_too_large`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": null,
+                  "error": "Image storage is temporarily unavailable, please try again later",
+                  "errorCode": "common.storage_unavailable",
+                  "message": "Image storage is temporarily unavailable, please try again later",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Image storage not configured or unreachable (errorCode `common.storage_unavailable`)"
+          }
+        },
+        "summary": "Upload my avatar",
         "tags": [
           "User"
         ]

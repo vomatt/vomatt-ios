@@ -71,8 +71,16 @@ sync_api() {
 		fi
 		if [[ "${1:-}" == "--file" ]]; then cp "$2" "$tmp"; else api_contract > "$tmp"; fi
 	fi
-	# Stable formatting keeps the git diff readable
-	python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$tmp"
+	# Stable formatting keeps the git diff readable. A multipart body is marked required: the generator
+	# skips a multipart body that isn't (vomatt-api leaves `required` out), and the file can't be uploaded without one.
+	python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for path in d.get("paths",{}).values():
+    for op in path.values():
+        body = op.get("requestBody") if isinstance(op, dict) else None
+        if body and "multipart/form-data" in body.get("content", {}): body["required"] = True
+json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$tmp"
 	echo "Contract changes from $source:"
 	if [[ -f "$SPEC" ]]; then python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$tmp"; else echo "(first sync)"; fi
 	mv "$tmp" "$SPEC"
