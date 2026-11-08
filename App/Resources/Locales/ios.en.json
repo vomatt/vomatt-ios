@@ -1,7 +1,5 @@
 {
 	"ios": {
-		"avatarUpload": "Upload a photo",
-		"avatarUploading": "Uploading…",
 		"signUpPolicy": "By signing up, you agree to the [Terms of Service]({terms}) and [Privacy Policy]({privacy}).",
 		"openProfile": "Opens their profile",
 		"report": "Report",
