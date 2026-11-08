@@ -73,10 +73,5 @@
 	},
 	"authError": {
 		"passkeyInvalid": "Passkey verification failed. Please try again"
-	},
-	"homePage": {
-		"bookmarks": "Saved",
-		"bookmarksEmpty": "No saved polls yet.",
-		"bookmarksEmptyHint": "Save a poll to find it here, and to hear when it ends."
 	}
 }

@@ -73,10 +73,5 @@
 	},
 	"authError": {
 		"passkeyInvalid": "通行密鑰驗證失敗，請重新操作一次"
-	},
-	"homePage": {
-		"bookmarks": "收藏",
-		"bookmarksEmpty": "還沒有收藏的投票。",
-		"bookmarksEmptyHint": "收藏投票就能在這裡找到，結束時也會通知你。"
 	}
 }
