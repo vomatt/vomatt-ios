@@ -310,7 +310,7 @@ struct AccountView: View {
     }
 }
 
-/// A poll in an Asked list (the web's `AskedRow`): "1,284 voted · ends Fri 20:00" while open, "**Yes** won · 2,061 voted"
+/// A poll in an Asked list (the web's `AskedRow`): "1,284 voted" + gap + "ends Fri 20:00" while open, "**Yes** won" + gap + "2,061 voted"
 /// once ended. Only the owner gets the unread dot on results they haven't opened.
 struct AskedRow: View {
     @Environment(AppModel.self) private var app
@@ -366,9 +366,9 @@ private func strong(_ text: String) -> Text {
     Text(text).fontWeight(.medium).foregroundStyle(Tokens.foreground)
 }
 
-/// Meta parts set apart by " · ".
+/// Meta parts set apart by the meta gap.
 private func joined(_ parts: [Text]) -> Text {
-    parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: " · ") + $1 }
+    parts.dropFirst().reduce(parts.first ?? Text(verbatim: "")) { $0 + Text(verbatim: metaGap) + $1 }
 }
 
 /// A tab's count, in mono beside its label.
@@ -381,7 +381,7 @@ struct TabCount: View {
     }
 }
 
-/// A small heading over a run of rows: "Open now · 2", with the lock on what only the owner sees.
+/// A small heading over a run of rows: "Open now" + gap + "2", with the lock on what only the owner sees.
 struct ProfileSection: View {
     @Environment(AppModel.self) private var app
     let label: String
@@ -393,7 +393,7 @@ struct ProfileSection: View {
     var body: some View {
         HStack(spacing: 6) {
             if onlyYou { OnlyYouMarker() }
-            Text([label, count.map { app.t.number($0) }, note].compactMap { $0 }.joined(separator: " · "))
+            Text([label, count.map { app.t.number($0) }, note].compactMap { $0 }.joined(separator: metaGap))
         }
         .font(.vm(12, .medium))
         .foregroundStyle(Tokens.mutedForeground)
