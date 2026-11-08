@@ -1,19 +1,20 @@
 import SwiftUI
 import VomattCore
 
-/// The home tab: topic pills over the feed (the web's home page).
+/// The home tab: feed and topic pills over the feed (the web's home page).
 struct HomeView: View {
     @Environment(AppModel.self) private var app
     @State private var tags: [Tag] = []
     @State private var activeTag: Tag?
-    @State private var picked = FeedView.Source.all
+    @State private var picked = HomeFeed.forYou
+    @State private var resultsUnread = false
 
-    /// Signing out leaves Following and Saved, which are only offered while signed in.
-    private var source: FeedView.Source { app.isSignedIn ? picked : .all }
+    /// Signing out leaves the feeds that are only offered while signed in.
+    private var feed: HomeFeed { app.isSignedIn ? picked : .forYou }
 
     var body: some View {
-        FeedView(tag: source == .all ? activeTag : nil, source: source, header: AnyView(topicPills))
-            .id(source == .all ? activeTag?.id : "\(source)")
+        FeedView(tag: feed == .forYou ? activeTag : nil, feed: feed, header: AnyView(topicPills))
+            .id(feed == .forYou ? activeTag?.id : feed.rawValue)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Image("brand-logo").renderingMode(.template).resizable().scaledToFit()
@@ -22,29 +23,27 @@ struct HomeView: View {
                 }
             }
             .task { if tags.isEmpty { tags = await app.service.popularTags() } }
+            .task(id: "\(app.sessionGeneration) \(feed)") { await loadResultsUnread() }
     }
 
-    /// The web's `HomepageHeader`: For you, Following and Saved when signed in, then the popular topics.
+    /// The web's `HomepageHeader`: For you, then Following, Results are in and Closing soon when
+    /// signed in, then the popular topics.
     private var topicPills: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                PillButton(title: app.t("homePage.allTopics"), isOn: source == .all && activeTag == nil) {
-                    picked = .all
-                    activeTag = nil
-                }
-                if app.isSignedIn {
-                    PillButton(title: app.t("homePage.following"), isOn: source == .following) {
-                        picked = .following
-                        activeTag = nil
-                    }
-                    PillButton(title: app.t("homePage.bookmarks"), isOn: source == .saved) {
-                        picked = .saved
+                ForEach(HomeFeed.allCases.filter { app.isSignedIn || $0 == .forYou }, id: \.self) { kind in
+                    PillButton(
+                        title: app.t(Self.label(kind)),
+                        isOn: feed == kind && activeTag == nil,
+                        unread: kind == .resultsIn && resultsUnread ? app.t("notifications.unread") : nil
+                    ) {
+                        picked = kind
                         activeTag = nil
                     }
                 }
                 ForEach(tags) { tag in
-                    PillButton(title: tag.name, isOn: source == .all && tag.id == activeTag?.id) {
-                        picked = .all
+                    PillButton(title: tag.name, isOn: feed == .forYou && tag.id == activeTag?.id) {
+                        picked = .forYou
                         activeTag = tag
                     }
                 }
@@ -55,19 +54,34 @@ struct HomeView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(app.t("homePage.topics"))
     }
+
+    private static func label(_ feed: HomeFeed) -> String {
+        switch feed {
+        case .forYou: "homePage.allTopics"
+        case .following: "homePage.following"
+        case .resultsIn: "homePage.resultsIn"
+        case .closingSoon: "homePage.closingSoon"
+        }
+    }
+
+    /// The Results are in pill's dot: whether a result on that feed's first page is unread.
+    private func loadResultsUnread() async {
+        guard app.isSignedIn else {
+            resultsUnread = false
+            return
+        }
+        guard let page = try? await app.service.resultsInFeed() else { return }
+        resultsUnread = app.visible(page.items).contains { $0.unread == true }
+    }
 }
 
-/// Open Public Polls, most recently opened first, optionally under one topic.
+/// One of the home feeds; For you optionally under one topic.
 struct FeedView: View {
-    /// The whole feed; Open Public Polls by followed people and topics; or the viewer's saved Polls in any state.
-    enum Source: Hashable { case all, following, saved }
-
     @Environment(AppModel.self) private var app
     let tag: Tag?
-    var source = Source.all
+    var feed = HomeFeed.forYou
     var header: AnyView?
     @State private var list: CursorList<Poll>?
-    @State private var resultsIn: [Poll] = []
 
     var body: some View {
         ScrollView {
@@ -87,21 +101,15 @@ struct FeedView: View {
             }
             .padding(.bottom, 16)
         }
-        .refreshable { await load(list) }
+        .refreshable { await list?.reload() }
         .canvas()
         .navigationTitle(tag.map { "#\($0.name)" } ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: app.sessionGeneration) {
             let list = list ?? makeList()
             self.list = list
-            await load(list)
+            await list.reload()
         }
-    }
-
-    private func load(_ list: CursorList<Poll>?) async {
-        async let results: Void = loadResultsIn()
-        await list?.reload()
-        await results
     }
 
     @ViewBuilder private var content: some View {
@@ -114,13 +122,9 @@ struct FeedView: View {
             case .loaded:
                 let polls = app.visible(list.items)
                 if let tag, app.isSignedIn { TopicFollowButton(tag: tag).padding(.top, 4) }
-                if !resultsIn.isEmpty { ResultsInCard(polls: resultsIn).padding(.top, 4) }
-                if polls.isEmpty {
-                    switch source {
-                    case .all: empty
-                    case .following: exploreEmpty(app.t("homePage.followingEmpty"), app.t("homePage.followingEmptyHint"))
-                    case .saved: exploreEmpty(app.t("homePage.bookmarksEmpty"), app.t("homePage.bookmarksEmptyHint"))
-                    }
+                // Not while pages remain: a feed that filters a list can come back empty before its end
+                if polls.isEmpty && !list.hasMore {
+                    empty
                 } else {
                     ForEach(polls) { poll in
                         PollCardView(poll: poll) {
@@ -133,40 +137,29 @@ struct FeedView: View {
         }
     }
 
-    private var empty: some View {
-        EmptyCard(title: app.t(tag == nil ? "homePage.feedListNoData" : "homePage.topicEmpty")) {
-            Button(app.t(app.isSignedIn ? "homePage.createFirst" : "homePage.joinToCreate")) { app.openCreator() }
-                .buttonStyle(.vm)
+    @ViewBuilder private var empty: some View {
+        switch feed {
+        case .forYou:
+            EmptyCard(title: app.t(tag == nil ? "homePage.feedListNoData" : "homePage.topicEmpty")) {
+                Button(app.t(app.isSignedIn ? "homePage.createFirst" : "homePage.joinToCreate")) { app.openCreator() }
+                    .buttonStyle(.vm)
+            }
+        case .following:
+            EmptyCard(title: app.t("homePage.followingEmpty"), body: app.t("homePage.followingEmptyHint")) {
+                Button(app.t("homePage.followingEmptyCta")) { app.select(.explore) }
+                    .buttonStyle(.vm(.outline))
+            }
+        case .resultsIn:
+            EmptyCard(title: app.t("homePage.resultsInEmpty"), body: app.t("homePage.resultsInEmptyHint"))
+        case .closingSoon:
+            EmptyCard(title: app.t("homePage.closingSoonEmpty"), body: app.t("homePage.closingSoonEmptyHint"))
         }
-    }
-
-    /// Following or Saved with nothing yet: both point to Explore.
-    private func exploreEmpty(_ title: String, _ hint: String) -> some View {
-        EmptyCard(title: title, body: hint) {
-            Button(app.t("homePage.followingEmptyCta")) { app.select(.explore) }
-                .buttonStyle(.vm(.outline))
-        }
-    }
-
-    /// The whole feed leads, for a signed-in viewer, with Ended Polls they voted in (the web's rail).
-    private func loadResultsIn() async {
-        guard app.isSignedIn, tag == nil, source == .all else {
-            resultsIn = []
-            return
-        }
-        let ended = (try? await app.service.myPolls(status: .ended, limit: 10).items) ?? []
-        resultsIn = Array(app.visible(ended).filter { $0.myOptionId != nil }.prefix(3))
     }
 
     private func makeList() -> CursorList<Poll> {
         let service = app.service
-        switch source {
-        case .following: return CursorList { cursor in try await service.followingPolls(cursor: cursor, limit: 10) }
-        case .saved: return CursorList { cursor in try await service.bookmarkedPolls(cursor: cursor, limit: 10) }
-        case .all:
-            let slug = tag?.slug
-            return CursorList { cursor in try await service.polls(tag: slug, cursor: cursor, limit: 10) }
-        }
+        let (feed, slug) = (feed, tag?.slug)
+        return CursorList { cursor in try await service.feed(feed, cursor: cursor, tag: slug) }
     }
 }
 
@@ -205,70 +198,6 @@ private struct TopicFollowButton: View {
         } catch {
             following = !next
             app.showToast(app.t.message(for: error, fallback: next ? "homePage.followTopicFailed" : "homePage.unfollowTopicFailed"), isError: true)
-        }
-    }
-}
-
-/// "Results are in": Ended Polls the viewer voted in, what each decided, and an unread dot
-/// (the web's `PollSideCard kind="resultsIn"`).
-private struct ResultsInCard: View {
-    @Environment(AppModel.self) private var app
-    let polls: [Poll]
-    /// Half the title's cap height, so the dot sits mid-line at every text size
-    @ScaledMetric(relativeTo: .body) private var dotLift: CGFloat = 5
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            RailHeading(text: app.t("homePage.resultsIn"))
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(polls) { poll in row(poll) }
-            }
-            .padding(.horizontal, -8)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card(padding: 0)
-    }
-
-    private func row(_ poll: Poll) -> some View {
-        let unread = poll.unread == true
-        return Button { app.push(.poll(poll.id)) } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                // The dot trails the title, so titles share one left edge whether read or not
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(poll.title)
-                        .font(.vm(15, unread ? .semibold : .regular))
-                        .tracking(-0.15)
-                        .foregroundStyle(Tokens.foreground)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    if unread {
-                        UnreadDot(label: app.t("notifications.unread"))
-                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + dotLift }
-                    }
-                }
-                meta(poll).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-            }
-            .frame(maxWidth: .infinity, minHeight: Metrics.minTarget, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// "Yes won · 2,061 voted", or a short "Tie": no room to name every winner.
-    private func meta(_ poll: Poll) -> Text {
-        let turnout = Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)]))
-        let separator = Text(verbatim: " · ")
-        switch ProfileLists.endedSummary(poll) {
-        case let .won(winner):
-            let option = Text(winner).font(.vm(13, .medium)).foregroundColor(Tokens.foreground)
-            return Text.rich(app.t("profile.wonBy"), ["option": option]) + separator + turnout
-        case .tie:
-            return Text(app.t("homePage.resultsTie")) + separator + turnout
-        case .none:
-            return turnout
         }
     }
 }

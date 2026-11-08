@@ -168,6 +168,38 @@ public final class VomattService: Sendable {
         try await collectPages(maxPages: 10) { try await self.myPolls(status: status, cursor: $0) }.page.items
     }
 
+    /// Ended Polls the viewer voted in, most recently ended first, each with its `unread` flag. An Anonymous
+    /// Ballot's option is sealed a day after the end, but `myBallotAnonymous` still says there was one.
+    /// Reads on past pages with no such Poll, so a page comes back empty only at the end.
+    public func resultsInFeed(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await collectPages(from: cursor, maxPages: 5, until: { !$0.isEmpty }) { pageCursor in
+            let page = try await self.myPolls(status: .ended, cursor: pageCursor, limit: limit)
+            return CursorPage(items: page.items.filter { $0.myOptionId != nil || $0.myBallotAnonymous != nil }, nextCursor: page.nextCursor)
+        }.page
+    }
+
+    /// Open Polls ending within a day, soonest first, as the viewer: with their Ballots, without people they blocked.
+    public func closingSoonFeed(cursor: String? = nil, limit: Int = 10, now: Date = .now) async throws -> CursorPage<Poll> {
+        let page = try await polls(sort: .closing, cursor: cursor, limit: limit)
+        let statuses = page.items.map { $0.status(at: now) }
+        // Soonest first, so the first Poll with more than a day left ends the list
+        let pastWindow = statuses.contains(.open)
+        return CursorPage(
+            items: zip(page.items, statuses).filter { $0.1 == .closing }.map(\.0),
+            nextCursor: pastWindow ? nil : page.nextCursor
+        )
+    }
+
+    /// A page of one of the home feeds; `tag` filters For you to a topic.
+    public func feed(_ feed: HomeFeed, cursor: String?, tag: String? = nil) async throws -> CursorPage<Poll> {
+        switch feed {
+        case .forYou: try await polls(tag: tag, cursor: cursor)
+        case .following: try await followingPolls(cursor: cursor)
+        case .resultsIn: try await resultsInFeed(cursor: cursor)
+        case .closingSoon: try await closingSoonFeed(cursor: cursor)
+        }
+    }
+
     /// A user's opened Polls (Open and Ended), most recently opened first.
     public func userPolls(username: String, cursor: String? = nil, limit: Int = 20) async throws -> CursorPage<Poll> {
         try await call {
