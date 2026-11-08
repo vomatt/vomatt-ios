@@ -219,34 +219,9 @@ private struct PollDetailCard: View {
         .card(padding: nil)
     }
 
-    /// Turnout (and a non-Public Audience), comments, save and share (the web's `PollFooter`). Turnout shows in every state.
     private var footer: some View {
-        let meta = [
-            ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
-            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: metaGap)
-        return HStack(spacing: 20) {
-            if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit().lineLimit(1) }
-            Button(action: onOpenDiscussion) {
-                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
-            }
-            .frame(minHeight: Metrics.minTarget)
-            // As on the feed card: the turnout line gives way, the comment count never breaks mid-word
-            .fixedSize()
-            Spacer(minLength: 0)
-            PollFooterActions(poll: $poll)
-        }
-        .font(.vm(14))
-        .foregroundStyle(Tokens.mutedForeground)
-        .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 4)
-        .overlay(alignment: .top) { Hairline() }
-    }
-
-    private var commentLabel: String {
-        guard let commentCount else { return app.t("poll.discuss") }
-        return commentCount == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": commentCount])
+        PollFooter(poll: $poll, turnout: ballot.turnout, commentCount: commentCount, onComments: onOpenDiscussion)
+            .padding(.vertical, 4)
     }
 
     private func apply(_ fresh: Poll) {

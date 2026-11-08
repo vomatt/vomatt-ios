@@ -239,6 +239,7 @@ struct AvatarTests {
 
     @Test func aRetiredBotIsAPlainIcon() {
         #expect(Avatars.isNone("bot:banyan"))
+        #expect(Avatars.resolve(username: "alice", avatarUrl: "bot:banyan") == Avatars.noBot)
         #expect(!Avatars.isNone("/api/avatars/x.jpg"))
     }
 

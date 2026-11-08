@@ -174,7 +174,7 @@ public final class VomattService: Sendable {
     public func resultsInFeed(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
         try await collectPages(from: cursor, maxPages: 5, until: { !$0.isEmpty }) { pageCursor in
             let page = try await self.myPolls(status: .ended, cursor: pageCursor, limit: limit)
-            return CursorPage(items: page.items.filter { $0.myOptionId != nil || $0.myBallotAnonymous != nil }, nextCursor: page.nextCursor)
+            return CursorPage(items: page.items.filter(ProfileLists.holdsBallot), nextCursor: page.nextCursor)
         }.page
     }
 
@@ -516,9 +516,9 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Saves one of the bot cast as the avatar; only a known kind is accepted.
+    /// Saves one of the bot cast, or no character (`Avatars.noBot`), as the avatar.
     public func chooseAvatar(kind: String) async throws {
-        guard Avatars.isKind(kind) else { throw APIError(.http(400), errorCode: "avatar.unknown", message: "Unknown avatar") }
+        guard Avatars.isChoice(kind) else { throw APIError(.http(400), errorCode: "avatar.unknown", message: "Unknown avatar") }
         try await updateProfile(avatarUrl: Avatars.avatarUrl(for: kind))
     }
 

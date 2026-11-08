@@ -23,7 +23,11 @@ struct HomeView: View {
                 }
             }
             .task { if tags.isEmpty { tags = await app.service.popularTags() } }
-            .task(id: "\(app.sessionGeneration) \(feed)") { await loadResultsUnread() }
+            // Once per appearance and session; leaving Results are in may have read results, so check again then
+            .task(id: app.sessionGeneration) { await loadResultsUnread() }
+            .onChange(of: feed) { old, _ in
+                if old == .resultsIn { Task { await loadResultsUnread() } }
+            }
     }
 
     /// The web's `HomepageHeader`: For you, then Following, Results are in and Closing soon when
@@ -56,12 +60,7 @@ struct HomeView: View {
     }
 
     private static func label(_ feed: HomeFeed) -> String {
-        switch feed {
-        case .forYou: "homePage.allTopics"
-        case .following: "homePage.following"
-        case .resultsIn: "homePage.resultsIn"
-        case .closingSoon: "homePage.closingSoon"
-        }
+        feed == .forYou ? "homePage.allTopics" : "homePage.\(feed.rawValue)"
     }
 
     /// The Results are in pill's dot: whether a result on that feed's first page is unread.

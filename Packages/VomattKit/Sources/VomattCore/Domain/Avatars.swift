@@ -1,7 +1,7 @@
 import Foundation
 
 /// The bot cast (port of vomatt-web `features/avatars/catalog.ts`): 60 characters
-/// in six families. A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
+/// in six families (`families` mirrors the web's `BOT_FAMILIES`, kept for re-syncing). A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
 public enum Avatars {
     public enum Tint: String, Sendable {
         case sand, stone, green, sky, peach, lavender
@@ -38,6 +38,12 @@ public enum Avatars {
     public static func avatarUrl(for kind: String) -> String { prefix + kind }
 
     public static func isKind(_ value: String) -> Bool { tints[value] != nil }
+
+    /// No character: the plain account icon, stored as `bot:none`. Never a default.
+    public static let noBot = "none"
+
+    /// What a user can choose: one of the cast, or no character.
+    public static func isChoice(_ value: String) -> Bool { value == noBot || isKind(value) }
 
     /// A plain account icon: `bot:none` (no character), or a bot since retired from the cast.
     public static func isNone(_ avatarUrl: String?) -> Bool {
@@ -84,8 +90,10 @@ public enum Avatars {
         return kinds[Int(slot) - retiredSlots.filter { $0 < slot }.count]
     }
 
-    /// The bot to draw: the one they chose, else their username's. Image URLs are ignored.
+    /// What to draw: the bot they chose, `noBot` if they chose no character or one since retired,
+    /// else their username's bot. Image URLs are ignored.
     public static func resolve(username: String, avatarUrl: String?) -> String {
-        parse(avatarUrl) ?? defaultKind(for: username)
+        if avatarUrl?.hasPrefix(prefix) == true { return parse(avatarUrl) ?? noBot }
+        return defaultKind(for: username)
     }
 }

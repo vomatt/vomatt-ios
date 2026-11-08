@@ -273,7 +273,7 @@ struct PollCreatorView: View {
     private var times: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(app.t("pollCreator.opensLabel")).font(.vm(14, .medium))
+                FieldLabel(text: app.t("pollCreator.opensLabel"))
                 if let start = form.startTime {
                     HStack {
                         DatePicker(app.t("pollCreator.opensLabel"), selection: Binding(get: { start }, set: { setStart($0) }),
@@ -291,7 +291,7 @@ struct PollCreatorView: View {
                 Text(app.t("pollCreator.opensHint")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text(app.t("pollCreator.endsAtLabel")).font(.vm(14, .medium))
+                FieldLabel(text: app.t("pollCreator.endsAtLabel"))
                 DatePicker(app.t("pollCreator.endsAtLabel"), selection: Binding(
                     get: { form.endTime ?? (form.startTime ?? .now).addingTimeInterval(PollForm.EndPreset.threeDays.duration) },
                     set: {
@@ -371,7 +371,7 @@ struct PollCreatorView: View {
 
     @ViewBuilder private var inviteesField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(app.t("pollCreator.inviteesLabel")).font(.vm(14, .medium))
+            FieldLabel(text: app.t("pollCreator.inviteesLabel"))
             if let invitees = form.invitees {
                 InviteePicker(selection: Binding(get: { invitees }, set: { form.invitees = $0 }), withGroups: true,
                               isInvalid: errors[.invitees] != nil)
@@ -542,13 +542,5 @@ private struct PillGroup<Value: Hashable>: View {
             .padding(.vertical, 8)
             Text(hint).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
         }
-    }
-}
-
-/// A create-form field's label: the web PollCreator's `LABEL`, not a rail heading.
-private struct FieldLabel: View {
-    let text: String
-    var body: some View {
-        Text(text).font(.vm(14, .medium, relativeTo: .subheadline))
     }
 }

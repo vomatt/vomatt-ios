@@ -9,7 +9,7 @@ struct AccountView: View {
     @Environment(AppModel.self) private var app
     let profile: MyProfile
 
-    enum Tab: Hashable { case asked, voted, saved }
+    enum Tab: String, Hashable { case asked, voted, saved }
     enum AskedFilter: Hashable { case all, drafts, open, ended }
     enum VotedFilter: Hashable { case all, sealed, decided }
     @State private var tab = Tab.asked
@@ -105,8 +105,9 @@ struct AccountView: View {
             .padding(.vertical, 24)
         }
         .refreshable {
+            async let savedReload: Void = saved?.reload() ?? ()
             await load()
-            await saved?.reload()
+            await savedReload
         }
         .canvas()
         .navigationBarTitleDisplayMode(.inline)
@@ -222,11 +223,7 @@ struct AccountView: View {
 
     /// What the open tab shows to whom, on the Tide surface (the web's rail note, which follows the lists on a phone).
     private var tabNote: some View {
-        let key = switch tab {
-        case .asked: "asked"
-        case .voted: "voted"
-        case .saved: "saved"
-        }
+        let key = tab.rawValue
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: "lock.fill").font(.system(size: 12)).foregroundStyle(Tokens.tide).accessibilityHidden(true)
@@ -509,19 +506,19 @@ struct EditProfileSheet: View {
                 usernameField
                 // First and last name share one visibility setting, so they share one header
                 VStack(alignment: .leading, spacing: 6) {
-                    labelRow(app.t("profile.realName")) { pill(app.t("profile.realName"), ["firstName", "lastName"]) }
+                    labelRow(app.t("profile.realName")) { pill(.realName) }
                     HStack(alignment: .top, spacing: 10) {
                         nameField(app.t("profile.firstName"), $firstName, .givenName)
                         nameField(app.t("profile.lastName"), $lastName, .familyName)
                     }
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    labelRow(app.t("profile.displayName")) { pill(app.t("profile.displayName"), ["displayName"]) }
+                    labelRow(app.t("profile.displayName")) { pill(.displayName) }
                     VMTextField(label: nil, placeholder: app.t("profile.displayNamePlaceholder"), text: limited($displayName, Self.displayNameMax), contentType: .nickname)
                 }
                 birthdayField
                 VStack(alignment: .leading, spacing: 6) {
-                    labelRow(app.t("profile.bio")) { pill(app.t("profile.bio"), ["bio"]) }
+                    labelRow(app.t("profile.bio")) { pill(.bio) }
                     VMTextEditor(placeholder: app.t("profile.bioPlaceholder"), text: limited($bio, Self.bioMax), minHeight: 72)
                     Text("\(bio.count) / \(Self.bioMax)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -596,19 +593,19 @@ struct EditProfileSheet: View {
 
     private func labelRow(_ label: String, @ViewBuilder trailing: () -> some View) -> some View {
         HStack(spacing: 8) {
-            Text(label).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+            FieldLabel(text: label)
                 .frame(maxWidth: .infinity, alignment: .leading)
             trailing()
         }
         .frame(minHeight: 28)
     }
 
-    /// Who sees `fields`, switching all of them between Everyone and Only you. Shown as Everyone when any of
-    /// them is (the web's `isSettingPublic`): the real name shows when either half does.
-    private func pill(_ label: String, _ fields: [String]) -> some View {
-        let isPublic = fields.contains { ProfileVisibility.isPublic(visibility, $0) }
+    /// Who sees a setting, switching all its fields between Everyone and Only you.
+    private func pill(_ setting: ProfileVisibility.Setting) -> some View {
+        let isPublic = ProfileVisibility.isPublic(visibility, setting)
+        let label = app.t("profile.\(setting.key)")
         return Button {
-            for field in fields { visibility[field] = !isPublic }
+            for field in setting.fields { visibility[field] = !isPublic }
         } label: {
             VisibilityPill(isPublic: isPublic, canChange: true)
                 .frame(minHeight: Metrics.minTarget)
@@ -721,15 +718,13 @@ struct AvatarPickerSheet: View {
     @State private var isPreparing = false
     @State private var isSaving = false
     @State private var isUploading = false
-    private static let none = "none"
-    /// What everyone sees now: nil for an uploaded photo, else the bot or "none".
+    /// What everyone sees now: nil for an uploaded photo, else the bot or `Avatars.noBot`.
     private var saved: String? {
-        if Avatars.isUploaded(avatarUrl) { return nil }
-        return Avatars.isNone(avatarUrl) ? Self.none : Avatars.resolve(username: username, avatarUrl: avatarUrl)
+        Avatars.isUploaded(avatarUrl) ? nil : Avatars.resolve(username: username, avatarUrl: avatarUrl)
     }
     private var copyKey: String {
         guard let selected else { return "avatar.upload" }
-        return selected == Self.none ? "avatar.none" : "avatar.bots.\(selected)"
+        return selected == Avatars.noBot ? "avatar.none" : "avatar.bots.\(selected)"
     }
 
     var body: some View {
@@ -773,9 +768,9 @@ struct AvatarPickerSheet: View {
                         guard let item else { return }
                         Task { await pick(item) }
                     }
-                    Button { selected = Self.none } label: { Text(app.t("avatar.remove")).frame(maxWidth: .infinity) }
+                    Button { selected = Avatars.noBot } label: { Text(app.t("avatar.remove")).frame(maxWidth: .infinity) }
                         .buttonStyle(.vm(.outline, size: .sm))
-                        .disabled(selected == Self.none)
+                        .disabled(selected == Avatars.noBot)
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(Avatars.kinds, id: \.self) { kind in
@@ -809,11 +804,7 @@ struct AvatarPickerSheet: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            if selected == Self.none {
-                _ = try await app.service.updateProfile(avatarUrl: Avatars.avatarUrl(for: Self.none))
-            } else {
-                try await app.service.chooseAvatar(kind: selected)
-            }
+            try await app.service.chooseAvatar(kind: selected)
             app.updateMe { $0.avatarUrl = Avatars.avatarUrl(for: selected) }
             app.showToast(app.t("avatar.savedToast"))
             dismiss()

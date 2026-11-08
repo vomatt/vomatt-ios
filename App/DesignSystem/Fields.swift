@@ -46,7 +46,7 @@ struct VMTextField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let label {
-                Text(label).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+                FieldLabel(text: label)
             }
             TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Tokens.mutedForeground))
                 .textContentType(contentType)
@@ -117,5 +117,13 @@ struct SearchField: View {
         .fieldChrome(isFocused: isFocused)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(placeholder)
+    }
+}
+
+/// A form field's label (the web's `LABEL`: 14pt medium in the foreground color).
+struct FieldLabel: View {
+    let text: String
+    var body: some View {
+        Text(text).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
     }
 }

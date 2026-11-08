@@ -143,40 +143,9 @@ struct PollCardView: View {
         }
     }
 
-    /// Turnout (and a non-Public Audience), comments, save and share. Turnout shows in every state.
     private var footer: some View {
-        HStack(spacing: 20) {
-            if !footerMeta.isEmpty {
-                Text(footerMeta).font(.vmMono(13)).lineLimit(1)
-            }
-            Button { app.push(.poll(poll.id)) } label: {
-                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
-            }
+        PollFooter(poll: $poll, turnout: ballot.turnout, commentCount: poll.commentCount) { app.push(.poll(poll.id)) }
             .frame(minHeight: Metrics.minTarget)
-            // On a narrow card the turnout line gives way; the comment count never breaks mid-word
-            .fixedSize()
-            Spacer(minLength: 0)
-            PollFooterActions(poll: $poll)
-        }
-        .font(.vm(14))
-        .foregroundStyle(Tokens.mutedForeground)
-        .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .frame(minHeight: Metrics.minTarget)
-        .overlay(alignment: .top) { Hairline() }
-    }
-
-    /// "18 voted", gap, "invite only"; a Public Poll says nothing about its Audience.
-    private var footerMeta: String {
-        [
-            ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
-            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: metaGap)
-    }
-
-    private var commentLabel: String {
-        guard let count = poll.commentCount else { return app.t("poll.discuss") }
-        return count == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": count])
     }
 
     private func apply(_ fresh: Poll) {
@@ -321,6 +290,50 @@ struct ReportPollButton: View {
         Button(role: .destructive) { app.requireAuth(action) } label: {
             Label(app.t("poll.report"), systemImage: "flag")
         }
+    }
+}
+
+/// Turnout (and a non-Public Audience), comments, save and share (the web's `PollFooter`). Turnout shows in
+/// every state.
+struct PollFooter: View {
+    @Environment(AppModel.self) private var app
+    @Binding var poll: Poll
+    let turnout: Int?
+    let commentCount: Int?
+    let onComments: () -> Void
+
+    var body: some View {
+        HStack(spacing: 20) {
+            if !meta.isEmpty {
+                Text(meta).font(.vmMono(13)).monospacedDigit().lineLimit(1)
+            }
+            Button(action: onComments) {
+                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
+            }
+            .frame(minHeight: Metrics.minTarget)
+            // On a narrow card the turnout line gives way; the comment count never breaks mid-word
+            .fixedSize()
+            Spacer(minLength: 0)
+            PollFooterActions(poll: $poll)
+        }
+        .font(.vm(14))
+        .foregroundStyle(Tokens.mutedForeground)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .overlay(alignment: .top) { Hairline() }
+    }
+
+    /// "18 voted", gap, "invite only"; a Public Poll says nothing about its Audience.
+    private var meta: String {
+        [
+            turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
+            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
+        ].compactMap { $0 }.joined(separator: metaGap)
+    }
+
+    private var commentLabel: String {
+        guard let commentCount else { return app.t("poll.discuss") }
+        return commentCount == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": commentCount])
     }
 }
 

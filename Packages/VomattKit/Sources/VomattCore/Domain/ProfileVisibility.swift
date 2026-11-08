@@ -10,15 +10,15 @@ public enum ProfileVisibility {
     public struct Setting: Hashable, Sendable {
         public let key: String
         public let fields: [String]
+
+        public static let realName = Setting(key: "realName", fields: ["firstName", "lastName"])
+        public static let displayName = Setting(key: "displayName", fields: ["displayName"])
+        public static let bio = Setting(key: "bio", fields: ["bio"])
     }
 
     /// The settings in the order Edit profile and Settings › What others see show them: first and last name
     /// share one, Real name.
-    public static let settings = [
-        Setting(key: "realName", fields: ["firstName", "lastName"]),
-        Setting(key: "displayName", fields: ["displayName"]),
-        Setting(key: "bio", fields: ["bio"]),
-    ]
+    public static let settings: [Setting] = [.realName, .displayName, .bio]
 
     /// Public until the owner turns them off; the rest stay hidden until turned on (the API's defaults).
     private static let publicByDefault: Set = ["displayName", "bio"]

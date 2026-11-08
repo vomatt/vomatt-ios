@@ -25,7 +25,8 @@ public enum ProfileLists {
         asked.reduce(0) { $0 + max(0, ($1.turnout ?? 0) - (holdsBallot($1) ? 1 : 0)) }
     }
 
-    private static func holdsBallot(_ poll: Poll) -> Bool {
+    /// Whether the viewer holds a Ballot in the Poll. A sealed Anonymous Ballot has no option left, only its flag.
+    static func holdsBallot(_ poll: Poll) -> Bool {
         poll.myOptionId != nil || poll.myBallotAnonymous != nil
     }
 
