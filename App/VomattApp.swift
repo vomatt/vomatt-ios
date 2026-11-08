@@ -174,6 +174,8 @@ struct RouteView: View {
         case .settings: SettingsView()
         case .inviteLists: InviteListsView()
         case .devices: DevicesView()
+        case .blocked: BlockedPeopleView()
+        case .visibility: VisibilitySettingsView()
         }
     }
 }
