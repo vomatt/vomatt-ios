@@ -88,16 +88,16 @@ public final class VomattService: Sendable {
         try await call { _ = try await client.sendOtp(body: .json(.init(email: email))).ok }
     }
 
-    /// Verifies the code and starts the session. True when this sign-in created the account.
+    /// Verifies the code and starts the session.
     @discardableResult
-    public func verifyOtp(email: String, code: String) async throws -> Bool {
-        let (tokens, isNewUser) = try await call {
+    public func verifyOtp(email: String, code: String) async throws -> CodeSignIn {
+        let (tokens, signIn) = try await call {
             let output = try await client.verifyOtp(body: .json(.init(code: code, email: Email.normalize(email))))
             let data = try required(output.ok.body.json.data, "verifyOtp.data")
-            return (try AuthTokens(data), data.isNewUser == true)
+            return (try AuthTokens(data), CodeSignIn(data))
         }
         await session.signIn(tokens)
-        return isNewUser
+        return signIn
     }
 
     /// A fresh one-time challenge for signing in with any passkey on the device (lasts 5 minutes).

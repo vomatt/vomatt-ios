@@ -58,3 +58,31 @@ public struct SignUpName: Equatable, Sendable {
         self.lastName = lastName.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty
     }
 }
+
+/// What a code sign-in says about the account (the web's `verifyOtp` result).
+public struct CodeSignIn: Equatable, Sendable {
+    /// True when this sign-in created the account.
+    public let isNewUser: Bool
+    /// The username everyone else sees; nil when the response carries none.
+    public let username: String?
+
+    public init(isNewUser: Bool, username: String?) {
+        self.isNewUser = isNewUser
+        self.username = username
+    }
+}
+
+/// The sign-up name step (the web's `useAuthFlow`). It opens for a new account, and again for an
+/// account that never gave a first name, so leaving it once doesn't leave the account nameless.
+public struct NameStep: Equatable, Sendable {
+    /// The username everyone else sees, when known.
+    public let username: String?
+
+    /// Nil when the account is signed in and nothing else is asked. `me` is nil when it wasn't loaded
+    /// or failed to load: a failed check doesn't hold up sign-in.
+    public static func after(_ signIn: CodeSignIn, me: MyProfile?) -> NameStep? {
+        if signIn.isNewUser { return NameStep(username: signIn.username) }
+        guard let me, me.firstName?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty == nil else { return nil }
+        return NameStep(username: me.username)
+    }
+}

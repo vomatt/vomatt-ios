@@ -290,11 +290,11 @@ struct ServiceTests {
         let transport = StubTransport { request, _ in
             let path = request.path ?? ""
             if path.hasSuffix("/send-otp") { return (200, envelope(#"{"success":true}"#), [:]) }
-            return (200, envelope(#"{"token":"a","refreshToken":"r","isNewUser":true}"#), [:])
+            return (200, envelope(#"{"token":"a","refreshToken":"r","isNewUser":true,"user":{"username":"newbie_0042"}}"#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
         try await service.requestOtp(email: "A@b.co")
-        #expect(try await service.verifyOtp(email: "a@b.co", code: "123456") == true)
+        #expect(try await service.verifyOtp(email: "a@b.co", code: "123456") == CodeSignIn(isNewUser: true, username: "newbie_0042"))
         #expect(transport.requests.map { $0.path ?? "" }.allSatisfy { !$0.contains("check-email") })
     }
 
