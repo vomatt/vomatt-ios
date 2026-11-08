@@ -74,10 +74,10 @@ final class SignedInFlowTests: XCTestCase {
         app.buttons["Publish poll"].tap()
 
         // Lands on the new poll
-        XCTAssertTrue(app.staticTexts["ABOUT THIS POLL"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["About this poll"].waitForExistence(timeout: 15))
         app.buttons.matching(identifier: "ballot-option").element(boundBy: 1).tap()
         app.buttons["Vote"].tap()
-        XCTAssertTrue(app.staticTexts["VOTED"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Voted"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["Withdraw vote"].exists)
         snapshot("e2e-4-voted")
 

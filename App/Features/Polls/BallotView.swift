@@ -378,12 +378,15 @@ nonisolated struct ShakeEffect: GeometryEffect {
 /// the check would vanish into it.
 struct BallotMark: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     let checked: Bool
 
     var body: some View {
         ZStack {
             if checked {
+                // In dark the ink is the canvas, so a Volt edge keeps the disc's shape on a card or the tint
                 Circle().fill(Tokens.highlightForeground)
+                    .overlay(Circle().strokeBorder(Tokens.highlight, lineWidth: colorScheme == .dark ? 2 : 0))
                 CheckShape()
                     .stroke(Tokens.highlight, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                     .frame(width: 12, height: 12)
@@ -422,7 +425,7 @@ struct VotedStamp: View {
                 .trim(from: 0, to: drawn ? 1 : 0)
                 .stroke(Color.black.opacity(0.85), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
                 .frame(width: 12, height: 12)
-            Text(label.uppercased()).font(.vm(11, .semibold, relativeTo: .caption2)).tracking(0.55)
+            Text(label).font(.vm(11, .medium, relativeTo: .caption2))
         }
         // Volt stays light in dark mode, so its ink stays dark
         .foregroundStyle(Color.black.opacity(0.85))
