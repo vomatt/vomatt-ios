@@ -226,11 +226,13 @@ private struct PollDetailCard: View {
             poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
         ].compactMap { $0 }.joined(separator: metaGap)
         return HStack(spacing: 20) {
-            if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit() }
+            if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit().lineLimit(1) }
             Button(action: onOpenDiscussion) {
                 Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
             }
             .frame(minHeight: Metrics.minTarget)
+            // As on the feed card: the turnout line gives way, the comment count never breaks mid-word
+            .fixedSize()
             Spacer(minLength: 0)
             PollFooterActions(poll: $poll)
         }
