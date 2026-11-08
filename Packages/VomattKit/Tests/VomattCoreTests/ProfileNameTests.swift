@@ -59,3 +59,31 @@ struct SignUpNameTests {
         #expect(name?.firstName == "Cher" && name?.lastName == nil)
     }
 }
+
+/// Ported from vomatt-web `src/__tests__/hooks/useAuthFlow.test.ts` and `AuthDialog.test.tsx`.
+@Suite("Name step after a code sign-in")
+struct NameStepTests {
+    @Test func tellsANewUserTheUsernameEveryoneElseSees() {
+        let step = NameStep.after(CodeSignIn(isNewUser: true, username: "newbie_0042"), me: nil)
+        #expect(step == NameStep(username: "newbie_0042"))
+    }
+
+    @Test func leavesTheUsernameOutWhenTheSignInResponseHasNone() {
+        #expect(NameStep.after(CodeSignIn(isNewUser: true, username: nil), me: nil) == NameStep(username: nil))
+    }
+
+    @Test func asksAnExistingUserWhoNeverGaveAFirstNameForItAgain() {
+        let signIn = CodeSignIn(isNewUser: false, username: "henry_0007")
+        #expect(NameStep.after(signIn, me: MyProfile(id: "1", username: "henry_0007")) == NameStep(username: "henry_0007"))
+        #expect(NameStep.after(signIn, me: MyProfile(id: "1", username: "henry_0007", firstName: "  ")) == NameStep(username: "henry_0007"))
+    }
+
+    @Test func signsInAnExistingUserWithAFirstName() {
+        let me = MyProfile(id: "1", username: "ann_0001", firstName: "Ann")
+        #expect(NameStep.after(CodeSignIn(isNewUser: false, username: "ann_0001"), me: me) == nil)
+    }
+
+    @Test func stillSignsInAnExistingUserWhenTheirProfileFailsToLoad() {
+        #expect(NameStep.after(CodeSignIn(isNewUser: false, username: "ann_0001"), me: nil) == nil)
+    }
+}

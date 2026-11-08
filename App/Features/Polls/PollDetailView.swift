@@ -76,7 +76,7 @@ struct PollDetailView: View {
     @ViewBuilder private func notFound(_ owner: PollOwner?) -> some View {
         if let owner {
             InvitationPrompt(owner: owner)
-        } else if !app.isSignedIn {
+        } else if !app.isSignedIn, PollID.isValid(pollId) {
             // Signed out, a missing Poll may be Invite-only
             LoginPromptCard(forPoll: true)
         } else {
@@ -91,6 +91,10 @@ struct PollDetailView: View {
     }
 
     private func load(reloadComments: Bool = false) async {
+        guard PollID.isValid(pollId) else {
+            phase = .notFound(nil)
+            return
+        }
         do {
             guard let poll = try await app.service.poll(id: pollId) else {
                 phase = .notFound(try? await app.service.inviteOnlyOwner(pollId: pollId))
