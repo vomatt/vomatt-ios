@@ -52,6 +52,8 @@ enum Route: Hashable {
     case settings
     case inviteLists
     case devices
+    case blocked
+    case visibility
 }
 
 struct Toast: Equatable, Identifiable {

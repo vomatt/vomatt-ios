@@ -527,7 +527,7 @@ struct EditProfileSheet: View {
 
     /// Who sees `fields`, switching all of them between Everyone and Only you.
     private func pill(_ label: String, _ fields: [String]) -> some View {
-        let isPublic = ProfileVisibility.isPublic(visibility, fields[0])
+        let isPublic = fields.contains { ProfileVisibility.isPublic(visibility, $0) }
         return Button {
             for field in fields { visibility[field] = !isPublic }
         } label: {

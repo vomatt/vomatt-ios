@@ -6,8 +6,19 @@ public enum ProfileVisibility {
     /// shows. Location, points and membership level are left out, since no page shows them.
     public static let fields = ["displayName", "bio", "firstName", "lastName"]
 
-    /// One per Edit profile setting; the real name shows when either half does.
-    public static let settings = [["displayName"], ["bio"], ["firstName", "lastName"]]
+    /// A visibility setting a person sets: `key` names its label, `profile.<key>`.
+    public struct Setting: Hashable, Sendable {
+        public let key: String
+        public let fields: [String]
+    }
+
+    /// The settings in the order Edit profile and Settings › What others see show them: first and last name
+    /// share one, Real name.
+    public static let settings = [
+        Setting(key: "realName", fields: ["firstName", "lastName"]),
+        Setting(key: "displayName", fields: ["displayName"]),
+        Setting(key: "bio", fields: ["bio"]),
+    ]
 
     /// Public until the owner turns them off; the rest stay hidden until turned on (the API's defaults).
     private static let publicByDefault: Set = ["displayName", "bio"]
@@ -23,12 +34,17 @@ public enum ProfileVisibility {
             .filter { isPublic(next, $0) != isPublic(saved, $0) }
             .map { ($0, isPublic(next, $0)) })
     }
+
+    /// Whether visitors see a setting; the real name shows when either half does.
+    public static func isPublic(_ visibility: [String: Bool], _ setting: Setting) -> Bool {
+        setting.fields.contains { isPublic(visibility, $0) }
+    }
 }
 
 public extension MyProfile {
     /// How many of the Edit profile settings visitors see: "2 of 3 shown".
     var shownSettingCount: Int {
-        ProfileVisibility.settings.filter { $0.contains { ProfileVisibility.isPublic(visibilitySettings, $0) } }.count
+        ProfileVisibility.settings.filter { ProfileVisibility.isPublic(visibilitySettings, $0) }.count
     }
 
     /// Hidden fields that have a value; the owner's header marks each with the lock.

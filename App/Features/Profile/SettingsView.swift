@@ -2,7 +2,7 @@ import SwiftUI
 import VomattCore
 
 /// Settings, pushed from the gear on the profile (the web's `/settings`): Voting, Notifications,
-/// Appearance and language, Privacy and safety, Account, then Delete account and the legal links.
+/// Appearance and language, Privacy and safety, Help, Account, then Delete account and the legal links.
 struct SettingsView: View {
     @Environment(AppModel.self) private var app
 
@@ -84,12 +84,13 @@ private struct SettingsSection<Content: View>: View {
 private struct RowText: View {
     let title: String
     var detail: String?
+    var detailLines: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
             if let detail {
-                Text(detail).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                Text(detail).font(.vm(13)).foregroundStyle(Tokens.mutedForeground).lineLimit(detailLines)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -138,7 +139,7 @@ private struct AccountSettings: View {
     let profile: MyProfile
     @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
     @State private var confirmingSignOut = false
-    @State private var editingProfile = false
+    @State private var reportingProblem = false
     /// How many invite lists the user has; nil until loaded or when they couldn't be.
     @State private var inviteListCount: Int?
     /// How many devices the user is signed in on; nil until loaded or when they couldn't be.
@@ -211,9 +212,16 @@ private struct AccountSettings: View {
                         title: app.t("account.privacyTitle"),
                         detail: app.t("settings.whatOthersSeeBody"),
                         value: app.t("settings.shownCount", ["shown": profile.shownSettingCount, "total": ProfileVisibility.settings.count])
-                    ) { editingProfile = true }
+                    ) { app.push(.visibility) }
                     Hairline()
-                    BlockedPeople().padding(16)
+                    NavigationRow(title: app.t("blocks.title"), detail: app.t("settings.blockedBody")) { app.push(.blocked) }
+                }
+                .card(padding: nil)
+            }
+
+            SettingsSection(title: app.t("settings.help")) {
+                NavigationRow(title: app.t("navigation.reportProblem"), detail: app.t("settings.reportProblemBody")) {
+                    reportingProblem = true
                 }
                 .card(padding: nil)
             }
@@ -239,7 +247,6 @@ private struct AccountSettings: View {
                     ) { app.push(.devices) }
                 }
                 .card(padding: nil)
-                FeedbackRow().card(padding: nil)
             }
 
             // Kept apart, at the end, and quiet until opened
@@ -249,7 +256,7 @@ private struct AccountSettings: View {
         }
         .task { await loadInviteListCount() }
         .task { await loadDeviceCount() }
-        .sheet(isPresented: $editingProfile) { EditProfileSheet(profile: profile) }
+        .sheet(isPresented: $reportingProblem) { ReportProblemSheet() }
     }
 
     /// The app's language in its own words: "English", "中文".
@@ -363,40 +370,199 @@ private struct NotificationSwitches: View {
     }
 }
 
-/// People the user blocked, each with Unblock: a row inside the Privacy card (the web's
-/// `BlockedUsersPanel`, `embedded`): the title with a mono count, then soft tiles.
-private struct BlockedPeople: View {
+/// The Blocked people screen, opened from Settings (the web's `/settings/blocked`): each person a row of a
+/// settings card with Unblock.
+struct BlockedPeopleView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(app.t("blocks.title")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if !app.blocked.isEmpty {
-                    Text(app.t.number(app.blocked.count)).font(.vmMono(14)).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            if app.blocked.isEmpty {
-                Text(app.t("blocks.empty")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-            }
-            ForEach(app.blocked, id: \.self) { username in
-                HStack(spacing: 10) {
-                    AvatarView(username: username, avatarUrl: nil, size: 28)
-                    Text("@\(username)").font(.vmMono(14)).foregroundStyle(Tokens.foreground).lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button(app.t("blocks.unblock")) {
-                        app.unblock(username)
-                        app.showToast(app.t("blocks.unblocked", ["username": username]))
+        ScrollView {
+            Group {
+                if app.blocked.isEmpty {
+                    EmptyState { Text(app.t("blocks.empty")) }
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(app.blocked, id: \.self) { username in
+                            if username != app.blocked.first { Hairline() }
+                            row(username)
+                        }
                     }
-                    .buttonStyle(.vm(.outline, size: .sm))
+                    .card(padding: nil)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
-                .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+            }
+            .pageColumn(768)
+            .padding(.vertical, 24)
+        }
+        .canvas()
+        .navigationTitle(app.t("blocks.title"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func row(_ username: String) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(username: username, avatarUrl: nil, size: 36)
+            Text("@\(username)").font(.vm(15, .medium)).foregroundStyle(Tokens.foreground).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(app.t("blocks.unblock")) {
+                app.unblock(username)
+                app.showToast(app.t("blocks.unblocked", ["username": username]))
+            }
+            .buttonStyle(.vm(.outline, size: .sm))
+            .accessibilityLabel(app.t("blocks.unblockLabel", ["username": username]))
+        }
+        .settingsRow()
+    }
+}
+
+/// Settings › What others see, on a screen of its own (the web's `/settings/visibility`).
+struct VisibilitySettingsView: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        ScrollView {
+            if let me = app.me {
+                VisibilitySettings(profile: me)
+                    .pageColumn(768)
+                    .padding(.vertical, 24)
             }
         }
+        .canvas()
+        .navigationTitle(app.t("account.privacyTitle"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// A switch per visibility setting, each saved at once and put back if the save fails, over the profile as
+/// visitors get it (the web's `VisibilitySettings`).
+private struct VisibilitySettings: View {
+    @Environment(AppModel.self) private var app
+    let profile: MyProfile
+    /// The last settings the server confirmed; a failed save goes back to them.
+    @State private var saved: [String: Bool]
+    /// One save per switch at a time, so the server can't apply an older toggle after a newer one.
+    @State private var saving: Set<String> = []
+    @State private var editingProfile = false
+
+    init(profile: MyProfile) {
+        self.profile = profile
+        _saved = State(initialValue: profile.visibilitySettings)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            Text(app.t("settings.visibilityIntro")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+            VStack(alignment: .leading, spacing: 4) {
+                VStack(spacing: 0) {
+                    ForEach(ProfileVisibility.settings, id: \.key) { setting in
+                        if setting != ProfileVisibility.settings.first { Hairline() }
+                        Toggle(isOn: Binding(
+                            get: { ProfileVisibility.isPublic(profile.visibilitySettings, setting) },
+                            set: { value in Task { await toggle(setting, value) } }
+                        )) {
+                            RowText(title: app.t("profile.\(setting.key)"), detail: value(setting) ?? app.t("settings.visibilityNotSet"), detailLines: 1)
+                        }
+                        .tint(Tokens.primary)
+                        .disabled(saving.contains(setting.key))
+                        .settingsRow()
+                    }
+                }
+                .card(padding: nil)
+                Button { editingProfile = true } label: {
+                    Text(app.t("settings.visibilityEditDetails")).underline()
+                }
+                .font(.vm(13))
+                .foregroundStyle(Tokens.mutedForeground)
+                .buttonStyle(.plain)
+                .frame(minHeight: Metrics.minTarget)
+            }
+            PublicPreview(profile: profile)
+        }
+        // Edit profile can change the settings too
+        .sheet(isPresented: $editingProfile, onDismiss: { saved = app.me?.visibilitySettings ?? saved }) {
+            EditProfileSheet(profile: profile)
+        }
+    }
+
+    private func value(_ setting: ProfileVisibility.Setting) -> String? {
+        let text: String? = switch setting.key {
+        case "realName": ProfileName.realName(firstName: profile.firstName, lastName: profile.lastName)
+        case "displayName": profile.displayName
+        case "bio": profile.bio
+        default: nil
+        }
+        return text?.isEmpty == false ? text : nil
+    }
+
+    private func toggle(_ setting: ProfileVisibility.Setting, _ value: Bool) async {
+        let changes = Dictionary(uniqueKeysWithValues: setting.fields.map { ($0, value) })
+        app.updateMe { $0.visibilitySettings.merge(changes) { $1 } }
+        saving.insert(setting.key)
+        defer { saving.remove(setting.key) }
+        do {
+            _ = try await app.service.updateVisibility(changes)
+            saved.merge(changes) { $1 }
+            let field = app.t("profile.\(setting.key)")
+            AccessibilityNotification.Announcement(app.t(value ? "settings.visibilityOn" : "settings.visibilityOff", ["field": field])).post()
+        } catch {
+            // Only this setting's fields: another switch may still be saving
+            app.updateMe { me in
+                for field in setting.fields { me.visibilitySettings[field] = saved[field] }
+            }
+            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+        }
+    }
+}
+
+/// What everyone else sees of the owner's profile (the web's `PublicPreview`). Built from what visitors
+/// get, so hidden names never leak into it.
+private struct PublicPreview: View {
+    @Environment(AppModel.self) private var app
+    let profile: MyProfile
+
+    private func shown(_ field: String, _ value: String?) -> String? {
+        ProfileVisibility.isPublic(profile.visibilitySettings, field) ? value : nil
+    }
+
+    private var name: ProfileName {
+        ProfileName(
+            username: profile.username, displayName: shown("displayName", profile.displayName),
+            firstName: shown("firstName", profile.firstName), lastName: shown("lastName", profile.lastName)
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(app.t("profile.everyoneSees"), systemImage: "globe")
+                .font(.vm(12, .medium))
+                .foregroundStyle(Tokens.mutedForeground)
+                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    AvatarView(username: profile.username, avatarUrl: profile.avatarUrl, size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        nameLine.font(.vm(17, .medium)).foregroundStyle(Tokens.foreground).lineLimit(1)
+                        Text("@\(profile.username)").font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
+                    }
+                }
+                if let bio = shown("bio", profile.bio), !bio.isEmpty {
+                    Text(bio).font(.vm(14)).foregroundStyle(Tokens.foreground).lineLimit(3)
+                }
+                if let joinedAt = profile.joinedAt {
+                    Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
+                        .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                }
+                Text("\(app.t.count("profile.recordAskedCount", profile.totalPolls)) · \(app.t.count("profile.recordVotedCount", profile.totalVotes))")
+                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var nameLine: Text {
+        guard let secondary = name.secondary else { return Text(name.primary) }
+        return Text(name.primary) + Text(verbatim: " ") + Text(secondary).foregroundStyle(Tokens.mutedForeground)
     }
 }
 
@@ -604,23 +770,9 @@ private struct DevicesSection: View {
     }
 }
 
-/// Opens the feedback sheet (iOS only; the web has no feedback form).
-private struct FeedbackRow: View {
-    @Environment(AppModel.self) private var app
-    @State private var isPresented = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RowText(title: app.t("ios.feedbackTitle"), detail: app.t("ios.feedbackBody"))
-            Button(app.t("ios.feedbackCta")) { isPresented = true }.buttonStyle(.vm(.outline, size: .sm))
-        }
-        .settingsRow()
-        .sheet(isPresented: $isPresented) { FeedbackSheet() }
-    }
-}
-
-/// A free-text message to the team (max 2000 characters).
-private struct FeedbackSheet: View {
+/// Report a problem, opened from Help in Settings (the web's `ReportProblemDialog`): a free-text message to
+/// the team (max 2000 characters).
+private struct ReportProblemSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
@@ -633,18 +785,18 @@ private struct FeedbackSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    VMTextEditor(placeholder: app.t("ios.feedbackPlaceholder"), text: $text, minHeight: 160)
+                    VMTextEditor(placeholder: app.t("feedback.placeholder"), text: $text, minHeight: 160)
                     if let error { Text(error).font(.vm(14)).foregroundStyle(Tokens.destructive) }
                 }
                 .padding(Metrics.gutter)
             }
             .canvas()
-            .navigationTitle(app.t("ios.feedbackTitle"))
+            .navigationTitle(app.t("feedback.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    LoadingButton(style: .vm(.link), action: send) { Text(app.t("ios.feedbackSend")).fontWeight(.semibold) }
+                    LoadingButton(style: .vm(.link), action: send) { Text(app.t("feedback.submit")).fontWeight(.semibold) }
                         .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
                 }
             }
@@ -656,11 +808,11 @@ private struct FeedbackSheet: View {
         error = nil
         do {
             try await app.service.sendFeedback(content)
-            app.showToast(app.t("ios.feedbackSent"))
+            app.showToast(app.t("feedback.sent"))
             dismiss()
         } catch {
             let limited = (error as? APIError)?.isRateLimited == true
-            self.error = app.t.message(for: error, fallback: limited ? "ios.feedbackLimited" : "ios.feedbackFailed")
+            self.error = app.t.message(for: error, fallback: limited ? "ios.feedbackLimited" : "feedback.failed")
         }
     }
 }
@@ -724,8 +876,16 @@ struct LegalLinks: View {
 
     /// The about site serves the legal pages; vomatt.com only redirects there (the web's `aboutHref`).
     private static let aboutSite = URL(string: "https://about.vomatt.com")!
-    static let terms = aboutSite.appending(path: "terms-of-service")
-    static let privacy = aboutSite.appending(path: "privacy-policy")
+    static func terms(_ language: Language) -> URL { aboutPage("terms-of-service", language) }
+    static func privacy(_ language: Language) -> URL { aboutPage("privacy-policy", language) }
+
+    /// The about site serves Chinese under /zh, falling back to English for a page with no translation.
+    private static func aboutPage(_ slug: String, _ language: Language) -> URL {
+        switch language {
+        case .en: aboutSite.appending(path: slug)
+        case .zh: aboutSite.appending(path: "zh/\(slug)")
+        }
+    }
 
     /// Under Home's guest prompt: the two pages only, leading, as the web's `HomepageHeader` has them.
     var pagesOnly = false
@@ -733,8 +893,8 @@ struct LegalLinks: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: pagesOnly ? 20 : 18) {
-                link(app.t("settings.terms"), Self.terms)
-                link(app.t("settings.privacyPolicy"), Self.privacy)
+                link(app.t("settings.terms"), Self.terms(app.language))
+                link(app.t("settings.privacyPolicy"), Self.privacy(app.language))
                 if !pagesOnly, !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
                     link(app.t("ios.contact"), mail)
                 }
