@@ -2,13 +2,14 @@ import PhotosUI
 import SwiftUI
 import VomattCore
 
-/// The signed-in user's own page (the web's `OwnProfileView`): their record, then two lists one at a time.
-/// Asked holds their polls and drafts; Voted holds the polls they voted in and what they chose, which only they see.
+/// The signed-in user's own page (the web's `OwnProfileView`): their record, then three lists one at a time.
+/// Asked holds their polls and drafts; Voted holds the polls they voted in and what they chose; Saved holds the
+/// polls they bookmarked. Only they see Voted and Saved.
 struct AccountView: View {
     @Environment(AppModel.self) private var app
     let profile: MyProfile
 
-    enum Tab: Hashable { case asked, voted }
+    enum Tab: Hashable { case asked, voted, saved }
     enum AskedFilter: Hashable { case all, drafts, open, ended }
     enum VotedFilter: Hashable { case all, sealed, decided }
     @State private var tab = Tab.asked
@@ -18,6 +19,10 @@ struct AccountView: View {
     @State private var polls: [Poll]?
     @State private var loadFailed = false
     @State private var drafts: [PollDraft] = []
+    /// Drafts can't be brought back, so deleting one asks first.
+    @State private var deletingDraft: PollDraft?
+    /// Bookmarked Polls, made when the tab first opens (most visits never look), then kept across tab switches.
+    @State private var saved: CursorList<Poll>?
     @State private var showEdit = false
     @State private var showAvatar = false
 
@@ -54,7 +59,11 @@ struct AccountView: View {
                 ])
 
                 VStack(alignment: .leading, spacing: 12) {
-                    LineTabs(items: [(Tab.asked, app.t("profile.tabAsked")), (Tab.voted, app.t("profile.tabVoted"))], selection: $tab) { value in
+                    LineTabs(items: [
+                        (Tab.asked, app.t("profile.tabAsked")),
+                        (Tab.voted, app.t("profile.tabVoted")),
+                        (Tab.saved, app.t("profile.tabSaved")),
+                    ], selection: $tab) { value in
                         switch value {
                         case .asked:
                             TabCount(count: asked.count)
@@ -66,6 +75,8 @@ struct AccountView: View {
                             OnlyYouMarker()
                             let unread = votedSplit.decided.filter { $0.unread == true }.count
                             if unread > 0 { UnreadBadge(count: formatUnreadCount(unread), label: app.t("notifications.unread")) }
+                        case .saved:
+                            OnlyYouMarker()
                         }
                     }
                     switch tab {
@@ -84,16 +95,38 @@ struct AccountView: View {
                             (VotedFilter.decided, app.t("profile.filterDecided"), nil),
                         ])
                         lists { votedList(votedSplit) }
+                    case .saved:
+                        savedList
                     }
                 }
+                tabNote
             }
             .pageColumn(768)
             .padding(.vertical, 24)
         }
-        .refreshable { await load() }
+        .refreshable {
+            await load()
+            await saved?.reload()
+        }
         .canvas()
         .navigationBarTitleDisplayMode(.inline)
         .task(id: app.sessionGeneration) { await load() }
+        .onChange(of: tab) {
+            guard tab == .saved, saved == nil else { return }
+            let list = CursorList { [service = app.service] cursor in try await service.bookmarkedPolls(cursor: cursor, limit: 10) }
+            saved = list
+            // Not tied to the tab, so a quick look elsewhere doesn't cancel the first page
+            Task { await list.reload() }
+        }
+        .alert(app.t("myPolls.deleteDraftTitle"), isPresented: Binding(get: { deletingDraft != nil }, set: { if !$0 { deletingDraft = nil } }), presenting: deletingDraft) { draft in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("common.delete"), role: .destructive) {
+                drafts = app.drafts.delete(draft.id)
+                AccessibilityNotification.Announcement(app.t("myPolls.draftDeleted")).post()
+            }
+        } message: { _ in
+            Text(app.t("myPolls.deleteDraftBody"))
+        }
         .onAppear { drafts = app.drafts.list() }
         .onChange(of: app.creator == nil) { _, closed in if closed { drafts = app.drafts.list() } }
         .sheet(isPresented: $showEdit) { EditProfileSheet(profile: profile) }
@@ -163,6 +196,51 @@ struct AccountView: View {
         }
     }
 
+    @ViewBuilder private var savedList: some View {
+        if let saved {
+            switch saved.phase {
+            case .idle, .loading:
+                VStack(spacing: 8) { ForEach(0..<3, id: \.self) { _ in PollRowSkeleton() } }
+            case .failed:
+                LoadFailed(message: app.t("profile.pollsLoadFailed")) { await saved.reload() }
+            case .loaded:
+                let polls = app.visible(saved.items)
+                if polls.isEmpty {
+                    EmptyState {
+                        Text(app.t("profile.noSavedYet"))
+                        Button(app.t("profile.savedEmptyCta")) { app.select(.explore) }.buttonStyle(.vm(.outline, size: .sm))
+                    }
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(polls) { AskedRow(poll: $0) }
+                    }
+                    LoadMoreFooter(list: saved)
+                }
+            }
+        }
+    }
+
+    /// What the open tab shows to whom, on the Tide surface (the web's rail note, which follows the lists on a phone).
+    private var tabNote: some View {
+        let key = switch tab {
+        case .asked: "asked"
+        case .voted: "voted"
+        case .saved: "saved"
+        }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill").font(.system(size: 12)).foregroundStyle(Tokens.tide).accessibilityHidden(true)
+                Text(app.t("profile.\(key)NoteTitle")).fontWeight(.medium)
+            }
+            Text(app.t("profile.\(key)NoteBody"))
+        }
+        .font(.vm(14))
+        .lineSpacing(3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .tidePanel()
+    }
+
     /// Drafts live on this device only, so only their author sees them: a quieter, dashed row.
     private func draftRow(_ draft: PollDraft) -> some View {
         let title = draft.form.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -176,7 +254,7 @@ struct AccountView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             Button(app.t("myPolls.draftContinue")) { app.openCreator(draft: draft) }.buttonStyle(.vm(.outline, size: .sm))
             Menu {
-                Button(app.t("myPolls.actionDelete"), systemImage: "trash", role: .destructive) { drafts = app.drafts.delete(draft.id) }
+                Button(app.t("myPolls.actionDelete"), systemImage: "trash", role: .destructive) { deletingDraft = draft }
             } label: {
                 Image(systemName: "ellipsis").font(.system(size: 16))
                     .foregroundStyle(Tokens.mutedForeground)
@@ -525,7 +603,8 @@ struct EditProfileSheet: View {
         .frame(minHeight: 28)
     }
 
-    /// Who sees `fields`, switching all of them between Everyone and Only you.
+    /// Who sees `fields`, switching all of them between Everyone and Only you. Shown as Everyone when any of
+    /// them is (the web's `isSettingPublic`): the real name shows when either half does.
     private func pill(_ label: String, _ fields: [String]) -> some View {
         let isPublic = fields.contains { ProfileVisibility.isPublic(visibility, $0) }
         return Button {
@@ -628,76 +707,113 @@ struct VisibilityPill: View {
     }
 }
 
-/// The bot cast, in four families (the web's `AvatarDialog`).
+/// The bot cast, in four families, or a photo the user frames (the web's `AvatarDialog`).
 struct AvatarPickerSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     let username: String
     let avatarUrl: String?
-    @State private var selected = ""
+    /// A bot kind or "none"; nil while the uploaded photo is what's kept.
+    @State private var selected: String?
     @State private var photo: PhotosPickerItem?
+    /// The photo being framed; nil while choosing from the cast.
+    @State private var cropping: CGImage?
+    @State private var isPreparing = false
+    @State private var isSaving = false
     @State private var isUploading = false
-    /// Whether the user chose a bot since opening: only then does Save change anything.
-    @State private var picked = false
-    private var initial: String { Avatars.resolve(username: username, avatarUrl: avatarUrl) }
-    /// Saving the picker as it opened must change nothing: `bot:none` and a photo aren't bots in the grid.
-    private var untouched: Bool { !picked }
+    private static let none = "none"
+    /// What everyone sees now: nil for an uploaded photo, else the bot or "none".
+    private var saved: String? {
+        if Avatars.isUploaded(avatarUrl) { return nil }
+        return Avatars.isNone(avatarUrl) ? Self.none : Avatars.resolve(username: username, avatarUrl: avatarUrl)
+    }
+    private var copyKey: String {
+        guard let selected else { return "avatar.upload" }
+        return selected == Self.none ? "avatar.none" : "avatar.bots.\(selected)"
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    HStack(spacing: 16) {
-                        AvatarView(username: username, avatarUrl: untouched ? avatarUrl : Avatars.avatarUrl(for: selected), size: 72)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(app.t("avatar.bots.\(selected).name")).font(.vm(17, .medium))
-                            Text(app.t("avatar.bots.\(selected).trait")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                        }
-                        Spacer()
-                    }
-                    Text(app.t("avatar.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                    PhotosPicker(selection: $photo, matching: .images) {
-                        Label(app.t(isUploading ? "ios.avatarUploading" : "ios.avatarUpload"), systemImage: "photo")
-                    }
-                    .buttonStyle(.vm(.outline, size: .sm))
-                    .disabled(isUploading)
-                    .onChange(of: photo) { _, item in
-                        guard let item else { return }
-                        Task { await upload(item) }
-                    }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
-                        ForEach(Avatars.kinds, id: \.self) { kind in
-                            Button { picked = true; selected = kind } label: {
-                                AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: kind), size: 48)
-                                    .overlay(Circle().strokeBorder(Tokens.foreground, lineWidth: selected == kind ? 2 : 0).padding(-3))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(app.t("avatar.choose", ["name": app.t("avatar.bots.\(kind).name")]))
-                            .accessibilityAddTraits(selected == kind ? .isSelected : [])
-                        }
-                    }
-                }
-                .padding(Metrics.gutter)
-            }
-            .canvas()
-            .navigationTitle(app.t("avatar.title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() }.disabled(isUploading) }
-                ToolbarItem(placement: .confirmationAction) {
-                    LoadingButton(style: .vm(.link), action: save) { Text(app.t("avatar.save")).fontWeight(.semibold) }
-                        .disabled(isUploading)
-                }
+            if let cropping {
+                AvatarCropStage(image: cropping, onCancel: { self.cropping = nil }, onDone: { dismiss() }, isUploading: $isUploading)
+            } else {
+                cast
             }
         }
-        .onAppear { selected = initial }
+        .interactiveDismissDisabled(isSaving || isUploading)
+        .onAppear { selected = saved }
+    }
+
+    private var cast: some View {
+        // PhotosPicker's label isn't main-actor isolated, so it gets plain values
+        let uploadTitle = app.t("avatar.upload.button")
+        let preparing = isPreparing
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text(app.t("avatar.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                HStack(spacing: 16) {
+                    AvatarView(username: username, avatarUrl: selected.map(Avatars.avatarUrl(for:)) ?? avatarUrl, size: 72)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(app.t("\(copyKey).name")).font(.vm(17, .medium))
+                        Text(app.t("\(copyKey).trait")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                    }
+                    Spacer()
+                }
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $photo, matching: .images, preferredItemEncoding: .compatible) {
+                        HStack(spacing: 8) {
+                            if preparing { ProgressView().controlSize(.small) }
+                            Text(uploadTitle)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.vm(.outline, size: .sm))
+                    .disabled(isSaving || isPreparing)
+                    .onChange(of: photo) { _, item in
+                        guard let item else { return }
+                        Task { await pick(item) }
+                    }
+                    Button { selected = Self.none } label: { Text(app.t("avatar.remove")).frame(maxWidth: .infinity) }
+                        .buttonStyle(.vm(.outline, size: .sm))
+                        .disabled(selected == Self.none)
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                    ForEach(Avatars.kinds, id: \.self) { kind in
+                        Button { selected = kind } label: {
+                            AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: kind), size: 48)
+                                .overlay(Circle().strokeBorder(Tokens.foreground, lineWidth: selected == kind ? 2 : 0).padding(-3))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(app.t("avatar.choose", ["name": app.t("avatar.bots.\(kind).name")]))
+                        .accessibilityAddTraits(selected == kind ? .isSelected : [])
+                    }
+                }
+            }
+            .padding(Metrics.gutter)
+        }
+        .canvas()
+        .navigationTitle(app.t("avatar.title"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() }.disabled(isSaving) }
+            ToolbarItem(placement: .confirmationAction) {
+                LoadingButton(style: .vm(.link), isLoading: isSaving, action: save) { Text(app.t("avatar.save")).fontWeight(.semibold) }
+                    .disabled(isPreparing)
+            }
+        }
     }
 
     private func save() async {
-        // Saving an untouched picker must not turn `bot:none` into the hash-derived bot.
-        if untouched { dismiss(); return }
+        // Nothing chosen since opening (or the photo kept) just closes, so `bot:none` never turns into a bot
+        guard let selected, selected != saved else { dismiss(); return }
+        isSaving = true
+        defer { isSaving = false }
         do {
-            try await app.service.chooseAvatar(kind: selected)
+            if selected == Self.none {
+                _ = try await app.service.updateProfile(avatarUrl: Avatars.avatarUrl(for: Self.none))
+            } else {
+                try await app.service.chooseAvatar(kind: selected)
+            }
             app.updateMe { $0.avatarUrl = Avatars.avatarUrl(for: selected) }
             app.showToast(app.t("avatar.savedToast"))
             dismiss()
@@ -706,34 +822,24 @@ struct AvatarPickerSheet: View {
         }
     }
 
-    /// Sends a JPEG no wider than 1024 px: the API keeps 512 px, crops to a square itself, and takes at most 2 MB.
-    private func upload(_ item: PhotosPickerItem) async {
-        isUploading = true
-        defer { isUploading = false; photo = nil }
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let jpeg = await Task.detached(priority: .userInitiated, operation: { Self.jpeg(from: data) }).value else {
-                throw APIError(.http(400), errorCode: "user.avatar.unsupported_image", message: "")
-            }
-            let updated = try await app.service.uploadAvatar(jpeg)
-            app.updateMe { $0.avatarUrl = updated.avatarUrl }
-            app.showToast(app.t("avatar.savedToast"))
-            dismiss()
-        } catch {
-            app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
+    /// Opens the crop step for a JPEG, PNG, GIF or BMP of at most 25 MB; anything else is refused here.
+    /// `.compatible` asks Photos for a JPEG of a HEIC photo, so camera shots pass.
+    private func pick(_ item: PhotosPickerItem) async {
+        isPreparing = true
+        defer { isPreparing = false; photo = nil }
+        guard let data = try? await item.loadTransferable(type: Data.self) else {
+            app.showToast(app.t("avatar.upload.unsupported"), isError: true)
+            return
         }
-    }
-
-    nonisolated private static func jpeg(from data: Data, maxSide: CGFloat = 1024) -> Data? {
-        guard let image = UIImage(data: data), image.size.width > 0, image.size.height > 0 else { return nil }
-        // `size` is in points and the renderer below is 1x, so pixels = points * image.scale
-        let pixels = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
-        let scale = min(1, maxSide / max(pixels.width, pixels.height))
-        let size = CGSize(width: max(1, (pixels.width * scale).rounded()), height: max(1, (pixels.height * scale).rounded()))
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        return UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.85) { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
+        switch AvatarCrop.check(data) {
+        case .unsupported: app.showToast(app.t("avatar.upload.unsupported"), isError: true); return
+        case .tooLarge: app.showToast(app.t("avatar.upload.tooLarge"), isError: true); return
+        case nil: break
         }
+        guard let image = await Task.detached(priority: .userInitiated, operation: { AvatarCropStage.decode(data) }).value else {
+            app.showToast(app.t("avatar.upload.unsupported"), isError: true)
+            return
+        }
+        cropping = image
     }
 }
