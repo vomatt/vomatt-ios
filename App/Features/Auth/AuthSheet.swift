@@ -336,7 +336,7 @@ private struct ProfileStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(app.t("onboarding.title")).displayHeading(32).padding(.bottom, 12)
-            Text(app.t("onboarding.subtitle")).font(.vm(16)).foregroundStyle(Tokens.mutedForeground).padding(.bottom, 32)
+            Text(app.t("onboarding.subtitleNoUsername")).font(.vm(16)).foregroundStyle(Tokens.mutedForeground).padding(.bottom, 32)
             VStack(alignment: .leading, spacing: 12) {
                 VMTextField(
                     label: app.t("profile.firstName"), placeholder: "", text: limited($firstName), error: firstNameError,

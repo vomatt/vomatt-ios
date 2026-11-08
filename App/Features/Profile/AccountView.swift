@@ -42,8 +42,8 @@ struct AccountView: View {
                     // Not votedPollCount: it counts Ballots on the owner's own polls, which the Voted tab leaves out (vomatt-web#121)
                     .init(label: app.t("profile.recordVoted"), value: polls == nil ? "–" : app.t.number(voted.count)),
                     .init(
-                        label: app.t("profile.recordReached"),
-                        value: polls == nil ? "–" : app.t.number(asked.reduce(0) { $0 + ($1.turnout ?? 0) }),
+                        label: app.t("profile.recordVotesReceived"),
+                        value: polls == nil ? "–" : app.t.number(ProfileLists.votesReceived(asked)),
                         onlyYou: true
                     ),
                     .init(
@@ -654,8 +654,6 @@ struct AvatarPickerSheet: View {
                             Text(app.t("avatar.bots.\(selected).trait")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                         }
                         Spacer()
-                        Button(app.t("avatar.surprise")) { picked = true; selected = Avatars.kinds.randomElement() ?? selected }
-                            .buttonStyle(.vm(.outline, size: .sm))
                     }
                     Text(app.t("avatar.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                     PhotosPicker(selection: $photo, matching: .images) {
@@ -667,20 +665,15 @@ struct AvatarPickerSheet: View {
                         guard let item else { return }
                         Task { await upload(item) }
                     }
-                    ForEach(Avatars.families, id: \.name) { family in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(app.t("avatar.families.\(family.name)")).font(.vm(13, .medium)).foregroundStyle(Tokens.mutedForeground)
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
-                                ForEach(family.kinds, id: \.self) { kind in
-                                    Button { picked = true; selected = kind } label: {
-                                        AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: kind), size: 48)
-                                            .overlay(Circle().strokeBorder(Tokens.foreground, lineWidth: selected == kind ? 2 : 0).padding(-3))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel(app.t("avatar.choose", ["name": app.t("avatar.bots.\(kind).name")]))
-                                    .accessibilityAddTraits(selected == kind ? .isSelected : [])
-                                }
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                        ForEach(Avatars.kinds, id: \.self) { kind in
+                            Button { picked = true; selected = kind } label: {
+                                AvatarView(username: username, avatarUrl: Avatars.avatarUrl(for: kind), size: 48)
+                                    .overlay(Circle().strokeBorder(Tokens.foreground, lineWidth: selected == kind ? 2 : 0).padding(-3))
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(app.t("avatar.choose", ["name": app.t("avatar.bots.\(kind).name")]))
+                            .accessibilityAddTraits(selected == kind ? .isSelected : [])
                         }
                     }
                 }

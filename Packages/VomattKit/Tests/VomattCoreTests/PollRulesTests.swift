@@ -205,17 +205,18 @@ struct CursorTests {
 struct AvatarTests {
     // Expected values computed with vomatt-web's defaultBotFor()
     @Test func defaultKindMatchesTheWeb() {
-        #expect(Avatars.defaultKind(for: "alice") == "banyan")
+        #expect(Avatars.defaultKind(for: "alice") == "labrador")
         #expect(Avatars.defaultKind(for: "chinssiang") == "pangolin")
-        #expect(Avatars.defaultKind(for: "Bob_42") == "blob")
+        #expect(Avatars.defaultKind(for: "Bob_42") == "tower")
         #expect(Avatars.defaultKind(for: "小明") == "fold")
+        #expect(Avatars.defaultKind(for: "vomatt") == "reptile")
     }
 
     @Test func parseAcceptsOnlyKnownBots() {
         #expect(Avatars.parse("bot:boba") == "boba")
         #expect(Avatars.parse("bot:nope") == nil)
         #expect(Avatars.parse("https://example.com/a.png") == nil)
-        #expect(Avatars.resolve(username: "alice", avatarUrl: "https://x/y.png") == "banyan")
+        #expect(Avatars.resolve(username: "alice", avatarUrl: "https://x/y.png") == "labrador")
     }
 
     @Test func anUploadedPhotoIsAPathOnTheAPIOrigin() throws {
@@ -226,7 +227,7 @@ struct AvatarTests {
         #expect(Avatars.uploadedURL("bot:boba", apiURL: api) == nil)
         #expect(Avatars.uploadedURL("/api/avatars/", apiURL: api) == nil)
         #expect(Avatars.uploadedURL(nil, apiURL: api) == nil)
-        #expect(Avatars.resolve(username: "alice", avatarUrl: path) == "banyan")
+        #expect(Avatars.resolve(username: "alice", avatarUrl: path) == "labrador")
     }
 
     @Test func botNoneIsAPlainIconNotABot() {
@@ -236,9 +237,14 @@ struct AvatarTests {
         #expect(Avatars.parse("bot:none") == nil)
     }
 
-    @Test func castHas72WithTints() {
-        #expect(Avatars.kinds.count == 72)
-        #expect(Set(Avatars.kinds).count == 72)
+    @Test func aRetiredBotIsAPlainIcon() {
+        #expect(Avatars.isNone("bot:banyan"))
+        #expect(!Avatars.isNone("/api/avatars/x.jpg"))
+    }
+
+    @Test func castHas60WithTints() {
+        #expect(Avatars.kinds.count == 60)
+        #expect(Set(Avatars.kinds).count == 60)
         #expect(Avatars.kinds.allSatisfy { Avatars.tints[$0] != nil })
     }
 }

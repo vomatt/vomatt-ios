@@ -1,17 +1,17 @@
 import Foundation
 
-/// The bot cast (port of vomatt-web `features/avatars/catalog.ts`): 72 characters
-/// in six families of twelve. A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
+/// The bot cast (port of vomatt-web `features/avatars/catalog.ts`): 60 characters
+/// in six families. A chosen bot is stored in `avatarUrl` as `bot:<kind>`.
 public enum Avatars {
     public enum Tint: String, Sendable {
         case sand, stone, green, sky, peach, lavender
     }
 
     public static let families: [(name: String, kinds: [String])] = [
-        ("bites", ["boba", "bao", "oolong", "su", "egg", "ice", "youtiao", "tofu", "sausage", "chip", "tower", "lumen"]),
-        ("guardians", ["mazu", "tudi", "yuelao", "qiye", "baye", "shi", "long", "denglong", "ding", "jiaobei", "xiang", "banyan"]),
-        ("visitors", ["gray", "nordic", "reptile", "mantis", "anu", "tallwhite", "moth", "blob", "cyclops", "probe", "saucer", "trio"]),
-        ("animals", ["bear", "magpie", "pangolin", "shihu", "macaque", "deer", "pheasant", "firefly", "crab", "flyfish", "turtle", "dog"]),
+        ("bites", ["boba", "bao", "oolong", "su", "ice", "youtiao", "chip", "tower", "lumen"]),
+        ("guardians", ["mazu", "tudi", "yuelao", "qiye", "baye", "long", "denglong", "jiaobei", "xiang"]),
+        ("visitors", ["gray", "nordic", "reptile", "mantis", "anu", "tallwhite", "moth", "cyclops", "trio"]),
+        ("animals", ["bear", "magpie", "pangolin", "shihu", "macaque", "deer", "pheasant", "flyfish", "dog"]),
         ("cats", ["fold", "munchkin", "chinchilla", "mainecoon", "siamese", "orange", "tuxedo", "calico", "sphynx", "ragdoll", "british", "bengal"]),
         ("dogs", ["shiba", "corgi", "golden", "husky", "pug", "dachshund", "poodle", "frenchie", "beagle", "collie", "dalmatian", "labrador"]),
     ]
@@ -19,14 +19,14 @@ public enum Avatars {
     public static let kinds: [String] = families.flatMap(\.kinds)
 
     public static let tints: [String: Tint] = [
-        "boba": .sand, "bao": .stone, "oolong": .green, "su": .sand, "egg": .peach, "ice": .sky,
-        "youtiao": .sand, "tofu": .stone, "sausage": .peach, "chip": .sky, "tower": .sky, "lumen": .peach,
-        "mazu": .sky, "tudi": .sand, "yuelao": .lavender, "qiye": .stone, "baye": .peach, "shi": .stone,
-        "long": .peach, "denglong": .peach, "ding": .sand, "jiaobei": .peach, "xiang": .sand, "banyan": .green,
+        "boba": .sand, "bao": .stone, "oolong": .green, "su": .sand, "ice": .sky,
+        "youtiao": .sand, "chip": .sky, "tower": .sky, "lumen": .peach,
+        "mazu": .sky, "tudi": .sand, "yuelao": .lavender, "qiye": .stone, "baye": .peach,
+        "long": .peach, "denglong": .peach, "jiaobei": .peach, "xiang": .sand,
         "gray": .stone, "nordic": .sky, "reptile": .green, "mantis": .peach, "anu": .sand, "tallwhite": .lavender,
-        "moth": .lavender, "blob": .green, "cyclops": .sky, "probe": .stone, "saucer": .sky, "trio": .green,
+        "moth": .lavender, "cyclops": .sky, "trio": .green,
         "bear": .stone, "magpie": .sky, "pangolin": .sand, "shihu": .peach, "macaque": .lavender, "deer": .green,
-        "pheasant": .sand, "firefly": .green, "crab": .peach, "flyfish": .sky, "turtle": .sky, "dog": .sand,
+        "pheasant": .sand, "flyfish": .sky, "dog": .sand,
         "fold": .stone, "munchkin": .peach, "chinchilla": .lavender, "mainecoon": .stone, "siamese": .sky, "orange": .sand,
         "tuxedo": .stone, "calico": .peach, "sphynx": .peach, "ragdoll": .sky, "british": .stone, "bengal": .sand,
         "shiba": .sand, "corgi": .sand, "golden": .sand, "husky": .sky, "pug": .sand, "dachshund": .sand,
@@ -39,8 +39,11 @@ public enum Avatars {
 
     public static func isKind(_ value: String) -> Bool { tints[value] != nil }
 
-    /// `bot:none`: the user picked no character and gets a plain account icon.
-    public static func isNone(_ avatarUrl: String?) -> Bool { avatarUrl == prefix + "none" }
+    /// A plain account icon: `bot:none` (no character), or a bot since retired from the cast.
+    public static func isNone(_ avatarUrl: String?) -> Bool {
+        guard let avatarUrl, avatarUrl.hasPrefix(prefix) else { return false }
+        return parse(avatarUrl) == nil
+    }
 
     /// The kind in a `bot:<kind>` value; nil for anything else, including an unknown kind.
     public static func parse(_ avatarUrl: String?) -> String? {
@@ -63,6 +66,11 @@ public enum Avatars {
 
     private static let uploadedPrefix = "/api/avatars/"
 
+    /// Defaults are picked from the original cast of 72, so usernames keep their character
+    /// as the cast shrinks. These are the slots of the characters since retired, ascending.
+    private static let originalCastSize: UInt32 = 72
+    private static let retiredSlots: [UInt32] = [4, 7, 8, 17, 20, 23, 31, 33, 34, 43, 44, 46]
+
     /// The bot a user gets until they choose one: picked from the username (FNV-1a over
     /// code points, matching the web), so everyone sees the same character for them.
     public static func defaultKind(for username: String) -> String {
@@ -71,7 +79,9 @@ public enum Avatars {
             hash ^= scalar.value
             hash = hash &* 0x0100_0193
         }
-        return kinds[Int(hash % UInt32(kinds.count))]
+        let slot = hash % originalCastSize
+        if retiredSlots.contains(slot) { return kinds[Int(hash % UInt32(kinds.count))] }
+        return kinds[Int(slot) - retiredSlots.filter { $0 < slot }.count]
     }
 
     /// The bot to draw: the one they chose, else their username's. Image URLs are ignored.
