@@ -76,9 +76,6 @@ struct PollDetailView: View {
     @ViewBuilder private func notFound(_ owner: PollOwner?) -> some View {
         if let owner {
             InvitationPrompt(owner: owner)
-        } else if !app.isSignedIn, PollID.isValid(pollId) {
-            // Signed out, a missing Poll may be Invite-only
-            LoginPromptCard(forPoll: true)
         } else {
             EmptyState {
                 Text(app.t("pollDetail.notFound")).font(.vm(17, .medium)).foregroundStyle(Tokens.foreground)
@@ -551,12 +548,10 @@ struct FlowLayout: Layout {
 /// "Log in or sign up for Vomatt" (the web's `LoginPrompt`).
 struct LoginPromptCard: View {
     @Environment(AppModel.self) private var app
-    /// Adds that logging in opens this Poll.
-    var forPoll = false
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(app.t("loginPrompt.title")).font(.vm(14, .semibold)).foregroundStyle(Tokens.foreground)
-            Text(app.t("loginPrompt.subtitle") + (forPoll ? " " + app.t("loginPrompt.pollNote") : ""))
+            Text(app.t("loginPrompt.subtitle"))
                 .font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
             Button(app.t("loginPrompt.ctaLabel")) { app.signIn() }
                 .buttonStyle(.vm(.default, size: .sm, fullWidth: true))
