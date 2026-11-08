@@ -20,10 +20,10 @@ struct DeviceSessionTests {
 
     @Test func namesComeFromTheUserAgent() {
         let name = { (ua: String) in DeviceName(userAgent: ua)?.text }
-        #expect(name("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1") == "iPhone · Safari")
-        #expect(name("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36") == "Mac · Chrome")
-        #expect(name("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 Edg/131.0") == "Windows · Edge")
-        #expect(name("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36") == "Android · Chrome")
+        #expect(name("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1") == "iPhone\u{2003}Safari")
+        #expect(name("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36") == "Mac\u{2003}Chrome")
+        #expect(name("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 Edg/131.0") == "Windows\u{2003}Edge")
+        #expect(name("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36") == "Android\u{2003}Chrome")
         #expect(name("Vomatt/1 CFNetwork/1568 Darwin/24.0") == "Vomatt")
         #expect(name("curl/8.0") == nil)
     }
@@ -34,7 +34,7 @@ struct DeviceSessionTests {
 
         #expect(transport.requests.map(\.path) == ["/api/users/me/sessions"])
         #expect(devices.map(\.id) == ["s-1", "s-2"])
-        #expect(devices[0].isCurrent && devices[0].deviceName == "iPhone · Safari")
+        #expect(devices[0].isCurrent && devices[0].deviceName == "iPhone\u{2003}Safari")
         #expect(devices[0].lastSeenAt != nil)
         #expect(devices[1].deviceName == nil && devices[1].createdAt == nil && devices[1].isAdminScope)
     }

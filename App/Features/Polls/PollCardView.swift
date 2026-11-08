@@ -108,7 +108,7 @@ struct PollCardView: View {
                     .font(.vm(14, .medium))
                     .foregroundStyle(Tokens.foreground)
                     .layoutPriority(1)
-                Text("· " + app.dates.age(poll.createdAt, now: now)).lineLimit(1).fixedSize()
+                Text(app.dates.age(poll.createdAt, now: now)).lineLimit(1).fixedSize()
                     .font(.vm(14))
                     .foregroundStyle(Tokens.mutedForeground)
             }
@@ -153,7 +153,9 @@ struct PollCardView: View {
                 Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
             }
             .frame(minHeight: Metrics.minTarget)
-            Spacer()
+            // On a narrow card the turnout line gives way; the comment count never breaks mid-word
+            .fixedSize()
+            Spacer(minLength: 0)
             PollFooterActions(poll: $poll)
         }
         .font(.vm(14))
@@ -164,12 +166,12 @@ struct PollCardView: View {
         .overlay(alignment: .top) { Hairline() }
     }
 
-    /// "18 voted · invite only"; a Public Poll says nothing about its Audience.
+    /// "18 voted", gap, "invite only"; a Public Poll says nothing about its Audience.
     private var footerMeta: String {
         [
             ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
             poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: " · ")
+        ].compactMap { $0 }.joined(separator: metaGap)
     }
 
     private var commentLabel: String {

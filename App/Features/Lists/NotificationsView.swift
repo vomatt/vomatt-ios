@@ -176,7 +176,7 @@ private struct NotificationRow: View {
                             .font(.vm(15))
                             .foregroundStyle(item.kind == .cancelled ? Tokens.mutedForeground : Tokens.foreground)
                             .multilineTextAlignment(.leading)
-                        Text(meta.joined(separator: " · "))
+                        Text(meta.joined(separator: metaGap))
                             .font(.vm(12, relativeTo: .caption))
                             .foregroundStyle(tide ? Tokens.tideForeground : Tokens.mutedForeground)
                             .lineLimit(2)
@@ -273,7 +273,7 @@ private struct NotificationRow: View {
     }
 
     /// The row's words, written once for both the styled line and VoiceOver: a localized template, what fills
-    /// each `{name}`, and an optional tail after " · ".
+    /// each `{name}`, and an optional tail after the meta gap.
     private struct Wording {
         let template: String
         let parts: [String: Part]
@@ -330,14 +330,14 @@ private struct NotificationRow: View {
     private var line: Text {
         let wording = wording
         let text = Text.rich(wording.template, wording.parts.mapValues(styled))
-        return wording.tail.map { text + Text(" · ") + styled($0) } ?? text
+        return wording.tail.map { text + Text(verbatim: metaGap) + styled($0) } ?? text
     }
 
     /// The same line as plain words, for VoiceOver. One pass, so a title that reads "{name}" stays as written.
     private var lineAccessibility: String {
         let wording = wording
         let text = Localizer.interpolate(wording.template, wording.parts.mapValues(\.text))
-        return wording.tail.map { "\(text) · \($0.text)" } ?? text
+        return wording.tail.map { "\(text)\(metaGap)\($0.text)" } ?? text
     }
 
     // MARK: Meta

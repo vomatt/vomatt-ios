@@ -27,14 +27,14 @@ public struct DeviceSession: Identifiable, Equatable, Sendable {
     public var deviceName: String? { userAgent.flatMap(DeviceName.init(userAgent:))?.text }
 }
 
-/// A readable "iPhone · Safari" from a raw User-Agent.
+/// A readable "iPhone", gap, "Safari" from a raw User-Agent.
 struct DeviceName: Equatable {
     var platform: String?
     var client: String?
 
     var text: String? {
         let parts = [platform, client].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        return parts.isEmpty ? nil : parts.joined(separator: metaGap)
     }
 
     init?(userAgent: String) {

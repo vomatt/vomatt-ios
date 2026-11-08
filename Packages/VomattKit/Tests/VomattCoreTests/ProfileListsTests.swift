@@ -118,7 +118,7 @@ struct DraftMetaTests {
 
     @Test func saysWhenItWasSavedItsFilledOptionsAndAMissingEnd() throws {
         let form = PollForm(title: "Rename the club?", options: ["A", "B", "C", " "], endTime: nil)
-        #expect(try meta(savedAt: "2026-10-27T09:00:00Z", form: form) == "Saved yesterday · 3 options · no end date yet")
+        #expect(try meta(savedAt: "2026-10-27T09:00:00Z", form: form) == "Saved yesterday\u{2003}3 options\u{2003}no end date yet")
     }
 
     @Test func saysOnlyWhenABlankDraftWithAnEndWasSaved() throws {

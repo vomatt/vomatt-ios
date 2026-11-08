@@ -551,7 +551,7 @@ private struct PublicPreview: View {
                     Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
                         .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
                 }
-                Text("\(app.t.count("profile.recordAskedCount", profile.totalPolls)) · \(app.t.count("profile.recordVotedCount", profile.totalVotes))")
+                Text("\(app.t.count("profile.recordAskedCount", profile.totalPolls))\(metaGap)\(app.t.count("profile.recordVotedCount", profile.totalVotes))")
                     .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -631,7 +631,7 @@ private struct PasskeysSection: View {
     private func dates(_ passkey: Passkey) -> String {
         let created = app.t("passkey.created", ["date": app.dates.pollDate(passkey.createdAt)])
         let used = passkey.lastUsedAt.map { app.t("passkey.lastUsed", ["date": app.dates.pollDate($0)]) } ?? app.t("passkey.neverUsed")
-        return "\(created) · \(used)"
+        return "\(created)\(metaGap)\(used)"
     }
 
     private func add() async {
@@ -745,7 +745,7 @@ private struct DevicesSection: View {
     private func dates(_ device: DeviceSession) -> String {
         let active = device.lastSeenAt.map { app.t("sessions.lastActive", ["time": app.dates.fromNow($0)]) } ?? app.t("sessions.activityUnknown")
         let signedIn = device.createdAt.map { app.t("sessions.signedInOn", ["date": app.dates.pollDate($0)]) }
-        return [active, signedIn].compactMap { $0 }.joined(separator: " · ")
+        return [active, signedIn].compactMap { $0 }.joined(separator: metaGap)
     }
 
     private func signOut(_ device: DeviceSession) async {

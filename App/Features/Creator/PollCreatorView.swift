@@ -101,7 +101,7 @@ struct PollCreatorView: View {
 
     private var question: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RailHeading(text: app.t("pollCreator.questionLabel"))
+            FieldLabel(text: app.t("pollCreator.questionLabel"))
             TextField("", text: $form.title, prompt: Text(app.t("pollCreator.questionPlaceholder")).foregroundStyle(Tokens.mutedForeground),
                       axis: .vertical)
                 .font(.vm(22, .medium, relativeTo: .title2))
@@ -141,7 +141,7 @@ struct PollCreatorView: View {
     @ViewBuilder private var context: some View {
         if showContext {
             VStack(alignment: .leading, spacing: 8) {
-                RailHeading(text: "\(app.t("pollCreator.descriptionLabel")) (\(app.t("common.optional")))")
+                FieldLabel(text: "\(app.t("pollCreator.descriptionLabel")) (\(app.t("common.optional")))")
                 TextField("", text: $form.description, prompt: Text(app.t("pollCreator.descriptionPlaceholder")).foregroundStyle(Tokens.mutedForeground),
                           axis: .vertical)
                     .lineLimit(3...12)
@@ -166,7 +166,7 @@ struct PollCreatorView: View {
 
     private var options: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RailHeading(text: app.t("pollCreator.pollOptionsLabel"))
+            FieldLabel(text: app.t("pollCreator.pollOptionsLabel"))
             ForEach(form.options.indices, id: \.self) { index in
                 optionRow(index)
             }
@@ -249,7 +249,7 @@ struct PollCreatorView: View {
 
     private var ends: some View {
         VStack(alignment: .leading, spacing: 10) {
-            RailHeading(text: app.t("pollCreator.endsLabel"))
+            FieldLabel(text: app.t("pollCreator.endsLabel"))
             FlowLayout(spacing: 8) {
                 ForEach(PollForm.EndPreset.allCases, id: \.self) { preset in
                     PillButton(title: app.t(preset.labelKey), isOn: endPreset == preset) { apply(preset) }
@@ -542,5 +542,13 @@ private struct PillGroup<Value: Hashable>: View {
             .padding(.vertical, 8)
             Text(hint).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
         }
+    }
+}
+
+/// A create-form field's label: the web PollCreator's `LABEL`, not a rail heading.
+private struct FieldLabel: View {
+    let text: String
+    var body: some View {
+        Text(text).font(.vm(14, .medium, relativeTo: .subheadline))
     }
 }

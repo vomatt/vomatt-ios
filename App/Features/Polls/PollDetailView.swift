@@ -177,7 +177,7 @@ private struct PollDetailCard: View {
                         .font(.vm(14, .medium))
                         .foregroundStyle(Tokens.foreground)
                         .layoutPriority(1)
-                    Text("· " + app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
+                    Text(app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
                         .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                     Spacer(minLength: 0)
                     CardStatusChip(poll: poll, status: status)
@@ -223,7 +223,7 @@ private struct PollDetailCard: View {
         let meta = [
             ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
             poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: " · ")
+        ].compactMap { $0 }.joined(separator: metaGap)
         return HStack(spacing: 20) {
             if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit() }
             Button(action: onOpenDiscussion) {
