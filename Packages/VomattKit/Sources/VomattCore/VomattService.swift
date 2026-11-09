@@ -386,6 +386,17 @@ public final class VomattService: Sendable {
         }
     }
 
+    /// Signed-in only. Idempotent both ways; liking needs no Ballot and works in any state.
+    public func setPollLike(pollId: String, liked: Bool) async throws {
+        _ = try await call {
+            if liked {
+                _ = try await client.like(path: .init(voteId: pollId)).ok
+            } else {
+                _ = try await client.unlike(path: .init(voteId: pollId)).ok
+            }
+        }
+    }
+
     /// Signed-in only. The viewer's saved Polls in any state, most recently saved first.
     public func bookmarkedPolls(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
         try await call {
@@ -447,7 +458,7 @@ public final class VomattService: Sendable {
             let list = if let email = person.email {
                 try await client.removeEmailMember(path: .init(inviteListId: groupId), query: .init(email: email)).ok.body.json.data
             } else {
-                try await client.removeMember(path: .init(inviteListId: groupId, userId: person.userId ?? "")).ok.body.json.data
+                try await client.removeMember1(path: .init(inviteListId: groupId, userId: person.userId ?? "")).ok.body.json.data
             }
             return (list ?? []).map(GroupMember.init)
         }

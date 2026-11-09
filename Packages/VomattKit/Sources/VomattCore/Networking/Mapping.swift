@@ -40,6 +40,10 @@ extension Poll {
             myBallotAnonymous: dto.myBallotAnonymous,
             unread: dto.unread,
             bookmarked: dto.bookmarked,
+            likeCount: dto.likeCount.map(Int.init) ?? 0,
+            likedByMe: dto.likedByMe ?? false,
+            pro: dto.pro ?? false,
+            revealAt: dto.revealAt,
             options: try (dto.options ?? []).map(PollOption.init).sorted { $0.displayOrder < $1.displayOrder },
             tags: try (dto.tags ?? []).map(Tag.init)
         )
@@ -289,6 +293,7 @@ extension FeedNotification.Kind {
         case .mention: self = .mention
         case .closingSoon: self = .closingSoon
         case .like: self = .like
+        case .pollLike: self = .pollLike
         }
     }
 }

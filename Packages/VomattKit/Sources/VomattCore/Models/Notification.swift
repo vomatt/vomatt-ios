@@ -15,12 +15,14 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         case closingSoon
         /// Someone liked your Comment or Reply.
         case like
+        /// Someone liked your Poll.
+        case pollLike
 
         /// The tab the API files this kind under.
         public var category: Category {
             switch self {
             case .comment, .mention: .conversation
-            case .like: .like
+            case .like, .pollLike: .like
             case .result, .cancelled, .closingSoon: .pollEnd
             case .invitation: .invitation
             case .followed: .follow

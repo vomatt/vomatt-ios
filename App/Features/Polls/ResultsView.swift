@@ -28,6 +28,13 @@ struct ResultsView: View {
         Group {
             if let rows {
                 content(rows)
+            } else if let revealAt = poll.revealAt, poll.resultsSealed() {
+                // Ended, but the owner holds the results back until `revealAt`
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(app.t("poll.sealedTitle")).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground)
+                    Text(app.t("poll.sealed", ["date": app.dates.pollMoment(revealAt)]))
+                        .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
             } else if failed {
                 Text(app.t("poll.resultsFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             } else {
@@ -150,7 +157,7 @@ struct ResultsView: View {
     }
 
     private func loadIfNeeded() async {
-        guard poll.inlineResults == nil, fetched == nil else { return }
+        guard poll.inlineResults == nil, fetched == nil, !poll.resultsSealed() else { return }
         do {
             fetched = try await app.service.results(pollId: poll.id)
         } catch let error as APIError where error.isSealed {

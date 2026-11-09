@@ -1,6 +1,10 @@
 {
 	"ios": {
-		"avatarUpload": "上傳照片",
+		"likePoll": "讚",
+		"unlikePoll": "收回讚",
+		"likePollFailed": "無法更新你的讚，請再試一次。",
+		"pollLiked": "{name} 對你的投票 {title} 按讚",
+		"avatarUpload":"上傳照片",
 		"avatarUploading": "上傳中…",
 		"signUpPolicy": "註冊即表示你同意[服務條款]({terms})與[隱私權政策]({privacy})。",
 		"openProfile": "開啟個人檔案",

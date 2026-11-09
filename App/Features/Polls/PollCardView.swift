@@ -331,6 +331,7 @@ struct PollFooterActions: View {
     /// Icons only, each named for VoiceOver, as the web's `PollFooter`.
     var body: some View {
         HStack(spacing: 0) {
+            LikeButton(poll: $poll)
             BookmarkButton(poll: $poll)
             ShareLink(item: app.shareURL(for: poll), subject: Text(poll.title)) {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
@@ -339,6 +340,58 @@ struct PollFooterActions: View {
             .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
         }
         .labelStyle(.iconOnly)
+    }
+}
+
+/// Likes the poll, or takes the like back: it flips at once and goes back if the request fails.
+/// Shows the count beside the heart; signed out, it asks to sign in first.
+private struct LikeButton: View {
+    @Environment(AppModel.self) private var app
+    @Binding var poll: Poll
+    @State private var isSaving = false
+
+    var body: some View {
+        let liked = poll.likedByMe
+        Button { app.requireAuth { Task { await toggle() } } } label: {
+            Label(app.t(liked ? "ios.unlikePoll" : "ios.likePoll"), systemImage: liked ? "heart.fill" : "heart")
+                .labelStyle(LikeLabelStyle(count: poll.likeCount))
+        }
+        .foregroundStyle(liked ? Tokens.foreground : Tokens.mutedForeground)
+        .accessibilityValue(app.t.number(poll.likeCount))
+        .accessibilityAddTraits(liked ? .isSelected : [])
+        .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
+    }
+
+    private func toggle() async {
+        guard !isSaving else { return }
+        let next = !poll.likedByMe
+        set(next)
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await app.service.setPollLike(pollId: poll.id, liked: next)
+        } catch {
+            set(!next)
+            app.showToast(app.t.message(for: error, fallback: "ios.likePollFailed"), isError: true)
+        }
+    }
+
+    private func set(_ liked: Bool) {
+        poll.likedByMe = liked
+        poll.likeCount = max(0, poll.likeCount + (liked ? 1 : -1))
+        app.didUpdate(poll)
+    }
+}
+
+/// The heart with its count (when there is one) beside it, whatever the footer's icon-only style says.
+private struct LikeLabelStyle: LabelStyle {
+    let count: Int
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon
+            if count > 0 { Text("\(count)").font(.vm(14)).monospacedDigit() }
+        }
     }
 }
 
