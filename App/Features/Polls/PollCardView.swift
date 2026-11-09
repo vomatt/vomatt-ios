@@ -357,7 +357,7 @@ private struct LikeButton: View {
                 .labelStyle(LikeLabelStyle(count: poll.likeCount > 0 ? app.t.number(poll.likeCount) : nil))
         }
         .foregroundStyle(liked ? Tokens.foreground : Tokens.mutedForeground)
-        .accessibilityValue(app.t.number(poll.likeCount))
+        .accessibilityValue(poll.likeCount > 0 ? app.t.number(poll.likeCount) : "")
         .accessibilityAddTraits(liked ? .isSelected : [])
         .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
     }
@@ -365,13 +365,16 @@ private struct LikeButton: View {
     private func toggle() async {
         guard !isSaving else { return }
         let next = !poll.likedByMe
+        let (previousLiked, previousCount) = (poll.likedByMe, poll.likeCount)
         set(next)
         isSaving = true
         defer { isSaving = false }
         do {
             try await app.service.setPollLike(pollId: poll.id, liked: next)
         } catch {
-            set(!next)
+            poll.likedByMe = previousLiked
+            poll.likeCount = previousCount
+            app.didUpdate(poll)
             app.showToast(app.t.message(for: error, fallback: "ios.likePollFailed"), isError: true)
         }
     }
