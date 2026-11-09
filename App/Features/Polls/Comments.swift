@@ -8,9 +8,18 @@ import VomattCore
 final class CommentsModel {
     struct ReplyTarget: Equatable {
         let comment: Comment
+        /// What the dock opens with: empty, or a failed Reply's text.
+        var text = ""
         var rootId: String { comment.parentId ?? comment.id }
         /// A Reply to a Reply addresses its author; the API files both under the top-level Comment.
         var prefix: String { comment.parentId != nil ? Comment.replyPrefix(to: comment.author ?? "") : "" }
+    }
+
+    /// Who a pending Comment is shown as until the saved one replaces it.
+    struct PendingAuthor {
+        let name: String
+        let avatarUrl: String?
+        let userId: String?
     }
 
     enum Status { case loading, ready, error }
@@ -99,12 +108,18 @@ final class CommentsModel {
         if current?.status == .loading { return }
         // Loaded to the end; a failed page is retried from where it stopped
         if let current, current.status != .error, current.nextCursor == nil { return }
+        await fetchReplies(rootId, after: current?.nextCursor, service)
+    }
+
+    /// Reads the page of Replies after `cursor`. A Reply the viewer posted meanwhile moves to its place by time,
+    /// after the older ones the page brings.
+    private func fetchReplies(_ rootId: String, after cursor: String?, _ service: VomattService) async {
         replies[rootId, default: ReplyList()].status = .loading
         do {
-            let page = try await service.replies(pollId: pollId, commentId: rootId, cursor: current?.nextCursor)
+            let page = try await service.replies(pollId: pollId, commentId: rootId, cursor: cursor)
             // One read, one write, as in `replace`
             var list = replies[rootId] ?? ReplyList()
-            list.items = mergeById(list.items, page.items)
+            list.items = mergeById(list.items, page.items).sorted { $0.createdAt < $1.createdAt }
             list.nextCursor = page.nextCursor
             list.status = .ready
             replies[rootId] = list
@@ -114,9 +129,11 @@ final class CommentsModel {
     }
 
     /// Shows the Comment at once as pending, then swaps in the saved one.
-    func add(_ text: String, author: String, avatarUrl: String?, rootId: String?, _ service: VomattService) async throws {
+    /// The pending one shows the viewer as they will be once it is saved, so nothing changes then.
+    func add(_ text: String, author: PendingAuthor, rootId: String?, _ service: VomattService) async throws {
         let tempId = "pending-\(UUID().uuidString)"
-        let pending = Comment(id: tempId, author: author, authorAvatarUrl: avatarUrl, text: text, createdAt: .now, parentId: rootId)
+        let pending = Comment(id: tempId, userId: author.userId, author: author.name, authorAvatarUrl: author.avatarUrl,
+                              text: text, createdAt: .now, parentId: rootId)
         // Replies read oldest first, top-level Comments newest first
         if let rootId {
             replies[rootId, default: ReplyList()].items.append(pending)
@@ -128,6 +145,12 @@ final class CommentsModel {
 
         do {
             let saved = try await service.postComment(pollId: pollId, text: text, parentId: rootId)
+            // Replies that loaded meanwhile may already list the saved one
+            if let rootId {
+                replies[rootId]?.items.removeAll { $0.id == saved.id }
+            } else {
+                comments.removeAll { $0.id == saved.id }
+            }
             replace(tempId) { _ in saved }
         } catch {
             if let rootId {
@@ -141,14 +164,24 @@ final class CommentsModel {
         }
     }
 
-    func reply(_ body: String, to target: ReplyTarget, author: String, avatarUrl: String?, _ service: VomattService) async throws {
+    /// The pending Reply stands in for the dock, which folds now and comes back with the text only if the post
+    /// fails and no other dock was opened meanwhile.
+    func reply(_ body: String, to target: ReplyTarget, author: PendingAuthor, _ service: VomattService) async throws {
         let rootId = target.rootId
         // Show the thread the Reply lands in
         folded.remove(rootId)
+        if replyTarget?.comment.id == target.comment.id { replyTarget = nil }
+        // The earlier Replies load alongside; marked loading first so the pending one doesn't read as the whole list
         if replies[rootId] == nil, comments.contains(where: { $0.id == rootId && $0.replyCount > 0 }) {
-            await loadReplies(rootId, service)
+            replies[rootId] = ReplyList(status: .loading)
+            Task { await fetchReplies(rootId, after: nil, service) }
         }
-        try await add(target.prefix + body, author: author, avatarUrl: avatarUrl, rootId: rootId, service)
+        do {
+            try await add(target.prefix + body, author: author, rootId: rootId, service)
+        } catch {
+            if replyTarget == nil { replyTarget = ReplyTarget(comment: target.comment, text: body) }
+            throw error
+        }
     }
 
     func edit(_ commentId: String, text: String, _ service: VomattService) async throws {
@@ -238,11 +271,19 @@ final class CommentsModel {
     /// Applies `change` to the Comment or Reply with this id, wherever it is.
     private func replace(_ id: String, _ change: (Comment) -> Comment) {
         comments = comments.map { $0.id == id ? change($0) : $0 }
-        if let target = replyTarget, target.comment.id == id { replyTarget = ReplyTarget(comment: change(target.comment)) }
+        if let target = replyTarget, target.comment.id == id {
+            replyTarget = ReplyTarget(comment: change(target.comment), text: target.text)
+        }
         // One read, one write: an in-place `replies[key]?.items = …` overlaps its own read
         guard let key = replies.first(where: { $0.value.items.contains { $0.id == id } })?.key, var list = replies[key] else { return }
         list.items = list.items.map { $0.id == id ? change($0) : $0 }
         replies[key] = list
+    }
+}
+
+private extension AppModel {
+    var pendingAuthor: CommentsModel.PendingAuthor {
+        .init(name: me?.username ?? t("comments.you"), avatarUrl: me?.avatarUrl, userId: userId)
     }
 }
 
@@ -273,8 +314,7 @@ struct CommentThreadView: View {
             }
             CommentComposer(placeholder: app.t("comments.placeholder")) { text in
                 do {
-                    try await model.add(text, author: app.me?.username ?? app.t("comments.you"),
-                                        avatarUrl: app.me?.avatarUrl, rootId: nil, app.service)
+                    try await model.add(text, author: app.pendingAuthor, rootId: nil, app.service)
                     return true
                 } catch {
                     app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
@@ -488,6 +528,8 @@ private struct CommentRow: View {
     @State private var draft = ""
     @State private var confirmingDelete = false
     @State private var reporting = false
+    /// A pending Comment dims and says it is posting only once the post takes a moment, so a quick one doesn't flicker.
+    @State private var isSlow = false
 
     private var isReply: Bool { if case .reply = rail { return true } else { return false } }
     private var avatarSize: CGFloat { isReply ? 24 : 32 }
@@ -567,6 +609,8 @@ private struct CommentRow: View {
                 if isOwn { Chip(text: app.t("comments.you"), tint: Tokens.highlight) }
                 if isEditing {
                     Text(app.t("ios.editing"))
+                } else if comment.isPending {
+                    Text(app.t("comments.posting")).opacity(isSlow ? 1 : 0)
                 } else {
                     Text(app.dates.fromNow(comment.createdAt)).font(.vmMono(12))
                     if comment.edited { Text(app.t("comments.edited")) }
@@ -614,14 +658,27 @@ private struct CommentRow: View {
                     })
             }
 
-            if !comment.isPending, !isEditing { actions }
+            // Held in place while pending, so the Comment doesn't grow once it is saved
+            if !isEditing {
+                actions
+                    .opacity(comment.isPending ? 0 : 1)
+                    .disabled(comment.isPending)
+                    .accessibilityHidden(comment.isPending)
+            }
         }
         .padding(.horizontal, 8).padding(.vertical, 4)
         .background(isTarget ? Tokens.highlightTint : .clear, in: RoundedRectangle(cornerRadius: Radius.xl))
         .padding(.horizontal, -8).padding(.vertical, -4)
         .contentShape(RoundedRectangle(cornerRadius: Radius.xl))
         .contextMenu { if !comment.isPending, !isEditing { menuItems } }
-        .opacity(comment.isPending ? 0.6 : 1)
+        .opacity(comment.isPending && isSlow ? 0.6 : 1)
+        .animation(.easeOut(duration: 0.2), value: isSlow)
+        .animation(.easeOut(duration: 0.2), value: comment.isPending)
+        .task(id: comment.isPending) {
+            guard comment.isPending else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            isSlow = true
+        }
         .animation(.easeOut(duration: 0.15), value: isTarget)
         .sheet(isPresented: $confirmingDelete) { DeleteCommentSheet(comment: comment, model: model) }
         .sheet(isPresented: $reporting) { ReportSheet(pollId: model.pollId, commentId: comment.id) }
@@ -945,9 +1002,16 @@ private struct ReplyDockBody: View {
     let target: CommentsModel.ReplyTarget
     let model: CommentsModel
 
-    @State private var text = ""
+    @State private var text: String
     @State private var isPosting = false
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    init(target: CommentsModel.ReplyTarget, model: CommentsModel) {
+        self.target = target
+        self.model = model
+        _text = State(initialValue: target.text)
+    }
+
     /// The "@name " prefix counts toward the limit too.
     private var tooLong: Bool { target.prefix.count + text.count > commentMax }
 
@@ -989,15 +1053,10 @@ private struct ReplyDockBody: View {
         app.requireAuth {
             let value = trimmed
             isPosting = true
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             Task {
                 do {
-                    try await model.reply(value, to: target, author: app.me?.username ?? app.t("comments.you"),
-                                          avatarUrl: app.me?.avatarUrl, app.service)
-                    // Close only the dock this Reply came from, not one opened while it posted
-                    if model.replyTarget?.comment.id == target.comment.id {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        model.replyTarget = nil
-                    }
+                    try await model.reply(value, to: target, author: app.pendingAuthor, app.service)
                 } catch {
                     app.showToast(app.t.message(for: error, fallback: "comments.postFailed"), isError: true)
                 }

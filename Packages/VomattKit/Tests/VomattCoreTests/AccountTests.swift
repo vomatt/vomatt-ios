@@ -43,6 +43,23 @@ struct ProfileVisibilityTests {
         #expect(MyProfile(id: "1", username: "klaus", visibilitySettings: ["lastName": true, "bio": false]).shownSettingCount == 2)
         #expect(ProfileVisibility.settings.count == 3)
     }
+
+    @Test func settingsAreRealNameThenDisplayNameThenBio() {
+        #expect(ProfileVisibility.settings.map(\.key) == ["realName", "displayName", "bio"])
+        #expect(ProfileVisibility.settings[0].fields == ["firstName", "lastName"])
+    }
+
+    // The web's VisibilitySettings: the real name hidden and the rest public by default
+    @Test func settingsFallBackToTheAPIDefaults() {
+        #expect(ProfileVisibility.settings.map { ProfileVisibility.isPublic([:], $0) } == [false, true, true])
+    }
+
+    @Test func realNameIsShownWhenEitherHalfIs() {
+        let realName = ProfileVisibility.settings[0]
+        #expect(ProfileVisibility.isPublic(["firstName": false, "lastName": true], realName))
+        #expect(ProfileVisibility.isPublic(["firstName": true], realName))
+        #expect(!ProfileVisibility.isPublic(["firstName": false, "lastName": false], realName))
+    }
 }
 
 /// Ported from vomatt-web `src/__tests__/features/account/username.test.ts`.

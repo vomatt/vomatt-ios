@@ -1,16 +1,15 @@
 import SwiftUI
 import VomattCore
 
-/// A small uppercase pill (`chipClassName`); pair it with a tint.
+/// A small pill (`chipClassName`); pair it with a tint.
 struct Chip: View {
     let text: String
     var tint: Color = Tokens.secondary
     var bordered = false
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.vm(11, .semibold, relativeTo: .caption2))
-            .tracking(0.55)
+        Text(text)
+            .font(.vm(11, .medium, relativeTo: .caption2))
             .lineLimit(1)
             .foregroundStyle(Tokens.foreground)
             .padding(.horizontal, 10)
@@ -74,10 +73,9 @@ struct OutcomeChip: View {
         HStack(spacing: 4) {
             if outcome == .won { Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).accessibilityHidden(true) }
             if outcome == .tied { Text(verbatim: "=").accessibilityHidden(true) }
-            Text(app.t("myPolls.outcome.\(outcome.rawValue)").uppercased())
+            Text(app.t("myPolls.outcome.\(outcome.rawValue)"))
         }
-        .font(.vm(11, .semibold, relativeTo: .caption2))
-        .tracking(0.55)
+        .font(.vm(11, .medium, relativeTo: .caption2))
         .lineLimit(1)
         .foregroundStyle(Tokens.foreground)
         .padding(.horizontal, 10)
@@ -397,13 +395,12 @@ struct SectionTitle: View {
     }
 }
 
-/// The small uppercase heading of a card or a form group (`text-[13px] uppercase tracking-[0.06em]`).
+/// The small heading of a card or a form group (`text-caption-1 font-medium text-muted-foreground`).
 struct RailHeading: View {
     let text: String
     var body: some View {
-        Text(text.uppercased())
-            .font(.vm(13, .semibold, relativeTo: .footnote))
-            .tracking(0.78)
+        Text(text)
+            .font(.vm(13, .medium, relativeTo: .footnote))
             .foregroundStyle(Tokens.mutedForeground)
             .accessibilityAddTraits(.isHeader)
     }

@@ -1,7 +1,5 @@
 {
 	"ios": {
-		"avatarUpload": "Upload a photo",
-		"avatarUploading": "Uploading…",
 		"signUpPolicy": "By signing up, you agree to the [Terms of Service]({terms}) and [Privacy Policy]({privacy}).",
 		"openProfile": "Opens their profile",
 		"report": "Report",
@@ -26,13 +24,6 @@
 		"blockFailed": "Couldn't block this person. Try again.",
 		"unblockFailed": "Couldn't unblock this person. Try again.",
 		"create": "Create",
-		"feedbackTitle": "Send feedback",
-		"feedbackBody": "Tell us what to fix or add. We read every message.",
-		"feedbackCta": "Write feedback",
-		"feedbackPlaceholder": "What's on your mind?",
-		"feedbackSend": "Send",
-		"feedbackSent": "Thanks, we got your feedback.",
-		"feedbackFailed": "Couldn't send your feedback. Try again.",
 		"feedbackLimited": "You've sent a lot of feedback today. Try again tomorrow (UTC).",
 		"follow": "Follow {name}",
 		"unfollow": "Unfollow {name}",

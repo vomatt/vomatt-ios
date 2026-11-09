@@ -59,6 +59,15 @@ struct ProfileListsTests {
         #expect(ProfileLists.asked(polls, viewerId: "me").map(\.id) == ["mine", "older"])
     }
 
+    @Test func votesReceivedLeavesOutTheOwnersOwnBallot() {
+        var voted = poll("mine-voted", myOptionId: "a", creatorId: "me")
+        voted.participantCount = 4
+        var notVoted = poll("mine-not-voted", creatorId: "me")
+        notVoted.participantCount = 2
+        let asked = [voted, notVoted]
+        #expect(ProfileLists.votesReceived(asked) == 5)
+    }
+
     @Test func picksWonIsTheShareOfDecidedBallotsThatWonOutright() {
         let polls = [
             poll("won", votes: ["a": 3, "b": 1], state: .ended, myOptionId: "a"),
@@ -109,7 +118,7 @@ struct DraftMetaTests {
 
     @Test func saysWhenItWasSavedItsFilledOptionsAndAMissingEnd() throws {
         let form = PollForm(title: "Rename the club?", options: ["A", "B", "C", " "], endTime: nil)
-        #expect(try meta(savedAt: "2026-10-27T09:00:00Z", form: form) == "Saved yesterday · 3 options · no end date yet")
+        #expect(try meta(savedAt: "2026-10-27T09:00:00Z", form: form) == "Saved yesterday\u{2003}3 options\u{2003}no end date yet")
     }
 
     @Test func saysOnlyWhenABlankDraftWithAnEndWasSaved() throws {

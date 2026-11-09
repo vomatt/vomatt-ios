@@ -76,9 +76,6 @@ struct PollDetailView: View {
     @ViewBuilder private func notFound(_ owner: PollOwner?) -> some View {
         if let owner {
             InvitationPrompt(owner: owner)
-        } else if !app.isSignedIn {
-            // Signed out, a missing Poll may be Invite-only
-            LoginPromptCard(forPoll: true)
         } else {
             EmptyState {
                 Text(app.t("pollDetail.notFound")).font(.vm(17, .medium)).foregroundStyle(Tokens.foreground)
@@ -91,6 +88,10 @@ struct PollDetailView: View {
     }
 
     private func load(reloadComments: Bool = false) async {
+        guard PollID.isValid(pollId) else {
+            phase = .notFound(nil)
+            return
+        }
         do {
             guard let poll = try await app.service.poll(id: pollId) else {
                 phase = .notFound(try? await app.service.inviteOnlyOwner(pollId: pollId))
@@ -177,7 +178,7 @@ private struct PollDetailCard: View {
                         .font(.vm(14, .medium))
                         .foregroundStyle(Tokens.foreground)
                         .layoutPriority(1)
-                    Text("· " + app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
+                    Text(app.dates.age(poll.createdAt)).lineLimit(1).fixedSize()
                         .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                     Spacer(minLength: 0)
                     CardStatusChip(poll: poll, status: status)
@@ -218,32 +219,9 @@ private struct PollDetailCard: View {
         .card(padding: nil)
     }
 
-    /// Turnout (and a non-Public Audience), comments, save and share (the web's `PollFooter`). Turnout shows in every state.
     private var footer: some View {
-        let meta = [
-            ballot.turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
-            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: " · ")
-        return HStack(spacing: 20) {
-            if !meta.isEmpty { Text(meta).font(.vmMono(13)).monospacedDigit() }
-            Button(action: onOpenDiscussion) {
-                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
-            }
-            .frame(minHeight: Metrics.minTarget)
-            Spacer(minLength: 0)
-            PollFooterActions(poll: $poll)
-        }
-        .font(.vm(14))
-        .foregroundStyle(Tokens.mutedForeground)
-        .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 4)
-        .overlay(alignment: .top) { Hairline() }
-    }
-
-    private var commentLabel: String {
-        guard let commentCount else { return app.t("poll.discuss") }
-        return commentCount == 1 ? app.t("poll.comment") : app.t("poll.comments", ["count": commentCount])
+        PollFooter(poll: $poll, turnout: ballot.turnout, commentCount: commentCount, onComments: onOpenDiscussion)
+            .padding(.vertical, 4)
     }
 
     private func apply(_ fresh: Poll) {
@@ -547,12 +525,10 @@ struct FlowLayout: Layout {
 /// "Log in or sign up for Vomatt" (the web's `LoginPrompt`).
 struct LoginPromptCard: View {
     @Environment(AppModel.self) private var app
-    /// Adds that logging in opens this Poll.
-    var forPoll = false
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(app.t("loginPrompt.title")).font(.vm(14, .semibold)).foregroundStyle(Tokens.foreground)
-            Text(app.t("loginPrompt.subtitle") + (forPoll ? " " + app.t("loginPrompt.pollNote") : ""))
+            Text(app.t("loginPrompt.subtitle"))
                 .font(.vm(14)).foregroundStyle(Tokens.mutedForeground).lineSpacing(3)
             Button(app.t("loginPrompt.ctaLabel")) { app.signIn() }
                 .buttonStyle(.vm(.default, size: .sm, fullWidth: true))
