@@ -105,8 +105,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
 
     /// Ended, but the results are still Sealed until `revealAt`.
     public func resultsSealed(at now: Date = .now) -> Bool {
-        guard let revealAt else { return false }
-        return revealAt > now
+        revealAt.map { $0 > now } ?? false
     }
 
     public init(

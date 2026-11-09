@@ -354,7 +354,7 @@ private struct LikeButton: View {
         let liked = poll.likedByMe
         Button { app.requireAuth { Task { await toggle() } } } label: {
             Label(app.t(liked ? "ios.unlikePoll" : "ios.likePoll"), systemImage: liked ? "heart.fill" : "heart")
-                .labelStyle(LikeLabelStyle(count: poll.likeCount))
+                .labelStyle(LikeLabelStyle(count: poll.likeCount > 0 ? app.t.number(poll.likeCount) : nil))
         }
         .foregroundStyle(liked ? Tokens.foreground : Tokens.mutedForeground)
         .accessibilityValue(app.t.number(poll.likeCount))
@@ -385,12 +385,12 @@ private struct LikeButton: View {
 
 /// The heart with its count (when there is one) beside it, whatever the footer's icon-only style says.
 private struct LikeLabelStyle: LabelStyle {
-    let count: Int
+    let count: String?
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 4) {
             configuration.icon
-            if count > 0 { Text("\(count)").font(.vm(14)).monospacedDigit() }
+            if let count { Text(count).font(.vm(14)).monospacedDigit() }
         }
     }
 }
