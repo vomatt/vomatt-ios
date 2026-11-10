@@ -389,6 +389,12 @@ extension AuthTokens {
     }
 }
 
+extension CodeSignIn {
+    init(_ dto: Schemas.AuthResponse) {
+        self.init(isNewUser: dto.isNewUser == true, username: dto.user?.username.flatMap { $0.isEmpty ? nil : $0 })
+    }
+}
+
 extension Schemas.PasskeyAuthenticationCredential {
     /// The browser's `PublicKeyCredential.toJSON()` for a sign-in: binary fields base64url, same names.
     init(_ assertion: PasskeyAssertion) {

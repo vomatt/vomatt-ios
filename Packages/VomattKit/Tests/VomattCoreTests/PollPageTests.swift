@@ -101,11 +101,11 @@ struct MoreFromAuthorTests {
     }
 
     @Test func endedPollSaysEndedWithItsTurnout() throws {
-        #expect(try meta(poll(endIn: -1, participants: 611)) == "ended · 611 voted")
+        #expect(try meta(poll(endIn: -1, participants: 611)) == "ended\u{2003}611 voted")
     }
 
     @Test func openPollSaysWhenItEndsBesideItsTurnout() throws {
-        #expect(try meta(poll(endIn: 2 + 1.0 / 60, participants: 96)) == "ends in 2h · 96 voted")
+        #expect(try meta(poll(endIn: 2 + 1.0 / 60, participants: 96)) == "ends in 2h\u{2003}96 voted")
     }
 
     @Test func picksTwoPollsOtherThanThisOne() {

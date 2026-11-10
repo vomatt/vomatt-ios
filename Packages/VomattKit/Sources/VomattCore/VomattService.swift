@@ -88,16 +88,16 @@ public final class VomattService: Sendable {
         try await call { _ = try await client.sendOtp(body: .json(.init(email: email))).ok }
     }
 
-    /// Verifies the code and starts the session. True when this sign-in created the account.
+    /// Verifies the code and starts the session.
     @discardableResult
-    public func verifyOtp(email: String, code: String) async throws -> Bool {
-        let (tokens, isNewUser) = try await call {
+    public func verifyOtp(email: String, code: String) async throws -> CodeSignIn {
+        let (tokens, signIn) = try await call {
             let output = try await client.verifyOtp(body: .json(.init(code: code, email: Email.normalize(email))))
             let data = try required(output.ok.body.json.data, "verifyOtp.data")
-            return (try AuthTokens(data), data.isNewUser == true)
+            return (try AuthTokens(data), CodeSignIn(data))
         }
         await session.signIn(tokens)
-        return isNewUser
+        return signIn
     }
 
     /// A fresh one-time challenge for signing in with any passkey on the device (lasts 5 minutes).
@@ -166,6 +166,38 @@ public final class VomattService: Sendable {
     /// Every page of `myPolls`, for insights and notifications that need the whole set.
     public func allMyPolls(status: ListStatus) async throws -> [Poll] {
         try await collectPages(maxPages: 10) { try await self.myPolls(status: status, cursor: $0) }.page.items
+    }
+
+    /// Ended Polls the viewer voted in, most recently ended first, each with its `unread` flag. An Anonymous
+    /// Ballot's option is sealed a day after the end, but `myBallotAnonymous` still says there was one.
+    /// Reads on past pages with no such Poll, so a page comes back empty only at the end.
+    public func resultsInFeed(cursor: String? = nil, limit: Int = 10) async throws -> CursorPage<Poll> {
+        try await collectPages(from: cursor, maxPages: 5, until: { !$0.isEmpty }) { pageCursor in
+            let page = try await self.myPolls(status: .ended, cursor: pageCursor, limit: limit)
+            return CursorPage(items: page.items.filter(ProfileLists.holdsBallot), nextCursor: page.nextCursor)
+        }.page
+    }
+
+    /// Open Polls ending within a day, soonest first, as the viewer: with their Ballots, without people they blocked.
+    public func closingSoonFeed(cursor: String? = nil, limit: Int = 10, now: Date = .now) async throws -> CursorPage<Poll> {
+        let page = try await polls(sort: .closing, cursor: cursor, limit: limit)
+        let statuses = page.items.map { $0.status(at: now) }
+        // Soonest first, so the first Poll with more than a day left ends the list
+        let pastWindow = statuses.contains(.open)
+        return CursorPage(
+            items: zip(page.items, statuses).filter { $0.1 == .closing }.map(\.0),
+            nextCursor: pastWindow ? nil : page.nextCursor
+        )
+    }
+
+    /// A page of one of the home feeds; `tag` filters For you to a topic.
+    public func feed(_ feed: HomeFeed, cursor: String?, tag: String? = nil) async throws -> CursorPage<Poll> {
+        switch feed {
+        case .forYou: try await polls(tag: tag, cursor: cursor)
+        case .following: try await followingPolls(cursor: cursor)
+        case .resultsIn: try await resultsInFeed(cursor: cursor)
+        case .closingSoon: try await closingSoonFeed(cursor: cursor)
+        }
     }
 
     /// A user's opened Polls (Open and Ended), most recently opened first.
@@ -495,9 +527,9 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Saves one of the bot cast as the avatar; only a known kind is accepted.
+    /// Saves one of the bot cast, or no character (`Avatars.noBot`), as the avatar.
     public func chooseAvatar(kind: String) async throws {
-        guard Avatars.isKind(kind) else { throw APIError(.http(400), errorCode: "avatar.unknown", message: "Unknown avatar") }
+        guard Avatars.isChoice(kind) else { throw APIError(.http(400), errorCode: "avatar.unknown", message: "Unknown avatar") }
         try await updateProfile(avatarUrl: Avatars.avatarUrl(for: kind))
     }
 

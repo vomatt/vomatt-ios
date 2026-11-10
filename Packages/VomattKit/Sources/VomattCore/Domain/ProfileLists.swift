@@ -17,7 +17,17 @@ public enum ProfileLists {
     /// Polls the owner voted in but didn't ask; My Polls mixes both, and Invitations.
     /// A sealed Anonymous Ballot has no option left, only its flag.
     public static func voted(_ polls: [Poll], viewerId: String) -> [Poll] {
-        polls.filter { $0.creatorId != viewerId && ($0.myOptionId != nil || $0.myBallotAnonymous != nil) }
+        polls.filter { $0.creatorId != viewerId && holdsBallot($0) }
+    }
+
+    /// Ballots other people cast in the owner's asked Polls. Not distinct people: the API has no such count.
+    public static func votesReceived(_ asked: [Poll]) -> Int {
+        asked.reduce(0) { $0 + max(0, ($1.turnout ?? 0) - (holdsBallot($1) ? 1 : 0)) }
+    }
+
+    /// Whether the viewer holds a Ballot in the Poll. A sealed Anonymous Ballot has no option left, only its flag.
+    static func holdsBallot(_ poll: Poll) -> Bool {
+        poll.myOptionId != nil || poll.myBallotAnonymous != nil
     }
 
     /// Asked: Scheduled and Open Polls first (what happens next), then Ended ones.

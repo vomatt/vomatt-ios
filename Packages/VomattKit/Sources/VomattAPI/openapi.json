@@ -4032,6 +4032,31 @@
         },
         "type": "object"
       },
+      "NewOfficialRequest": {
+        "description": "A new official account; the caller becomes its first OWNER",
+        "properties": {
+          "displayName": {
+            "description": "Group name, shown as the display name (max 100 characters)",
+            "example": "Sunrise Tower Committee",
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string"
+          },
+          "username": {
+            "description": "Username of the official account: 3-50 characters of [a-z0-9_], not a reserved name",
+            "example": "sunrise_tower",
+            "maxLength": 50,
+            "minLength": 3,
+            "pattern": "^(?!(?:search|account|explore|login|notifications|poll|sanity|api|me|my|admin|settings)$)[a-z0-9_]{3,50}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName",
+          "username"
+        ],
+        "type": "object"
+      },
       "NotificationPreferencesResponse": {
         "description": "Which notification kinds appear in the feed and the unread count. FOLLOWED has no switch",
         "nullable": true,
@@ -15546,6 +15571,131 @@
         "summary": "Mark a notification read",
         "tags": [
           "Notification"
+        ]
+      }
+    },
+    "/api/officials": {
+      "post": {
+        "description": "**Auth**: required\n**Precondition**: the caller is an active account that is not an official account; the username is free\n**Behavior**: creates an official account (a group's page: `displayName` is the group name, the logo is its avatar) with the caller as its first OWNER, who then adds members. It has no email or phone and can never sign in; members act as it with the `X-Act-As` header. Sent while acting, the real member becomes the OWNER. Returns 201 with the account, `official` true\n**Side effects**: the creation is audit-logged\n**Errors**:\n- 400 `common.validation_failed`: `username` not 3-50 characters of [a-z0-9_] or reserved, `displayName` blank or over 100 characters\n- 400 `official.member.invalid`: the caller is suspended or is an official account\n- 409 `user.username.taken`: the username is in use\n",
+        "operationId": "createOwnOfficial",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Create an official account": {
+                  "description": "Create an official account",
+                  "value": {
+                    "displayName": "Sunrise Tower Committee",
+                    "username": "sunrise_tower"
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/NewOfficialRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Official account": {
+                    "description": "Official account",
+                    "value": {
+                      "data": {
+                        "avatarUrl": null,
+                        "displayName": "Sunrise Tower Committee",
+                        "id": "0199c1a2-7b3e-7d4a-9f10-2c5e8a1b3d48",
+                        "official": true,
+                        "username": "sunrise_tower"
+                      },
+                      "error": null,
+                      "errorCode": null,
+                      "message": null,
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserDto"
+                }
+              }
+            },
+            "description": "Official account created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed or malformed request (errorCode `common.validation_failed`, `common.bad_request`, ...)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, expired or invalid access token (errorCode `common.unauthorized`, `auth.token.expired`, `auth.token.invalid`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authenticated but not allowed (errorCode `common.forbidden`)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "user.username.taken": {
+                    "description": "user.username.taken",
+                    "value": {
+                      "data": null,
+                      "error": "Username already taken",
+                      "errorCode": "user.username.taken",
+                      "message": "Username already taken",
+                      "success": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Username in use (`user.username.taken`)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": null,
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded; see `Retry-After` header (errorCode `common.rate_limited`)"
+          }
+        },
+        "summary": "Create an official account",
+        "tags": [
+          "Official Account"
         ]
       }
     },

@@ -99,12 +99,19 @@ struct PillButton: View {
     let title: String
     let isOn: Bool
     var pill = true
+    /// The unread dot's label, when the pill carries one.
+    var unread: String?
     let action: () -> Void
 
     var body: some View {
-        Button(title, action: action)
-            .buttonStyle(.vm(isOn ? .default : .outline, size: .sm, pill: pill))
-            .accessibilityAddTraits(isOn ? .isSelected : [])
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(title)
+                if let unread { UnreadDot(label: unread) }
+            }
+        }
+        .buttonStyle(.vm(isOn ? .default : .outline, size: .sm, pill: pill))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 

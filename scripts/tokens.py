@@ -3,8 +3,9 @@
 
 Reads the OKLCh values under `:root` (light) and `.dark`, converts them to
 Display P3 and writes one colorset per token into the asset catalog, plus a
-Swift file naming each one. Tokens that alias another (`var(--x)`) are
-skipped; tokens without a dark value reuse the light one.
+Swift file naming each one. A token that aliases another (`var(--x)`) is
+resolved, and kept only when one of the two themes gives it its own value;
+tokens without a dark value reuse the light one.
 
 Usage: tokens.py <global.css> <Colors.xcassets dir> <Tokens.generated.swift>
 """
@@ -17,6 +18,7 @@ import sys
 from pathlib import Path
 
 OKLCH = re.compile(r"--([\w-]+):\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)\s*;")
+ALIAS = re.compile(r"--([\w-]+):\s*var\(--([\w-]+)\)\s*;")
 
 
 def block(css: str, selector: str) -> str:
@@ -28,6 +30,26 @@ def block(css: str, selector: str) -> str:
 
 def tokens(css_block: str) -> dict[str, tuple[float, float, float]]:
     return {name: (float(l), float(c), float(h)) for name, l, c, h in OKLCH.findall(css_block)}
+
+
+def aliases(css_block: str) -> dict[str, str]:
+    return dict(ALIAS.findall(css_block))
+
+
+def resolve(name: str, values: dict, links: dict, fallback=None):
+    """A token's OKLCh in one theme, following `var(--x)` chains; `fallback` is the light theme."""
+    seen = set()
+    while name not in values:
+        if name in seen:
+            sys.exit(f"tokens.py: --{name} aliases itself")
+        seen.add(name)
+        if name in links:
+            name = links[name]
+        elif fallback:
+            return resolve(name, *fallback)
+        else:
+            return None
+    return values[name]
 
 
 def oklch_to_p3(l: float, c: float, h: float) -> tuple[float, float, float]:
@@ -85,8 +107,15 @@ def camel(name: str) -> str:
 def main() -> None:
     css_path, catalog, swift_path = map(Path, sys.argv[1:4])
     css = css_path.read_text()
-    light = tokens(block(css, ":root"))
-    dark = tokens(block(css, ".dark"))
+    light_block, dark_block = block(css, ":root"), block(css, ".dark")
+    light_values, light_links = tokens(light_block), aliases(light_block)
+    dark_values, dark_links = tokens(dark_block), aliases(dark_block)
+    own = set(light_values) | set(dark_values)
+    light = {n: resolve(n, light_values, light_links) for n in own}
+    dark = {n: resolve(n, dark_values, dark_links, (light_values, light_links)) for n in own}
+    missing = sorted(n for n, v in light.items() if v is None)
+    if missing:
+        sys.exit(f"tokens.py: no light value for {', '.join(missing)}")
 
     if catalog.exists():
         shutil.rmtree(catalog)
@@ -97,7 +126,7 @@ def main() -> None:
         colorset = catalog / f"{name}.colorset"
         colorset.mkdir()
         colors = [color_entry(oklch_to_p3(*value), dark=False),
-                  color_entry(oklch_to_p3(*dark.get(name, value)), dark=True)]
+                  color_entry(oklch_to_p3(*dark[name]), dark=True)]
         (colorset / "Contents.json").write_text(
             json.dumps({"colors": colors, "info": {"author": "xcode", "version": 1}}, indent=2)
         )
@@ -113,7 +142,7 @@ def main() -> None:
         lines.append(f'    static let {camel(name)} = Color("{name}")')
     lines += ["}", ""]
     swift_path.write_text("\n".join(lines))
-    print(f"tokens.py: {len(light)} colors ({len(dark)} with dark values)")
+    print(f"tokens.py: {len(light)} colors ({len(dark_values)} with their own dark value)")
 
 
 if __name__ == "__main__":

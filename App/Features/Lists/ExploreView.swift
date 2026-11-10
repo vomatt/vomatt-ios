@@ -240,7 +240,7 @@ private struct PollTile: View {
     /// which takes no Ballots yet. Then its first two topics.
     private func meta(status: PollStatus) -> Text {
         let turnout = Text(app.t("poll.voted", ["count": app.t.number(poll.turnout ?? 0)])).font(.vmMono(13))
-        let separator = Text(verbatim: " · ")
+        let separator = Text(verbatim: metaGap)
         let lead: Text? = switch status {
         case .ended where poll.isCancelled:
             Text(app.t("notifications.cancelled"))

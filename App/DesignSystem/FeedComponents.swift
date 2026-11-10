@@ -59,7 +59,7 @@ struct CardStatusChip: View {
             if status == .scheduled || status == .ended {
                 Circle().fill(Tokens.foreground).frame(width: 6, height: 6).accessibilityHidden(true)
             }
-            Text(label.uppercased())
+            Text(label)
         }
         .cardChip(tint: tint)
     }
@@ -80,20 +80,19 @@ struct VotedPill: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).accessibilityHidden(true)
-            Text(app.t("poll.votedPill").uppercased())
+            Text(app.t("poll.votedPill"))
         }
         .cardChip(tint: Tokens.highlight, foreground: Tokens.highlightForeground)
     }
 }
 
 private extension View {
-    /// `chipClassName` at a card's 10pt.
+    /// `chipClassName` on a Poll card.
     func cardChip(tint: Color, foreground: Color = Tokens.foreground) -> some View {
-        font(.vm(10, .semibold, relativeTo: .caption2))
-            .tracking(0.5)
+        font(.vm(11, .medium, relativeTo: .caption2))
             .lineLimit(1)
             .foregroundStyle(foreground)
-            .padding(.horizontal, 9)
+            .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .background(tint, in: Capsule())
             .fixedSize()
