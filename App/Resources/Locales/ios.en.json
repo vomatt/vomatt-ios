@@ -4,8 +4,6 @@
 		"unlikePoll": "Unlike",
 		"likePollFailed": "Couldn’t update your like. Try again.",
 		"pollLiked": "{name} liked your poll {title}",
-		"avatarUpload": "Upload a photo",
-		"avatarUploading": "Uploading…",
 		"signUpPolicy": "By signing up, you agree to the [Terms of Service]({terms}) and [Privacy Policy]({privacy}).",
 		"openProfile": "Opens their profile",
 		"report": "Report",

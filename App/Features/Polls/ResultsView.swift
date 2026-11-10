@@ -158,7 +158,8 @@ struct ResultsView: View {
 
     private func loadIfNeeded() async {
         // Held back by the owner: wait for `revealAt`, then fetch without needing the view recreated
-        if let revealAt = poll.revealAt, poll.resultsSealed() {
+        // Loop in case the sleep wakes before the reveal (clock changes, suspension)
+        while let revealAt = poll.revealAt, poll.resultsSealed() {
             try? await Task.sleep(for: .seconds(max(0, revealAt.timeIntervalSinceNow)) + .milliseconds(250))
             if Task.isCancelled { return }
         }
