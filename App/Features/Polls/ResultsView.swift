@@ -17,6 +17,11 @@ struct ResultsView: View {
     @State private var failed = false
     @State private var revealed = false
 
+    private struct TaskKey: Hashable {
+        let id: String
+        let revealAt: Date?
+    }
+
     private static let barDuration = 0.8
     private static let barEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: barDuration)
 
@@ -43,7 +48,8 @@ struct ResultsView: View {
                 }
             }
         }
-        .task(id: poll.id) { await loadIfNeeded() }
+        // Restart when the owner moves or clears `revealAt`, so the wait never uses a stale date
+        .task(id: TaskKey(id: poll.id, revealAt: poll.revealAt)) { await loadIfNeeded() }
     }
 
     private func content(_ rows: [ResultRow]) -> some View {
