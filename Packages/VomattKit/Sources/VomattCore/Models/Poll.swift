@@ -92,8 +92,21 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var unread: Bool?
     /// Whether the viewer saved the Poll; nil when signed out.
     public var bookmarked: Bool?
+    /// Users who liked the Poll; present even while the results are Sealed.
+    public var likeCount: Int
+    /// Whether the viewer liked the Poll (false when signed out).
+    public var likedByMe: Bool
+    /// A Pro poll: casting needs a verified phone number and Ballots are never named.
+    public var pro: Bool
+    /// When the results open, if after `endTime`; nil means they open when the Poll Ends.
+    public var revealAt: Date?
     public var options: [PollOption]
     public var tags: [Tag]
+
+    /// Ended, but the results are still Sealed until `revealAt`.
+    public func resultsSealed(at now: Date = .now) -> Bool {
+        revealAt.map { $0 > now } ?? false
+    }
 
     public init(
         id: String, title: String, description: String? = nil, active: Bool = true,
@@ -102,8 +115,14 @@ public struct Poll: Identifiable, Hashable, Sendable {
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
         participantCount: Int? = nil, commentCount: Int? = nil, shareCount: Int? = nil, myOptionId: String? = nil,
-        myBallotAnonymous: Bool? = nil, unread: Bool? = nil, bookmarked: Bool? = nil, options: [PollOption], tags: [Tag] = []
+        myBallotAnonymous: Bool? = nil, unread: Bool? = nil, bookmarked: Bool? = nil,
+        likeCount: Int = 0, likedByMe: Bool = false, pro: Bool = false, revealAt: Date? = nil,
+        options: [PollOption], tags: [Tag] = []
     ) {
+        self.likeCount = likeCount
+        self.likedByMe = likedByMe
+        self.pro = pro
+        self.revealAt = revealAt
         self.id = id
         self.title = title
         self.description = description

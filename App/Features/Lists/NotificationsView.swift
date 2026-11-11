@@ -233,7 +233,7 @@ private struct NotificationRow: View {
             disc("nosign")
         case .closingSoon:
             disc("clock", tint: Tokens.foreground)
-        case .invitation, .followed, .comment, .mention, .like:
+        case .invitation, .followed, .comment, .mention, .like, .pollLike:
             if let actor = item.actor {
                 AvatarView(username: actor.username, avatarUrl: actor.avatarUrl, size: 36).accessibilityHidden(true)
             } else {
@@ -298,11 +298,12 @@ private struct NotificationRow: View {
                                tail: Part(text: title, emphasis: .titled))
             case .followed:
                 return Wording(template: app.t("notifications.followedYou"), parts: ["name": Part(text: actorName, emphasis: .strong)])
-            case .comment, .mention, .like:
+            case .comment, .mention, .like, .pollLike:
                 // A comment on the viewer's poll or reply, a mention of them, or a like of their comment, read alike but for the verb
                 let key = switch item.kind {
                 case .mention: "notifications.mentioned"
                 case .like: "notifications.liked"
+                case .pollLike: "ios.pollLiked"
                 // The API doesn't say whose comment a reply answers: on the viewer's poll it may be someone else's
                 default: item.comment?.parentId != nil ? "notifications.replied" : "notifications.commented"
                 }
@@ -356,7 +357,7 @@ private struct NotificationRow: View {
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
         case .followed:
             return [age, item.actor?.displayName].compactMap { $0 }
-        case .comment, .mention, .like:
+        case .comment, .mention, .like, .pollLike:
             return [item.comment.map { app.t("notifications.excerpt", ["text": $0.excerpt]) }, age].compactMap { $0 }
         case .closingSoon:
             return [
@@ -404,6 +405,8 @@ private struct NotificationRow: View {
                     .buttonStyle(.vm(canVote ? .default : .outline, size: .sm))
             case .followed:
                 if let actor = item.actor { FollowBackButton(user: actor, onFollow: read) }
+            case .pollLike:
+                Button(app.t("notifications.view"), action: open).buttonStyle(.vm(.outline, size: .sm))
             case .comment, .mention, .like:
                 Button(app.t("comments.reply"), action: reply).buttonStyle(.vm(.outline, size: .sm))
             case .closingSoon:

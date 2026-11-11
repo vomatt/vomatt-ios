@@ -468,6 +468,33 @@ struct ServiceTests {
         #expect(calls == ["PUT /api/votes/p1/bookmark", "DELETE /api/votes/p1/bookmark", "GET /api/votes/bookmarked?cursor=abc&limit=5"])
     }
 
+    @Test func pollLikesArePutAndDeleted() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"success":true}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.setPollLike(pollId: "p1", liked: true)
+        try await service.setPollLike(pollId: "p1", liked: false)
+        #expect(transport.requests.map { "\($0.method.rawValue) \($0.path)" } == ["PUT /api/votes/p1/like", "DELETE /api/votes/p1/like"])
+    }
+
+    @Test func aPollCarriesLikesProAndWhenItsResultsOpen() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"id":"p1","title":"Q","creatorId":"u1","creatorUsername":"mei","startTime":"2026-10-20T09:00:00+08:00","likeCount":3,"likedByMe":true,"pro":true,"revealAt":"2999-01-01T00:00:00Z","options":[]}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let poll = try #require(try await service.poll(id: "p1"))
+        #expect(poll.likeCount == 3 && poll.likedByMe && poll.pro)
+        #expect(poll.resultsSealed())
+    }
+
+    @Test func aPollLikeNotificationIsFiledUnderLikes() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"{"items":[{"id":"pl_1","kind":"POLL_LIKE","category":"LIKE","createdAt":"2026-10-29T00:00:00Z","read":false,"actor":{"id":"u1","username":"ann"},"poll":{"id":"p1","title":"T"}}]}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let page = try await service.notifications(category: .like, cursor: nil)
+        #expect(page.items.map(\.kind) == [.pollLike] && page.items[0].kind.category == .like && page.items[0].comment == nil)
+    }
+
     @Test func aPollSaysWhetherTheViewerSavedIt() async throws {
         let transport = StubTransport { _, _ in
             (200, envelope(#"{"id":"p1","title":"Q","creatorId":"u1","creatorUsername":"mei","startTime":"2026-10-20T09:00:00+08:00","bookmarked":true,"options":[]}"#), [:])

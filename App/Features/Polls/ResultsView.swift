@@ -17,6 +17,11 @@ struct ResultsView: View {
     @State private var failed = false
     @State private var revealed = false
 
+    private struct TaskKey: Hashable {
+        let id: String
+        let revealAt: Date?
+    }
+
     private static let barDuration = 0.8
     private static let barEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: barDuration)
 
@@ -28,6 +33,13 @@ struct ResultsView: View {
         Group {
             if let rows {
                 content(rows)
+            } else if let revealAt = poll.revealAt, poll.resultsSealed() {
+                // Ended, but the owner holds the results back until `revealAt`
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(app.t("poll.sealedTitle")).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground)
+                    Text(app.t("poll.sealed", ["date": app.dates.pollMoment(revealAt)]))
+                        .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                }
             } else if failed {
                 Text(app.t("poll.resultsFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             } else {
@@ -36,7 +48,8 @@ struct ResultsView: View {
                 }
             }
         }
-        .task(id: poll.id) { await loadIfNeeded() }
+        // Restart when the owner moves or clears `revealAt`, so the wait never uses a stale date
+        .task(id: TaskKey(id: poll.id, revealAt: poll.revealAt)) { await loadIfNeeded() }
     }
 
     private func content(_ rows: [ResultRow]) -> some View {
@@ -150,7 +163,13 @@ struct ResultsView: View {
     }
 
     private func loadIfNeeded() async {
-        guard poll.inlineResults == nil, fetched == nil else { return }
+        // Held back by the owner: wait for `revealAt`, then fetch without needing the view recreated
+        // Loop in case the sleep wakes before the reveal (clock changes, suspension)
+        while let revealAt = poll.revealAt, poll.resultsSealed() {
+            try? await Task.sleep(for: .seconds(max(0, revealAt.timeIntervalSinceNow)) + .milliseconds(250))
+            if Task.isCancelled { return }
+        }
+        guard poll.inlineResults == nil, fetched == nil, !poll.resultsSealed() else { return }
         do {
             fetched = try await app.service.results(pollId: poll.id)
         } catch let error as APIError where error.isSealed {
