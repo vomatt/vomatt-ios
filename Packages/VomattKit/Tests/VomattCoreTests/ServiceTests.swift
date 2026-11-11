@@ -568,13 +568,15 @@ struct ServiceTests {
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
               {"id":"comment_c2","kind":"COMMENT","category":"THREADS","createdAt":"2026-10-25T09:30:00+08:00","read":true,
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
-              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true}
+              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true},
+              {"id":"locked_1","kind":"COMMUNITY_LOCKED","category":"COMMUNITY","createdAt":"2026-10-23T09:30:00+08:00","read":false,"actor":\#(actor)}
             ],"nextCursor":"n2"}
             """#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let page = try await service.notifications()
-        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known
+        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known.
+        // COMMUNITY_LOCKED is in the contract but has no row in the app, so it is left out too
         #expect(page.items.map(\.id) == ["mention_c1", "like_c1", "comment_c2"])
         #expect(page.items.map(\.kind) == [.mention, .like, .comment])
         #expect(page.items[0].comment?.excerpt == "@mei try Nagi" && page.items[0].actor?.username == "bob")

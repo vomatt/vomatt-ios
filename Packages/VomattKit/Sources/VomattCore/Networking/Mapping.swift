@@ -272,7 +272,7 @@ extension FeedNotification {
     init(_ dto: Schemas.NotificationResponse) throws {
         self.init(
             id: try required(dto.id, "NotificationResponse.id"),
-            kind: FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")),
+            kind: try FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")),
             createdAt: try required(dto.createdAt, "NotificationResponse.createdAt"),
             read: dto.read ?? false,
             actor: try dto.actor.map(UserSummary.init),
@@ -283,7 +283,8 @@ extension FeedNotification {
 }
 
 extension FeedNotification.Kind {
-    init(_ value: Schemas.NotificationResponse.KindPayload) {
+    /// Throws for a kind the app has no row for, so the feed leaves that item out (`notifications`).
+    init(_ value: Schemas.NotificationResponse.KindPayload) throws {
         switch value {
         case .result: self = .result
         case .cancelled: self = .cancelled
@@ -294,6 +295,8 @@ extension FeedNotification.Kind {
         case .closingSoon: self = .closingSoon
         case .like: self = .like
         case .pollLike: self = .pollLike
+        // The app has no community accounts yet, so there is nothing to open from "your community was locked"
+        case .communityLocked: throw APIError(.decoding, message: "Notification kind COMMUNITY_LOCKED is not shown")
         }
     }
 }
