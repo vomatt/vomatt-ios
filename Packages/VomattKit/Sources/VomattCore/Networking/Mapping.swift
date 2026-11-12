@@ -298,7 +298,8 @@ extension FeedNotification.Kind {
         case .like: self = .like
         case .pollLike: self = .pollLike
         // The app has no community accounts yet, so there is nothing to open from "your community was locked"
-        case .communityLocked: return nil
+        // or to answer for an invitation to one
+        case .communityInvitation, .communityLocked: return nil
         }
     }
 }
