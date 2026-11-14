@@ -6,7 +6,7 @@ public enum Username {
 
     public static let reserved: Set<String> = [
         "search", "account", "explore", "following", "login", "notifications", "poll", "sanity",
-        "api", "me", "my", "admin", "settings",
+        "api", "me", "my", "admin", "settings", "contact",
     ]
 
     public static func isValid(_ username: String) -> Bool {
