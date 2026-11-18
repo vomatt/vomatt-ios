@@ -43,6 +43,10 @@ struct ProfileNameTests {
     @Test func fallsBackToTheUsername() {
         #expect(ProfileName(username: "mei", displayName: nil) == ProfileName(primary: "mei", secondary: nil))
     }
+
+    @Test func writesAPersonAsTheirHandle() {
+        #expect(ProfileName.handle("mei_0042") == "@mei_0042")
+    }
 }
 
 /// The name step's cases from vomatt-web `src/__tests__/components/AuthDialog.test.tsx`.
