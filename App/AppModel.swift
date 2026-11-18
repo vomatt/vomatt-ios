@@ -77,6 +77,8 @@ final class AppModel {
     /// People the signed-in viewer follows, most recently followed first. Private to the viewer.
     private(set) var following: [UserSummary] = []
     private var followChanges = 0
+    /// Follows and unfollows the viewer made; each one plays a haptic.
+    private(set) var followTaps = 0
     private var followQueue: Task<Void, Never>?
     let language: Language
     let t: Localizer
@@ -307,6 +309,7 @@ final class AppModel {
         guard isSignedIn, !isFollowing(user.id) else { return }
         following.insert(user, at: 0)
         followChanges += 1
+        followTaps += 1
         enqueueFollow { [self] in
             do {
                 try await service.followUser(id: user.id)
@@ -330,6 +333,7 @@ final class AppModel {
         guard let index = following.firstIndex(where: { $0.id == userId }) else { return }
         let user = following.remove(at: index)
         followChanges += 1
+        followTaps += 1
         enqueueFollow { [self] in
             do {
                 try await service.unfollowUser(id: userId)

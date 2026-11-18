@@ -53,6 +53,7 @@ struct PollDetailView: View {
             if let comments, !showDiscussion { ReplyDock(model: comments) }
         }
         .refreshable { await load(reloadComments: true) }
+        .sensoryFeedback(.success, trigger: comments?.posted ?? 0)
         .canvas()
         .navigationTitle(app.t("ios.pollTitle"))
         .navigationBarTitleDisplayMode(.inline)

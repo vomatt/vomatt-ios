@@ -34,6 +34,8 @@ final class CommentsModel {
     private(set) var comments: [Comment] = []
     private(set) var replies: [String: ReplyList] = [:]
     private(set) var total: Int?
+    /// Comments and Replies posted from here; each one plays a haptic on the poll page.
+    private(set) var posted = 0
     private(set) var status = Status.loading
     private(set) var isLoadingMore = false
     /// What the docked composer answers; nil while it is closed.
@@ -152,6 +154,7 @@ final class CommentsModel {
                 comments.removeAll { $0.id == saved.id }
             }
             replace(tempId) { _ in saved }
+            posted += 1
         } catch {
             if let rootId {
                 replies[rootId]?.items.removeAll { $0.id == tempId }

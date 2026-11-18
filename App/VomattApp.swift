@@ -60,6 +60,7 @@ struct RootView: View {
             Button(app.t("common.cancel"), role: .cancel) {}
             Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(request.userId) }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: app.followTaps)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await app.refreshUnread() } }
         }

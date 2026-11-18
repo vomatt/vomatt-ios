@@ -186,6 +186,7 @@ private struct TopicFollowButton: View {
                 }
                 .buttonStyle(.vm(following ? .outline : .default, size: .sm))
                 .disabled(isSaving)
+                .sensoryFeedback(.impact(weight: .light), trigger: isSaving) { _, saving in saving }
                 .accessibilityAddTraits(following ? .isSelected : [])
             }
         }
