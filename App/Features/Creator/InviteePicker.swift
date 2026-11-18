@@ -15,7 +15,7 @@ struct InviteePicker: View {
     @State private var results = Results()
     @State private var groups: [UserGroup] = []
 
-    private static let maxSuggestions = 5
+    private static let maxSuggestions = 20
 
     private var term: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var email: String { Email.normalize(term) }
@@ -36,7 +36,7 @@ struct InviteePicker: View {
                     .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(isInvalid ? Tokens.destructive : .clear))
                     .onSubmit {
                         // Return picks the email, or the first person found
-                        if isEmail { addEmail() } else if let first = suggestions.first { add(first) }
+                        if isEmail { addEmail() } else if let first = suggestions.first(where: { !$0.isCommunity }) { add(first) }
                     }
                 if isEmail {
                     Button(action: addEmail) {
@@ -132,27 +132,49 @@ struct InviteePicker: View {
         .accessibilityLabel(app.t("invitees.picked"))
     }
 
+    /// Up to 20 matches; past the box's height they scroll inside it, so the picked chips stay in reach.
     private var suggestionList: some View {
+        ViewThatFits(in: .vertical) {
+            suggestionRows
+            ScrollView { suggestionRows }
+        }
+        .frame(maxHeight: 256)
+        .padding(4)
+        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(app.t("invitees.suggestions"))
+    }
+
+    private var suggestionRows: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(suggestions) { user in
                 Button { add(user) } label: {
                     HStack(spacing: 12) {
                         AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 28)
-                        Text(user.username).font(.vm(14)).lineLimit(1)
-                        if let name = user.displayName {
-                            Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(spacing: 12) {
+                                Text(user.username).font(.vm(14)).lineLimit(1)
+                                if let name = user.displayName {
+                                    Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
+                                }
+                            }
+                            if user.isCommunity {
+                                Text(app.t("invitees.communityNotAllowed")).font(.vm(12)).multilineTextAlignment(.leading)
+                            }
                         }
                         Spacer(minLength: 0)
                     }
-                    .foregroundStyle(Tokens.foreground)
+                    .foregroundStyle(user.isCommunity ? Tokens.mutedForeground : Tokens.foreground)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, user.isCommunity ? 6 : 0)
                     .frame(minHeight: Metrics.minTarget)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // Community accounts don't vote, so the API refuses them as Invitees: listed, not pickable
+                .disabled(user.isCommunity)
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(app.t("invitees.suggestions"))
     }
 
     private func add(_ user: UserSummary) {
@@ -171,7 +193,7 @@ struct InviteePicker: View {
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
         do {
-            let users = try await app.service.searchUsers(term, limit: 8).items
+            let users = try await app.service.searchUsers(term).items
             results = Results(term: term, users: users)
         } catch {
             if !(error is CancellationError) { results = Results(term: term, failed: true) }
