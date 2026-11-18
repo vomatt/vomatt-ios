@@ -262,6 +262,79 @@ struct ServiceTests {
         #expect(json["lastName"] as? String == "")
     }
 
+    @Test func myProfileCarriesGenderPhonePlanAndCommunityQuota() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"id":"u1","username":"alice","gender":"FEMALE","phoneNumber":"+886912345678","phoneVerified":true,"plan":"PRO",
+             "communityQuota":{"owned":3,"limit":1,"selectionRequired":true,"selectionDeadline":"2026-11-18T10:00:00Z"}}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.gender == .female && me.phoneNumber == "+886912345678" && me.phoneVerified && me.plan == .pro)
+        #expect(me.communityQuota == CommunityQuota(
+            owned: 3, limit: 1, selectionRequired: true, selectionDeadline: ISO8601DateFormatter().date(from: "2026-11-18T10:00:00Z")
+        ))
+    }
+
+    @Test func aProfileFromAnAPIOlderThanPlansHasNone() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"id":"u1","username":"alice","gender":null,"phoneNumber":null}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.gender == nil && me.phoneNumber == nil && !me.phoneVerified && me.plan == nil && me.communityQuota == nil)
+    }
+
+    @Test func genderIsSentOnlyWhenChangedAndShownWhenVisible() async throws {
+        let transport = StubTransport { request, _ in
+            request.method == .patch
+                ? (200, envelope(#"{"username":"alice","gender":"UNDISCLOSED"}"#), [:])
+                : (200, envelope(#"{"username":"alice","gender":"OTHER"}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.userProfile(username: "alice")?.gender == .other)
+        #expect(try await service.updateProfile(gender: .undisclosed).gender == .undisclosed)
+        _ = try await service.updateProfile(bio: "hi")
+        let bodies = try transport.requests.dropFirst().map {
+            try #require(try JSONSerialization.jsonObject(with: Data(($0.body ?? "").utf8)) as? [String: String])
+        }
+        #expect(bodies == [["gender": "UNDISCLOSED"], ["bio": "hi"]])
+        #expect(Gender.allCases.map(\.translationKey) == [
+            "profile.genders.MALE", "profile.genders.FEMALE", "profile.genders.OTHER", "profile.genders.UNDISCLOSED",
+        ])
+    }
+
+    // Phone bind cases ported from vomatt-web `src/__tests__/features/account/PhoneBindDialog.test.tsx`
+    @Test func bindingAPhoneTextsACodeThenVerifiesIt() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/users/me/phone/verify"
+                ? (200, envelope(#"{"id":"u1","username":"alice","phoneNumber":"+886912345678","phoneVerified":true}"#), [:])
+                : (200, envelope(#"{"success":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sendPhoneBindOtp(phone: "0912345678")
+        let me = try await service.verifyPhoneBind(phone: "0912345678", code: "123456")
+        #expect(me.phoneNumber == "+886912345678" && me.phoneVerified)
+        #expect(transport.requests.map { "\($0.method.rawValue) \($0.path)" } == ["POST /api/users/me/phone/send-otp", "POST /api/users/me/phone/verify"])
+        let bodies = try transport.requests.map {
+            try #require(try JSONSerialization.jsonObject(with: Data(($0.body ?? "").utf8)) as? [String: String])
+        }
+        #expect(bodies == [["phone": "0912345678"], ["phone": "0912345678", "code": "123456"]])
+    }
+
+    @Test func aPhoneBindResendInsideTheCooldownCarriesTheSecondsLeft() async {
+        let transport = StubTransport { _, _ in (400, failure("auth.otp.resend_cooldown", "Please wait 65 seconds before resending"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.sendPhoneBindOtp(phone: "0912345678") }
+        #expect(error?.cooldownSeconds == 65)
+    }
+
+    @Test func aNumberLinkedToAnotherAccountSaysSo() async throws {
+        let transport = StubTransport { _, _ in (409, failure("user.phone.taken"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.verifyPhoneBind(phone: "0912345678", code: "123456") }
+        #expect(AuthErrorKey(phoneBindError: try #require(error)) == .phoneTaken)
+    }
+
     @Test func uploadingAnAvatarSendsTheFileAsMultipartAndReturnsTheProfile() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .put {
@@ -814,6 +887,17 @@ struct SessionTests {
         // The refresh call itself never carries the access token
         #expect(transport.requests[1].authorization == nil)
         #expect(store.load()?.refreshToken == "refresh-2")
+    }
+
+    @Test func aWrongPhoneBindCodeIsSentOnceAndNeverSignsOut() async throws {
+        let transport = StubTransport { _, _ in (401, failure("auth.invalid_otp"), [:]) }
+        let store = InMemoryTokenStore(tokens(1))
+        let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.verifyPhoneBind(phone: "0912345678", code: "000000") }
+        #expect(AuthErrorKey(phoneBindError: try #require(error)) == .invalidSmsCode)
+        // No refresh, and no second guess against the 3-wrong-codes lockout
+        #expect(transport.requests.map(\.path) == ["/api/users/me/phone/verify"])
+        #expect(await service.session.isSignedIn && store.load()?.refreshToken == "refresh-1")
     }
 
     @Test func aDeadSessionSurfacesAsNotAuthenticated() async throws {

@@ -25,15 +25,19 @@ public struct UserProfile: Hashable, Sendable {
     public var mutualFollowersPreview: [UserSummary]
     /// A community account (a group's page run by several members), shown with a badge.
     public var isCommunity: Bool
+    /// nil unless the owner made it visible (hidden by default), or never set.
+    public var gender: Gender?
 
     public init(
         id: String? = nil, username: String, displayName: String? = nil, firstName: String? = nil, lastName: String? = nil,
         bio: String? = nil, avatarUrl: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0,
         isFollowing: Bool? = nil, isBlocked: Bool? = nil,
         followersCount: Int = 0, followingCount: Int = 0, followsYou: Bool? = nil,
-        mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = [], isCommunity: Bool = false
+        mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = [], isCommunity: Bool = false,
+        gender: Gender? = nil
     ) {
         self.id = id
+        self.gender = gender
         self.isCommunity = isCommunity
         self.followersCount = followersCount
         self.followingCount = followingCount
@@ -77,13 +81,29 @@ public struct MyProfile: Hashable, Sendable {
     public var visibilitySettings: [String: Bool]
     /// Whether a first Ballot is Anonymous unless the voter says otherwise.
     public var anonymousBallotByDefault: Bool
+    /// nil when never provided; once set it can be changed but not cleared.
+    public var gender: Gender?
+    /// E.164; nil when the account signed up with email only.
+    public var phoneNumber: String?
+    /// The phone number was verified by SMS (phone sign-up or `verifyPhoneBind`).
+    public var phoneVerified: Bool
+    /// nil from an API older than paid plans.
+    public var plan: Plan?
+    public var communityQuota: CommunityQuota?
 
     public init(
         id: String, username: String, email: String? = nil, displayName: String? = nil, bio: String? = nil,
         avatarUrl: String? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil,
         joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0, createdPollCount: Int? = nil, votedPollCount: Int? = nil, followersCount: Int = 0, followingCount: Int = 0,
-        visibilitySettings: [String: Bool] = [:], anonymousBallotByDefault: Bool = false
+        visibilitySettings: [String: Bool] = [:], anonymousBallotByDefault: Bool = false,
+        gender: Gender? = nil, phoneNumber: String? = nil, phoneVerified: Bool = false,
+        plan: Plan? = nil, communityQuota: CommunityQuota? = nil
     ) {
+        self.gender = gender
+        self.phoneNumber = phoneNumber
+        self.phoneVerified = phoneVerified
+        self.plan = plan
+        self.communityQuota = communityQuota
         self.followersCount = followersCount
         self.followingCount = followingCount
         self.id = id
@@ -102,6 +122,40 @@ public struct MyProfile: Hashable, Sendable {
         self.votedPollCount = votedPollCount
         self.visibilitySettings = visibilitySettings
         self.anonymousBallotByDefault = anonymousBallotByDefault
+    }
+}
+
+/// The API's gender values, in the order Edit profile offers them.
+public enum Gender: String, CaseIterable, Sendable {
+    case male = "MALE"
+    case female = "FEMALE"
+    case other = "OTHER"
+    case undisclosed = "UNDISCLOSED"
+
+    /// The gender as the viewer's language words it (the web's `genderLabel`).
+    public var translationKey: String { "profile.genders.\(rawValue)" }
+}
+
+public enum Plan: String, Sendable {
+    case free = "FREE"
+    case pro = "PRO"
+}
+
+/// The community accounts the user owns against their plan's limit.
+public struct CommunityQuota: Hashable, Sendable {
+    /// Unlocked ones the user is an OWNER of.
+    public var owned: Int
+    public var limit: Int
+    /// The user owns more than `limit` unlocked and must choose which to keep.
+    public var selectionRequired: Bool
+    /// When the earliest created are kept and the rest locked if the user hasn't chosen; nil unless `selectionRequired`.
+    public var selectionDeadline: Date?
+
+    public init(owned: Int, limit: Int, selectionRequired: Bool = false, selectionDeadline: Date? = nil) {
+        self.owned = owned
+        self.limit = limit
+        self.selectionRequired = selectionRequired
+        self.selectionDeadline = selectionDeadline
     }
 }
 

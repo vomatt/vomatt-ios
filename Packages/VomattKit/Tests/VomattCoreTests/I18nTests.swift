@@ -128,6 +128,17 @@ struct AuthErrorKeyTests {
         #expect(AuthErrorKey.codeExpired.translationKey == "authError.codeExpired")
     }
 
+    // Ported from vomatt-web `src/__tests__/features/account/PhoneBindDialog.test.tsx`
+    @Test func aPhoneBindRefusalReadsForATextMessage() {
+        #expect(AuthErrorKey(phoneBindError: APIError(.notAuthenticated, errorCode: "auth.invalid_otp")) == .invalidSmsCode)
+        #expect(AuthErrorKey(phoneBindError: APIError(.http(409), errorCode: "user.phone.taken")) == .phoneTaken)
+        #expect(AuthErrorKey(phoneBindError: APIError(.http(409), errorCode: "common.conflict")) == .phoneTaken)
+        #expect(AuthErrorKey(phoneBindError: APIError(.notAuthenticated, errorCode: "auth.otp.too_many_attempts")) == .tooManyAttempts)
+        #expect(AuthErrorKey(phoneBindError: APIError(.http(400), errorCode: "auth.sms.send_failed")) == .smsSendFailed)
+        #expect(AuthErrorKey(phoneBindError: APIError(.http(400), errorCode: "auth.phone.invalid")) == .serverError)
+        #expect(AuthErrorKey.invalidSmsCode.translationKey == "authError.invalidSmsCode")
+    }
+
     // vomatt-web#119: the API states the seconds left only inside its translated message
     @Test func aResendCooldownCarriesTheSecondsLeft() {
         #expect(APIError(.http(400), errorCode: "auth.otp.resend_cooldown", message: "Please wait 65 seconds before resending").cooldownSeconds == 65)

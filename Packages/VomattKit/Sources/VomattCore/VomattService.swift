@@ -513,17 +513,37 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted fields stay as they are; a blank name clears it, a birthday can't be cleared. Errors carry the API's localized message.
+    /// Omitted fields stay as they are; a blank name clears it, a birthday or a gender can't be cleared
+    /// (`.undisclosed` instead). Errors carry the API's localized message.
     @discardableResult
     public func updateProfile(
         username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
-        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil
+        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil,
+        gender: Gender? = nil
     ) async throws -> UserProfile {
         try await call {
             try await UserProfile(required(client.updateMyProfile(body: .json(.init(
                 anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, birthday: birthday,
-                displayName: displayName, firstName: firstName, lastName: lastName, username: username
+                displayName: displayName, firstName: firstName, gender: gender.flatMap { .init(rawValue: $0.rawValue) },
+                lastName: lastName, username: username
             ))).ok.body.json.data, "updateMyProfile.data"))
+        }
+    }
+
+    /// Texts a code that binds `phone` (a Taiwan mobile number or E.164) to the signed-in account. A resend
+    /// inside the cooldown fails with `auth.otp.resend_cooldown` (`APIError.cooldownSeconds`).
+    public func sendPhoneBindOtp(phone: String) async throws {
+        try await call { _ = try await client.sendPhoneBindOtp(body: .json(.init(phone: phone))).ok }
+    }
+
+    /// Binds the number the code went to; resolves to the profile with `phoneVerified` true. A wrong or
+    /// expired code is a 401 that doesn't end the session: show it with `AuthErrorKey(phoneBindError:)`.
+    @discardableResult
+    public func verifyPhoneBind(phone: String, code: String) async throws -> MyProfile {
+        try await call {
+            try await MyProfile(required(
+                client.verifyPhoneBind(body: .json(.init(code: code, phone: phone))).ok.body.json.data, "verifyPhoneBind.data"
+            ))
         }
     }
 

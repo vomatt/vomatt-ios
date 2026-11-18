@@ -60,6 +60,7 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
 public enum AuthErrorKey: String, Sendable {
     case invalidCode, codeExpired, tooManyAttempts, resendCooldown, emailSendFailed
     case accountSuspended, rateLimited, invalidEmail, serverError, passkeyInvalid
+    case invalidSmsCode, phoneTaken, smsSendFailed
 
     private static let codes: [String: AuthErrorKey] = [
         "auth.invalid_otp": .invalidCode,
@@ -70,6 +71,16 @@ public enum AuthErrorKey: String, Sendable {
         "auth.email.send_failed": .emailSendFailed,
         "auth.account_banned": .accountSuspended,
         "auth.passkey.invalid": .passkeyInvalid,
+        "auth.sms.send_failed": .smsSendFailed,
+        "user.phone.taken": .phoneTaken,
+    ]
+
+    /// Bind refusals that mean something else than at sign-in (the web's `PHONE_ERRORS`).
+    private static let phoneBindCodes: [String: AuthErrorKey] = [
+        // Sign-in's copy points at the email
+        "auth.invalid_otp": .invalidSmsCode,
+        // Another account bound the number between send and verify
+        "common.conflict": .phoneTaken,
     ]
 
     /// Maps a backend `errorCode` and HTTP status to a message the UI can show.
@@ -81,6 +92,14 @@ public enum AuthErrorKey: String, Sendable {
         case 400: self = .invalidEmail
         default: self = .serverError
         }
+    }
+
+    /// A failed `sendPhoneBindOtp` or `verifyPhoneBind`; the rest read as at sign-in.
+    public init(phoneBindError error: Error) {
+        if let code = (error as? APIError)?.errorCode, let key = Self.phoneBindCodes[code] { self = key; return }
+        let key = AuthErrorKey(error)
+        // A 400 here is about the number, never an email address
+        self = key == .invalidEmail ? .serverError : key
     }
 
     /// A failed passkey sign-in; nil when the person cancelled, which isn't an error to show.

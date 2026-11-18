@@ -216,7 +216,8 @@ extension UserProfile {
             followsYou: dto.followsYou,
             mutualFollowersCount: dto.mutualFollowersCount.map(Int.init),
             mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init),
-            isCommunity: dto.community ?? false
+            isCommunity: dto.community ?? false,
+            gender: dto.gender.flatMap { Gender(rawValue: $0.rawValue) }
         )
     }
 }
@@ -241,7 +242,23 @@ extension MyProfile {
             followersCount: dto.followersCount.map(Int.init) ?? 0,
             followingCount: dto.followingCount.map(Int.init) ?? 0,
             visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:],
-            anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false
+            anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false,
+            gender: dto.gender.flatMap { Gender(rawValue: $0.rawValue) },
+            phoneNumber: dto.phoneNumber,
+            phoneVerified: dto.phoneVerified ?? false,
+            plan: dto.plan.flatMap { Plan(rawValue: $0.rawValue) },
+            communityQuota: dto.communityQuota.map(CommunityQuota.init)
+        )
+    }
+}
+
+extension CommunityQuota {
+    init(_ dto: Schemas.CommunityQuota) {
+        self.init(
+            owned: dto.owned.map(Int.init) ?? 0,
+            limit: dto.limit.map(Int.init) ?? 0,
+            selectionRequired: dto.selectionRequired ?? false,
+            selectionDeadline: dto.selectionDeadline
         )
     }
 }

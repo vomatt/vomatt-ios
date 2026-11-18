@@ -94,8 +94,14 @@ struct AuthMiddleware: ClientMiddleware {
             // Buffer the body so it can be read here and still returned; a failed read is the caller's error
             let data = try await Data(collecting: responseBody, upTo: 1 << 20)
             rejection = HTTPBody(data)
+            let errorCode = Self.errorCode(in: data)
+            // A wrong or expired one-time code (binding a phone) is a 401 too, but the token was accepted:
+            // a refresh would spend it, and the retry would count as a second wrong code
+            if let errorCode, errorCode == "auth.invalid_otp" || errorCode.hasPrefix("auth.otp.") {
+                return (response, rejection)
+            }
             // Only when this token is still the session's: a late answer for an earlier sign-in must not end the new one
-            if Self.errorCode(in: data) == "auth.session_revoked" {
+            if errorCode == "auth.session_revoked" {
                 if await session.currentAccessToken() == token {
                     await session.signOut(expired: true, revoked: true)
                 }
