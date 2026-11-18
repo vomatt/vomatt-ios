@@ -47,6 +47,8 @@ enum Route: Hashable {
     /// The poll page with the Reply composer open under this Comment (a notification's Reply).
     case pollReply(String, FeedNotification.CommentInfo)
     case profile(String)
+    /// A community account's invitation to join it, by the invitation's id.
+    case communityInvitation(String)
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
     case settings
@@ -248,7 +250,8 @@ final class AppModel {
         paths[selectedTab, default: NavigationPath()].append(route)
     }
 
-    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` and `https://<site>/<username>`. The page opens on
+    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>`, `https://<site>/<username>` and a community
+    /// invitation's `…/notifications/community-invitations/<id>` (its email's link). The page opens on
     /// the tab the person is on, over whatever they had there, once anything presented has closed. A link
     /// the app has no page for leaves everything as it is.
     func open(_ url: URL) {
@@ -256,7 +259,10 @@ final class AppModel {
             ? [url.host()].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }
             : url.pathComponents.filter { $0 != "/" }
         guard let first = parts.first else { return }
-        if first == "notifications" {
+        if parts.count == 3, first == "notifications", parts[1] == "community-invitations" {
+            dismissModals()
+            push(.communityInvitation(parts[2]))
+        } else if first == "notifications" {
             dismissModals()
             selectedTab = .notifications
             paths[.notifications] = NavigationPath()
@@ -311,6 +317,17 @@ final class AppModel {
     /// Lists drop Polls deleted elsewhere or by blocked people, and show the newest copy of the rest.
     func visible(_ polls: [Poll]) -> [Poll] {
         polls.filter { !deletedPollIds.contains($0.id) && !isBlocked($0.creatorUsername) }.map(latest)
+    }
+
+    // MARK: Community invitations
+
+    /// Invitations answered, or found gone, on their own page: the API drops their notification, so the
+    /// feed drops its row without refetching.
+    private(set) var closedCommunityInvitations: Set<String> = []
+
+    func didCloseCommunityInvitation(_ id: String) {
+        closedCommunityInvitations.insert(id)
+        Task { await refreshUnread() }
     }
 
     // MARK: Following

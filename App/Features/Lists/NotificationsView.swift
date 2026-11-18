@@ -89,7 +89,11 @@ struct NotificationsView: View {
             if list.items.isEmpty {
                 EmptyState { Text(app.t("notifications.categoryEmpty")) }
             }
-            ForEach(ActivitySection.sections(list.items)) { section in
+            // An invitation answered on its own screen is gone from the API's feed too
+            let items = list.items.filter { item in
+                item.communityInvitation.map { !app.closedCommunityInvitations.contains($0.id) } ?? true
+            }
+            ForEach(ActivitySection.sections(items)) { section in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(app.t("notifications.day.\(section.day.rawValue)"))
                         .font(.vm(12, .medium, relativeTo: .caption)).foregroundStyle(Tokens.mutedForeground)
@@ -219,6 +223,11 @@ private struct NotificationRow: View {
         case let .single(item):
             if item.kind == .followed, let actor = item.actor {
                 app.push(.profile(actor.username))
+            } else if let invitation = item.communityInvitation {
+                app.push(.communityInvitation(invitation.id))
+            } else if item.kind == .communityLocked {
+                // The web's `/settings#communities`: Settings says how many the plan allows
+                app.push(.settings)
             } else if let poll = item.poll {
                 app.push(.poll(poll.id))
             }
@@ -413,8 +422,10 @@ private struct NotificationRow: View {
             switch item.kind {
             case .result:
                 if let outcome = item.poll.flatMap(outcome) { OutcomeChip(outcome: outcome) }
-            case .cancelled, .communityInvitation, .communityLocked:
+            case .cancelled:
                 EmptyView()
+            case .communityInvitation, .communityLocked:
+                Button(app.t("notifications.view"), action: open).buttonStyle(.vm(.outline, size: .sm))
             case .invitation:
                 let canVote = item.poll?.myOptionId == nil && (invitationStatus == .open || invitationStatus == .closing)
                 Button(app.t(canVote ? "poll.vote" : "notifications.view"), action: open)

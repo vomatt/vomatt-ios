@@ -20,6 +20,11 @@ public struct DateFormatting: Sendable {
         return language == .zh ? "\(day) \(time)" : "\(day), \(time)"
     }
 
+    /// "Nov 9, 2026" / "2026年11月9日" (the web's `formatDate`).
+    public func day(_ date: Date) -> String {
+        string(date, template: "yMMMd", timeZone: timeZone)
+    }
+
     /// "Aug 2026" / "2026年8月", in UTC so it matches the web.
     public func monthYear(_ date: Date) -> String {
         string(date, template: "MMMyyyy", timeZone: TimeZone(identifier: "UTC")!)

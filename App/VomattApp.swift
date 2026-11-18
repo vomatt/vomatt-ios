@@ -172,6 +172,7 @@ struct RouteView: View {
         case let .poll(id): PollDetailView(pollId: id)
         case let .pollReply(id, comment): PollDetailView(pollId: id, replyTo: comment)
         case let .profile(username): ProfileView(username: username)
+        case let .communityInvitation(id): CommunityInvitationView(invitationId: id)
         case let .topic(tag): FeedView(tag: tag)
         case let .people(username, kind): FollowListView(username: username, kind: kind)
         case .settings: SettingsView()

@@ -76,6 +76,12 @@ struct DateTests {
         #expect(chinese.monthYear(date) == "2026年10月")
     }
 
+    @Test func dayIsTheWholeDateInTheReadersTimeZone() {
+        let date = try! LenientDateTranscoder().decode("2026-11-08T18:00:00Z")
+        #expect(DateFormatting(language: .en, timeZone: TimeZone(identifier: "Asia/Taipei")!).day(date) == "Nov 9, 2026")
+        #expect(DateFormatting(language: .zh, timeZone: TimeZone(identifier: "Asia/Taipei")!).day(date) == "2026年11月9日")
+    }
+
     @Test func reusedFormattersKeepEachLanguageAndZone() {
         let date = try! LenientDateTranscoder().decode("2026-10-07T14:00:00Z")
         let readers = [
