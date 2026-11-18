@@ -81,7 +81,12 @@ struct UsernameRuleTests {
     @Test func rejectsTheReservedNamesTheAPIRefuses() {
         for name in Username.reserved { #expect(!Username.isValid(name), "\(name)") }
         #expect(Username.reserved.contains("following"))
-        #expect(Username.reserved.contains("contact"))
+        #expect(Username.reserved.contains("signup"))
+    }
+
+    @Test func rejectsTheRootPagesThatRedirectToTheAboutSite() {
+        #expect(!Username.isValid("about"))
+        #expect(!Username.isValid("contact"))
     }
 
     @Test func acceptsNamesThatOnlyStartWithAReservedName() {
