@@ -189,7 +189,7 @@ private struct NotificationRow: View {
                             .font(.vm(15))
                             .foregroundStyle(item.kind == .cancelled ? Tokens.mutedForeground : Tokens.foreground)
                             .multilineTextAlignment(.leading)
-                        Text(meta.joined(separator: metaGap))
+                        metaLine
                             .font(.vm(12, relativeTo: .caption))
                             .foregroundStyle(tide ? Tokens.tideForeground : Tokens.mutedForeground)
                             .lineLimit(2)
@@ -375,7 +375,7 @@ private struct NotificationRow: View {
         switch item.kind {
         case .result:
             guard let poll = item.poll else { return [age] }
-            return [winners(poll), app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age].compactMap { $0 }
+            return [app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age]
         case .cancelled, .followed, .communityInvitation, .communityLocked:
             return [age]
         case .invitation:
@@ -391,12 +391,13 @@ private struct NotificationRow: View {
         }
     }
 
-    /// "Yes won" or "Tie between A and B"; nil when no Ballot named an option.
-    private func winners(_ poll: FeedNotification.PollInfo) -> String? {
-        guard let labels = poll.winningOptionLabels, let first = labels.first else { return nil }
-        guard poll.tie == true else { return app.t("profile.wonBy", ["option": first]) }
-        let list = app.t.list(labels)
-        return app.t("profile.tieBetween", ["options": list])
+    /// A result leads with what it decided, "Yes won" or "Tie between A and B", when a Ballot named an option.
+    private var metaLine: Text {
+        let rest = Text(meta.joined(separator: metaGap))
+        guard case .single = entry, item.kind == .result, let poll = item.poll,
+              let decided = DecidedText(winners: poll.winningOptionLabels ?? [], tie: poll.tie == true).text(app.t, size: 12, relativeTo: .caption1)
+        else { return rest }
+        return decided + Text(verbatim: metaGap) + rest
     }
 
     /// The clock moves a Scheduled poll to Open and an Open one to closing; only Ended comes from the API.

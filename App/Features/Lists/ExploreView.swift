@@ -245,12 +245,9 @@ private struct PollTile: View {
         case .ended where poll.isCancelled:
             Text(app.t("notifications.cancelled"))
         case .ended:
-            switch ProfileLists.endedSummary(poll) {
-            case let .won(winner):
-                Text.rich(app.t("profile.wonBy"), ["option": decided(winner)]) + separator + turnout
-            case let .tie(winners):
-                Text.rich(app.t("profile.tieBetween"), ["options": decided(app.t.list(winners))]) + separator + turnout
-            case .none:
+            if let decided = DecidedText(ProfileLists.endedSummary(poll))?.text(app.t, size: 13) {
+                decided + separator + turnout
+            } else {
                 turnout
             }
         case .scheduled:
@@ -266,9 +263,5 @@ private struct PollTile: View {
         case let (nil, topics?): topics
         case (nil, nil): Text(verbatim: "")
         }
-    }
-
-    private func decided(_ text: String) -> Text {
-        Text(text).fontWeight(.medium).foregroundColor(Tokens.foreground)
     }
 }

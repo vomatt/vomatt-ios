@@ -326,7 +326,7 @@ struct AskedRow: View {
             if poll.isCancelled {
                 parts = [Text(app.t("notifications.cancelled"))]
             } else {
-                parts = [decided(poll), Text(votedCount(poll, app.t))].compactMap { $0 }
+                parts = [DecidedText(ProfileLists.endedSummary(poll))?.text(app.t, size: 13), Text(votedCount(poll, app.t))].compactMap { $0 }
             }
         } else {
             let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
@@ -338,22 +338,6 @@ struct AskedRow: View {
             joined(parts)
         } aside: {
             StatusChip(poll: poll, timeElsewhere: true)
-        }
-    }
-
-    /// "**Yes** won" or "Tie between **A** and **B**"; nil when there is no winner to name.
-    private func decided(_ poll: Poll) -> Text? {
-        switch ProfileLists.endedSummary(poll) {
-        case let .won(winner):
-            return Text.rich(app.t("profile.wonBy"), ["option": strong(winner)])
-        case let .tie(winners):
-            // The locale's list ("A, B and C"), formatted around placeholders so each name stays bold
-            let keys = winners.indices.map { "{\($0)}" }
-            let list = app.t.list(keys)
-            let names = Dictionary(uniqueKeysWithValues: winners.enumerated().map { ("\($0.offset)", strong($0.element)) })
-            return Text.rich(app.t("profile.tieBetween"), ["options": Text.rich(list, names)])
-        case .none:
-            return nil
         }
     }
 
