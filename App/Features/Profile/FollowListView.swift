@@ -28,7 +28,6 @@ struct FollowListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                SectionTitle(text: title)
                 if let list {
                     switch list.phase {
                     case .idle, .loading:
@@ -66,6 +65,7 @@ struct FollowListView: View {
         }
         .refreshable { await list?.reload() }
         .canvas()
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: username) {
             let service = app.service

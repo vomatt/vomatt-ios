@@ -5,6 +5,8 @@ import VomattCore
 struct VomattApp: App {
     @State private var app = AppModel()
 
+    init() { NavigationBarType.apply() }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -32,7 +34,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var app = app
         tabs
-        .toastHost(app)
+        .toastHost(app, colorScheme: theme.colorScheme)
         .preferredColorScheme(theme.colorScheme)
         .sheet(item: $app.pendingAuth) { pending in
             AuthSheet(onSignedIn: pending.onSignedIn)
@@ -58,6 +60,7 @@ struct RootView: View {
             Button(app.t("common.cancel"), role: .cancel) {}
             Button(app.t("follows.unfollow"), role: .destructive) { app.unfollow(request.userId) }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: app.followTaps)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await app.refreshUnread() } }
         }

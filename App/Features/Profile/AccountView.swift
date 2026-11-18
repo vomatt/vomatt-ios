@@ -37,9 +37,6 @@ struct AccountView: View {
                 // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
                 ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
-                    Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
-                        .buttonStyle(.vm(.outline, size: .icon))
-                        .accessibilityLabel(app.t("navigation.settings"))
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
@@ -110,7 +107,14 @@ struct AccountView: View {
             await savedReload
         }
         .canvas()
+        .navigationTitle("@\(profile.username)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel(app.t("navigation.settings"))
+            }
+        }
         .task(id: app.sessionGeneration) { await load() }
         .onChange(of: tab) {
             guard tab == .saved, saved == nil else { return }
@@ -418,6 +422,7 @@ struct EditProfileSheet: View {
     /// A new username breaks old links, so it takes a second step.
     @State private var confirmingUsername = false
     @State private var isSaving = false
+    @State private var confirmingDiscard = false
     @FocusState private var usernameFocused: Bool
 
     private static let displayNameMax = 100
@@ -453,6 +458,7 @@ struct EditProfileSheet: View {
     private var visibilityChanges: [String: Bool] {
         ProfileVisibility.changes(saved: profile.visibilitySettings, next: visibility)
     }
+    private var hasChanges: Bool { detailsChanged || !visibilityChanges.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -461,7 +467,9 @@ struct EditProfileSheet: View {
             .navigationTitle(app.t("profile.editProfile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(app.t("common.cancel")) { if hasChanges { confirmingDiscard = true } else { dismiss() } }
+                }
                 ToolbarItem(placement: .confirmationAction) { saveButton }
             }
             .alert(app.t("account.usernameConfirmTitle"), isPresented: $confirmingUsername) {
@@ -472,6 +480,7 @@ struct EditProfileSheet: View {
                 Text(usernameMove)
             }
         }
+        .discardConfirmation(app, isPresented: $confirmingDiscard, hasChanges: hasChanges) { dismiss() }
         .onAppear(perform: start)
     }
 

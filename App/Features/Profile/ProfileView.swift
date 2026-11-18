@@ -10,18 +10,22 @@ struct AccountTab: View {
             AccountView(profile: me)
         } else if app.isSignedIn {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity).canvas()
+                .navigationTitle(app.t("navigation.profile"))
+                .navigationBarTitleDisplayMode(.inline)
                 .task { await app.refreshAccount() }
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(app.t("navigation.profile")).displayHeading(32)
                     LoginPromptCard()
                     LegalLinks()
                 }
                 .pageColumn()
-                .padding(.vertical, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .canvas()
+            .navigationTitle(app.t("navigation.profile"))
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }
@@ -71,6 +75,7 @@ struct ProfileView: View {
         }
         .refreshable { await load() }
         .canvas()
+        .navigationTitle("@\(username)")
         .toolbar {
             if let readyProfile {
                 ToolbarItem(placement: .topBarTrailing) { moreMenu(readyProfile) }

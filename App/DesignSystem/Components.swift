@@ -448,20 +448,82 @@ struct ToastView: View {
 }
 
 extension View {
-    /// Shows `app.toast` for a few seconds and announces it to VoiceOver.
-    func toastHost(_ app: AppModel) -> some View {
-        modifier(ToastHost(app: app))
+    /// For a sheet that edits something: while there are changes a swipe down doesn't close it, and Cancel
+    /// (which sets `isPresented`) asks before they are discarded, as the poll creator does.
+    func discardConfirmation(_ app: AppModel, isPresented: Binding<Bool>, hasChanges: Bool, discard: @escaping () -> Void) -> some View {
+        interactiveDismissDisabled(hasChanges)
+            .confirmationDialog(app.t("pollCreator.discardEditTitle"), isPresented: isPresented, titleVisibility: .visible) {
+                Button(app.t("pollCreator.discardEdit"), role: .destructive, action: discard)
+                Button(app.t("pollCreator.keepEditing"), role: .cancel) {}
+            }
+    }
+
+    /// Shows `app.toast` for a few seconds and announces it to VoiceOver. The toast gets a window of its
+    /// own above the app's, so a sheet or the creator can't cover it.
+    func toastHost(_ app: AppModel, colorScheme: ColorScheme?) -> some View {
+        background(ToastWindowAnchor(app: app, style: UIUserInterfaceStyle(colorScheme)))
     }
 }
 
-private struct ToastHost: ViewModifier {
+/// Opens the toast window in the scene this view lands in.
+private struct ToastWindowAnchor: UIViewRepresentable {
+    let app: AppModel
+    /// The app's theme: the window is outside the hierarchy `preferredColorScheme` reaches.
+    let style: UIUserInterfaceStyle
+
+    func makeUIView(context: Context) -> AnchorView { AnchorView(app: app) }
+
+    func updateUIView(_ view: AnchorView, context: Context) { view.style = style }
+
+    final class AnchorView: UIView {
+        private let app: AppModel
+        private var toastWindow: ToastWindow?
+        var style = UIUserInterfaceStyle.unspecified {
+            didSet { toastWindow?.overrideUserInterfaceStyle = style }
+        }
+
+        init(app: AppModel) {
+            self.app = app
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard toastWindow == nil, let scene = window?.windowScene else { return }
+            let toastWindow = ToastWindow(windowScene: scene)
+            let host = UIHostingController(rootView: ToastLayer(app: app) { [weak toastWindow] in toastWindow?.toastFrame = $0 })
+            host.view.backgroundColor = .clear
+            toastWindow.rootViewController = host
+            toastWindow.windowLevel = .normal + 1
+            toastWindow.overrideUserInterfaceStyle = style
+            toastWindow.isHidden = false
+            self.toastWindow = toastWindow
+        }
+    }
+}
+
+/// Only the toast itself takes touches; everything else falls through to the app's window.
+private final class ToastWindow: UIWindow {
+    var toastFrame = CGRect.zero
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        toastFrame.contains(point) ? super.hitTest(point, with: event) : nil
+    }
+}
+
+private struct ToastLayer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let app: AppModel
+    let onFrame: (CGRect) -> Void
 
-    func body(content: Content) -> some View {
-        content.overlay(alignment: .bottom) {
+    var body: some View {
+        Color.clear.overlay(alignment: .bottom) {
             if let toast = app.toast {
                 ToastView(toast: toast)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { onFrame($0) }
                     .padding(.bottom, 80)
                     .transition(.vmEnterExit(reduceMotion: reduceMotion))
                     .id(toast.id)
@@ -474,5 +536,6 @@ private struct ToastHost: ViewModifier {
             }
         }
         .animation(.spring(duration: 0.3), value: app.toast)
+        .onChange(of: app.toast == nil) { _, gone in if gone { onFrame(.zero) } }
     }
 }

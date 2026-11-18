@@ -16,31 +16,46 @@ struct NotificationsView: View {
         Group {
             if app.isSignedIn {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
-                        content
+                    // The categories stay under the bar while the feed scrolls, like Home's topics
+                    LazyVStack(alignment: .leading, spacing: 8, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            content.pageColumn().padding(.top, showsCategories ? 0 : 8)
+                        } header: {
+                            if showsCategories { categoryPills.background(Tokens.background.opacity(0.97)) }
+                        }
                     }
-                    .pageColumn()
-                    .padding(.vertical, 24)
+                    .padding(.bottom, 24)
                 }
                 .refreshable { await load() }
                 .task(id: app.sessionGeneration) { await load() }
             } else {
-                SignedOutPlaceholder(title: app.t("notifications.title"))
+                SignedOutPlaceholder()
             }
         }
         .canvas()
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var header: some View {
-        Text(app.t("notifications.title")).displayHeading(32).accessibilityAddTraits(.isHeader)
+        .navigationTitle(app.t("notifications.title"))
+        .navigationBarTitleDisplayMode(.large)
     }
 
     /// Nothing at all: unknown kinds are left out, so an empty page can still have more after it.
     private var isEmpty: Bool {
         guard let list else { return false }
         return category == nil && list.items.isEmpty && !list.hasMore && app.unreadCount == 0
+    }
+
+    /// Once there is a feed to filter; an empty category keeps them, to get back out.
+    private var showsCategories: Bool { list?.phase == .loaded && !isEmpty }
+
+    private var categoryPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            FilterPills(
+                label: app.t("notifications.categoryLabel"),
+                selection: Binding(get: { category }, set: { next in Task { await changeCategory(next) } }),
+                options: [(nil, app.t("profile.filterAll"), nil)] + FeedNotification.Category.allCases.map { ($0, categoryLabel($0), nil) }
+            )
+            .padding(.horizontal, Metrics.gutter)
+            .padding(.vertical, 8)
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -71,13 +86,6 @@ struct NotificationsView: View {
 
     private func feed(_ list: CursorList<FeedNotification>) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                FilterPills(
-                    label: app.t("notifications.categoryLabel"),
-                    selection: Binding(get: { category }, set: { next in Task { await changeCategory(next) } }),
-                    options: [(nil, app.t("profile.filterAll"), nil)] + FeedNotification.Category.allCases.map { ($0, categoryLabel($0), nil) }
-                )
-            }
             if list.items.isEmpty {
                 EmptyState { Text(app.t("notifications.categoryEmpty")) }
             }
@@ -452,19 +460,14 @@ private struct FollowBackButton: View {
     }
 }
 
-/// What a signed-in-only tab shows to guests.
+/// What a signed-in-only tab shows to guests, under the tab's navigation title.
 struct SignedOutPlaceholder: View {
-    @Environment(AppModel.self) private var app
-    let title: String
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text(title).displayHeading(32)
-                LoginPromptCard()
-            }
-            .pageColumn()
-            .padding(.vertical, 24)
+            LoginPromptCard()
+                .pageColumn()
+                .padding(.top, 8)
+                .padding(.bottom, 24)
         }
     }
 }

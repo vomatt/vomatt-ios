@@ -45,7 +45,8 @@
 		"seeAll": "查看全部",
 		"rulesTitle": "投票者會看到的規則",
 		"rulesChange": "更改",
-		"rulesDone": "完成"
+		"rulesDone": "完成",
+		"pollTitle": "投票"
 	},
 	"apiError": {
 		"auth.email_not_verified": "此 OAuth 帳號的 email 尚未驗證，無法登入或合併既有帳號",
