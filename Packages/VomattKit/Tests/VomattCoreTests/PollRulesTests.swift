@@ -11,13 +11,13 @@ private func poll(
     active: Bool = true, votingActive: Bool = true, start: Date = hours(-48), end: Date? = hours(72),
     audience: Audience? = .public, visibility: VoterVisibility? = .owner, deletable: Bool? = nil,
     options: [PollOption] = [PollOption(id: "a", text: "A"), PollOption(id: "b", text: "B")],
-    myOptionId: String? = nil, participants: Int? = nil, deadline: Date? = nil
+    myOptionId: String? = nil, participants: Int? = nil, deadline: Date? = nil, revealAt: Date? = nil
 ) -> Poll {
     Poll(
         id: "p1", title: "Q", active: active, votingActive: votingActive, voterVisibility: visibility,
         audience: audience, creatorId: "owner", creatorUsername: "alice", createdAt: start, startTime: start,
         endTime: end, deadline: deadline, deletable: deletable,
-        participantCount: participants, myOptionId: myOptionId, options: options
+        participantCount: participants, myOptionId: myOptionId, revealAt: revealAt, options: options
     )
 }
 
@@ -54,6 +54,46 @@ struct NextStatusChangeTests {
         #expect(poll(end: hours(-1)).nextStatusChange(at: now) == nil)
         #expect(poll(active: false).nextStatusChange(at: now) == nil)
         #expect(poll(end: nil).nextStatusChange(at: now) == nil)
+    }
+
+    @Test func endedPollStillSealedChangesAtItsRevealAtThenNever() {
+        #expect(poll(end: hours(-1), revealAt: hours(6)).nextStatusChange(at: now) == hours(6))
+        #expect(poll(end: hours(-2), revealAt: hours(-1)).nextStatusChange(at: now) == nil)
+    }
+
+    @Test func openPollWithALaterRevealAtStillChangesAtItsEnd() {
+        #expect(poll(end: hours(5), revealAt: hours(30)).nextStatusChange(at: now) == hours(5))
+    }
+}
+
+@Suite("Revealed")
+struct RevealedTests {
+    @Test func notWhileThePollIsOpenWhateverItsRevealAt() {
+        #expect(!poll().isRevealed(at: now))
+        #expect(!poll(revealAt: hours(-1)).isRevealed(at: now))
+    }
+
+    @Test func onceEndedWithoutARevealAt() {
+        #expect(poll(end: hours(-1)).isRevealed(at: now))
+    }
+
+    @Test func waitsForARevealAtAfterTheEnd() {
+        #expect(!poll(end: hours(-1), revealAt: hours(1)).isRevealed(at: now))
+        #expect(poll(end: hours(-2), revealAt: hours(-1)).isRevealed(at: now))
+    }
+
+    @Test func revealTimeIsTheRevealAtOrElseTheEnd() {
+        #expect(poll(end: hours(5), revealAt: hours(30)).revealTime == hours(30))
+        #expect(poll(end: hours(5)).revealTime == hours(5))
+        #expect(poll(end: nil).revealTime == nil)
+    }
+
+    // vomatt-web's usePollStatus: `sealedUntil` is set only between the end and the reveal
+    @Test func sealedUntilIsTheRevealAtOnlyBetweenTheEndAndTheReveal() {
+        #expect(poll(end: hours(5), revealAt: hours(30)).sealedUntil(at: now) == nil)
+        #expect(poll(end: hours(-1), revealAt: hours(6)).sealedUntil(at: now) == hours(6))
+        #expect(poll(end: hours(-2), revealAt: hours(-1)).sealedUntil(at: now) == nil)
+        #expect(poll(end: hours(-1)).sealedUntil(at: now) == nil)
     }
 }
 
@@ -160,6 +200,12 @@ struct InsightsTests {
 
     @Test func pendingWhileOpen() {
         #expect(AccountInsights.outcome(of: counted(1, 0, ended: false), optionId: "a", at: now) == .pending)
+    }
+
+    @Test func pendingUntilTheResultsAreRevealed() {
+        var sealed = counted(nil, nil)
+        sealed.revealAt = hours(6)
+        #expect(AccountInsights.outcome(of: sealed, optionId: "a", at: now) == .pending)
     }
 
     @Test func readsWonLostAndTiedFromTheCounts() {

@@ -42,6 +42,14 @@ struct ProfileListsTests {
         #expect(split.decided.map(\.id) == ["e"])
     }
 
+    @Test func votedKeepsAnEndedPollSealedUntilItsRevealAt() {
+        var waiting = poll("w", state: .ended, myOptionId: "a")
+        waiting.revealAt = Self.date("2026-10-06T00:00:00Z")
+        let split = ProfileLists.splitVoted([waiting], at: Self.now)
+        #expect(split.sealed.map(\.id) == ["w"])
+        #expect(split.decided.isEmpty)
+    }
+
     @Test func votedKeepsPollsTheOwnerVotedInButDidNotAsk() {
         let polls = [poll("mine", myOptionId: "a", creatorId: "me"), poll("voted", myOptionId: "b"), poll("invited")]
         #expect(ProfileLists.voted(polls, viewerId: "me").map(\.id) == ["voted"])

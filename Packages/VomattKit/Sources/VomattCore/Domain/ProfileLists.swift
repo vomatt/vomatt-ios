@@ -32,21 +32,12 @@ public enum ProfileLists {
 
     /// Asked: Scheduled and Open Polls first (what happens next), then Ended ones.
     public static func splitAsked(_ polls: [Poll], at now: Date = .now) -> (open: [Poll], ended: [Poll]) {
-        splitEnded(polls, at: now)
+        (polls.filter { $0.status(at: now) != .ended }, polls.filter { $0.status(at: now) == .ended })
     }
 
-    /// Voted: Sealed Ballots waiting for results first, then decided ones.
+    /// Voted: Sealed Ballots waiting for results (open, or Ended before `revealAt`) first, then decided ones.
     public static func splitVoted(_ polls: [Poll], at now: Date = .now) -> (sealed: [Poll], decided: [Poll]) {
-        splitEnded(polls, at: now)
-    }
-
-    private static func splitEnded(_ polls: [Poll], at now: Date) -> ([Poll], [Poll]) {
-        var notEnded: [Poll] = []
-        var ended: [Poll] = []
-        for poll in polls {
-            if poll.status(at: now) == .ended { ended.append(poll) } else { notEnded.append(poll) }
-        }
-        return (notEnded, ended)
+        (polls.filter { !$0.isRevealed(at: now) }, polls.filter { $0.isRevealed(at: now) })
     }
 
     /// Share of decided Ballots whose pick won outright, 0–100; nil before any is decided. A tie isn't a win.
