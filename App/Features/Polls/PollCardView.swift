@@ -1,7 +1,8 @@
 import SwiftUI
 import VomattCore
 
-/// Shows the Ballot until the Poll Ends, then the Results (the web's `PollCard` in a feed). The whole
+/// Shows the Ballot until the Poll Ends, then the Results, or when they come out until its `revealAt`
+/// (the web's `PollCard` in a feed). The whole
 /// card opens the poll page, but the Ballot or Results, owner actions and footer keep their own taps, so
 /// a stray tap in the Ballot can't drop an uncast choice.
 struct PollCardView: View {
@@ -27,7 +28,7 @@ struct PollCardView: View {
     var body: some View {
         // Re-evaluated every minute so the age and chip text follow the clock
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            card(status: poll.status(at: now), now: context.date)
+            card(status: poll.status(at: now), sealedUntil: poll.sealedUntil(at: now), now: context.date)
         }
         .statusClock($now, for: poll, onEnded: refetch)
         .onChange(of: initialPoll) { _, fresh in
@@ -41,7 +42,7 @@ struct PollCardView: View {
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
     }
 
-    private func card(status: PollStatus, now: Date) -> some View {
+    private func card(status: PollStatus, sealedUntil: Date?, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 header(status: status, now: now)
@@ -50,8 +51,8 @@ struct PollCardView: View {
                     if status == .ended {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
-                            onSealed: refetch,
-                            onSelectOption: poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            sealedUntil: sealedUntil, onSealed: refetch,
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
                         )
                     } else {
                         BallotView(
@@ -164,16 +165,17 @@ struct PollCardView: View {
 extension View {
     /// Moves `now` on at the moment the clock next changes the Poll's status (the web's `usePollStatus`),
     /// so a Poll left on screen past its end shows it Ended without a refresh. `onEnded` runs when the
-    /// clock, not a refetch, Ends it.
+    /// clock, not a refetch, Ends it. Passing `revealAt` doesn't call it again: the Results fetch the counts.
     func statusClock(_ now: Binding<Date>, for poll: Poll, onEnded: @escaping () async -> Void) -> some View {
         task(id: poll.nextStatusChange(at: now.wrappedValue)) {
             guard let next = poll.nextStatusChange(at: now.wrappedValue) else { return }
             // Without a tolerance the system coalesces a long sleep, waking it seconds late
             do { try await Task.sleep(for: .seconds(next.timeIntervalSinceNow), tolerance: .milliseconds(100)) } catch { return }
             // The sleep's clock can wake a moment before the wall clock reaches `next`
+            let wasEnded = poll.status(at: now.wrappedValue) == .ended
             now.wrappedValue = max(.now, next)
             // The new status cancels this task, so the refetch runs on its own
-            if poll.status(at: now.wrappedValue) == .ended { Task { await onEnded() } }
+            if !wasEnded, poll.status(at: now.wrappedValue) == .ended { Task { await onEnded() } }
         }
     }
 }

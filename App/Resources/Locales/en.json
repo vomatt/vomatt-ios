@@ -4,12 +4,9 @@
 		"busy": "Another change is in progress. Try again in a moment.",
 		"home": "Home",
 		"createPoll": "Create a poll",
-		"myPolls": "My Polls",
 		"explore": "Explore",
 		"notifications": "Notifications",
-		"login": "login",
 		"email": "Email",
-		"welcome": "Welcome",
 		"loading": "Loading",
 		"signingIn": "Signing you in",
 		"error": "Something went wrong",
@@ -22,10 +19,6 @@
 		"optional": "optional",
 		"required": "required",
 		"loadMore": "Load more",
-		"votes": "votes",
-		"comments": "comments",
-		"active": "Active",
-		"ended": "Ended",
 		"invalidEmailAddress": "Invalid email address",
 		"errorBody": "Please try again. If it keeps happening, come back in a few minutes.",
 		"tryAgain": "Try again",
@@ -38,7 +31,6 @@
 		"home": "Home",
 		"profile": "Profile",
 		"settings": "Settings",
-		"logout": "Logout",
 		"howCountsTitle": "How vomatt counts",
 		"howCountsBody": "One vote per person. Ballots stay sealed while a poll is open, so nobody votes with the crowd.",
 		"more": "More",
@@ -55,14 +47,6 @@
 		"submit": "Submit",
 		"sent": "Thanks. We got your report.",
 		"failed": "Couldn’t send your report. Try again."
-	},
-	"user": {
-		"profile": {
-			"title": "User Profile",
-			"name": "Name",
-			"email": "Email",
-			"bio": "Biography"
-		}
 	},
 	"loginPrompt": {
 		"title": "Log in or sign up for Vomatt",
@@ -82,7 +66,8 @@
 		"sessionExpired": "Your session expired. Please log in again.",
 		"dialogDescription": "Log in or sign up with your email to continue",
 		"sessionRevoked": "For your security, you were signed out on this device. Please log in again.",
-		"signedOutHere": "You were signed out on this device. Please log in again."
+		"signedOutHere": "You were signed out on this device. Please log in again.",
+		"communityInvitation": "Sign up or log in with the email address the invitation was sent to."
 	},
 	"verificationCode": {
 		"title": "Check your email",
@@ -94,15 +79,27 @@
 		"inputLabel": "6-digit verification code",
 		"resendReady": "You can send a new code now."
 	},
+	"phoneBind": {
+		"rowTitle": "Phone number",
+		"rowBodyNone": "Some polls ask for a verified phone number before you vote.",
+		"verified": "Verified",
+		"add": "Add phone number",
+		"verify": "Verify",
+		"title": "Add your phone number",
+		"subtitle": "We’ll text a 6-digit code to this number. Only you see it.",
+		"label": "Phone number",
+		"hint": "A Taiwan mobile number (09…) or one with a country code (+…).",
+		"sendCode": "Send code",
+		"codeTitle": "Check your messages",
+		"codeSubtitle": "Enter the 6-digit code we texted to",
+		"useAnotherNumber": "Use a different number",
+		"done": "Phone number verified"
+	},
 	"myPolls": {
-		"title": "My Polls",
-		"tabActive": "Active",
 		"tabDrafts": "Drafts",
 		"tabEnded": "Ended",
 		"empty": "No polls here yet.",
-		"actionEdit": "Edit",
 		"actionDelete": "Delete",
-		"actionEnd": "End Poll",
 		"draftContinue": "Continue",
 		"draftSavedAt": "Saved {date}",
 		"draftNoEnd": "no end date yet",
@@ -143,7 +140,6 @@
 	},
 	"pollDetail": {
 		"about": "About this poll",
-		"share": "Share",
 		"notFound": "Poll not found.",
 		"notFoundBody": "It may have been deleted, or the link is wrong.",
 		"notFoundExplore": "Explore polls",
@@ -154,7 +150,6 @@
 		"resultsIn": "Voting has closed. Results are in.",
 		"noEnd": "No end time set",
 		"topics": "Topics",
-		"sealedExplainer": "Votes stay sealed until the poll ends, so no one is swayed by the running count. You can change or withdraw your vote until then.",
 		"ruleSealed": "Ballots are sealed. Counts are revealed only when the poll ends.",
 		"ruleOneVote": "One vote per person. You can change it until the end.",
 		"endedEarly": "Ended early. It was set to close {date}.",
@@ -168,27 +163,17 @@
 		"pageNotFoundBody": "The link may be broken, or the page was removed.",
 		"notFoundExplore": "Explore polls",
 		"notFoundHome": "Go home",
-		"polls": "Polls",
 		"noPollsYet": "No polls yet.",
 		"noPollsYetOwn": "Your polls show up here once they open.",
 		"pollsLoadFailed": "Couldn’t load polls.",
+		"pollsTruncated": "You have more polls than this page can load. Some are missing from these lists and counts.",
 		"cardFailed": "Couldn’t load this profile.",
 		"joined": "Joined {date}",
 		"followers": "Followers",
 		"following": "Following",
-		"noFollowers": "No followers yet.",
-		"noFollowing": "Not following anyone yet.",
-		"listFailed": "Couldn’t load this list.",
 		"onlyYou": "Only you can see this",
-		"onlyYouSee": "Only you see: {items}.",
-		"onlyYouSettings": "Change in Settings",
-		"statVoted": "Public polls voted in",
-		"statCreated": "Public polls created",
-		"statTurnout": "Votes received",
 		"editProfile": "Edit profile",
 		"bio": "Bio",
-		"joinedAt": "Joined",
-		"totalVotes": "Votes",
 		"displayName": "Display name",
 		"saveChanges": "Save changes",
 		"displayNamePlaceholder": "Your display name",
@@ -197,6 +182,15 @@
 		"lastName": "Last name",
 		"birthday": "Birthday",
 		"birthdayInvalid": "Pick a date between 1900 and yesterday.",
+		"gender": "Gender",
+		"genders": {
+			"MALE": "Male",
+			"FEMALE": "Female",
+			"OTHER": "Other",
+			"UNDISCLOSED": "Prefer not to say"
+		},
+		"genderMeta": "Gender: {gender}",
+		"genderReportNote": "Pro poll result reports include gender only in anonymous totals, never with your name.",
 		"updated": "Profile updated",
 		"askedCount": "{count} asked",
 		"askedCount_one": "{count} asked",
@@ -291,13 +285,21 @@
 		"replied": "{name} replied in {title}",
 		"mentioned": "{name} mentioned you in {title}",
 		"liked": "{name} liked your comment in {title}",
+		"pollLiked": "{name} liked your poll {title}",
+		"communityLocked": "{name} was locked because no choice was made before the deadline",
+		"communityInvitation": "{name} invited you to join as {role}",
+		"accept": "Accept",
+		"decline": "Decline",
+		"invitationAccepted": "You joined {name}",
+		"invitationDeclined": "Declined the invitation from {name}",
 		"categoryLabel": "Category",
 		"category": {
 			"CONVERSATION": "Conversation",
 			"LIKE": "Likes",
 			"POLL_END": "Poll ends",
 			"INVITATION": "Invitations",
-			"FOLLOW": "Follows"
+			"FOLLOW": "Follows",
+			"COMMUNITY": "Community"
 		},
 		"categoryEmpty": "Nothing here yet.",
 		"categoryFailed": "Couldn’t load that tab. Try again.",
@@ -345,15 +347,17 @@
 		"visibilityLabel": "After it ends, who can see what each person chose?",
 		"visibility": {
 			"nobody": "Nobody",
-			"nobodyHint": "Only totals are shown.",
+			"nobodyHint": "Not even you. Only totals are shown.",
 			"owner": "Only me",
-			"ownerHint": "You see who chose each option.",
+			"ownerHint": "Only you see who chose each option. Everyone else sees the totals.",
 			"signed-in": "Everyone signed in",
 			"signed-inHint": "Every signed-in user sees who chose what.",
 			"invited": "Everyone invited",
-			"invitedHint": "Everyone invited sees who chose what."
+			"invitedHint": "Everyone invited sees who chose what.",
+			"community": "Only {name}",
+			"communityHint": "Anyone acting as {name} sees who chose each option. Everyone else sees the totals."
 		},
-		"visibilityNote": "Voters see it before they vote.",
+		"visibilityNote": "Voters are shown this before they vote.",
 		"publish": "Publish poll",
 		"saveChanges": "Save changes",
 		"draftSaved": "Draft saved",
@@ -386,8 +390,10 @@
 			"nobody": "Nobody will see who chose what.",
 			"owner": "Only you will see who chose what once it ends.",
 			"signed-in": "Anyone signed in will see who chose what once it ends.",
-			"invited": "Everyone invited will see who chose what once it ends."
+			"invited": "Everyone invited will see who chose what once it ends.",
+			"community": "Only people acting as {name} will see who chose what once it ends."
 		},
+		"ruleAnonymous": "If anyone votes anonymously, only who took part is listed.",
 		"ruleFixed": "You can’t change this after it opens.",
 		"ruleOneVote": "One vote per person. Voters can change or withdraw it until the poll closes.",
 		"audienceLabel": "Who can see and vote?",
@@ -449,7 +455,7 @@
 		"vote": "Vote",
 		"updateVote": "Update vote",
 		"changeHint": "Pick another option to change your vote.",
-		"updatingHint": "Replaces your vote for {option}. Still sealed until the poll ends.",
+		"updatingHint": "Replaces your vote for {option}.",
 		"withdrawVote": "Withdraw vote",
 		"withdrawTitle": "Withdraw your vote?",
 		"withdrawBody": "You won’t be counted or notified.",
@@ -458,9 +464,10 @@
 		"yourVoteShort": "your vote",
 		"yourVoteCaption": "“{option}” was your vote.",
 		"revealHint": "Results are revealed when the poll ends",
-		"sealed": "Results are sealed until {date}. We’ll notify you when they’re in.",
-		"sealedNoEnd": "Results are sealed until the poll ends. We’ll notify you when they’re in.",
-		"sealedTitle": "Sealed. Thank you.",
+		"sealed": "Sealed until {date}",
+		"sealedShort": "Sealed",
+		"sealedNoEnd": "Sealed until the poll ends",
+		"sealedUntilReveal": "Results are revealed on {date}",
 		"opensHint": "Voting opens {distance}",
 		"voted": "{count} voted",
 		"voteCount": "{count} votes",
@@ -470,6 +477,10 @@
 		"comments": "{count} comments",
 		"comment": "1 comment",
 		"share": "Share",
+		"like": "Like",
+		"liked": "Liked",
+		"likeFailed": "Couldn’t like the poll. Try again.",
+		"unlikeFailed": "Couldn’t take back your like. Try again.",
 		"bookmark": "Save",
 		"bookmarked": "Saved",
 		"bookmarkFailed": "Couldn’t save the poll. Try again.",
@@ -490,8 +501,6 @@
 		"withdrawFailed": "Couldn’t withdraw your vote. Try again.",
 		"tooManyVotes": "You’re voting too fast. Wait a minute and try again.",
 		"anonymousHidden": "You’ll be counted, but left out of the voter list.",
-		"nameListed": "Your name shows in the voter list",
-		"nameHidden": "Your name is hidden from the voter list",
 		"hideMyName": "Hide my name",
 		"showMyName": "Show my name",
 		"resultsFailed": "Couldn’t load the results.",
@@ -538,8 +547,6 @@
 		"endNowBody": "Voting stops and the results are revealed. This can’t be undone.",
 		"endFailed": "Couldn’t end the poll. Try again.",
 		"audience": {
-			"public": "Public",
-			"unlisted": "Unlisted",
 			"invite-only": "Invite only"
 		},
 		"audienceMeta": {
@@ -557,6 +564,9 @@
 	"authError": {
 		"invalidCode": "That code is not right. Check the email and try again.",
 		"codeExpired": "This code has expired. Request a new one.",
+		"invalidSmsCode": "That code is not right. Check the text message and try again.",
+		"phoneTaken": "This number is linked to another account.",
+		"smsSendFailed": "We could not send the text message. Check the number and try again.",
 		"tooManyAttempts": "Too many wrong attempts. Wait a few minutes, then try again.",
 		"resendCooldown": "A code was sent recently. Please wait before requesting another.",
 		"emailSendFailed": "We could not send the email. Check the address and try again.",
@@ -564,7 +574,8 @@
 		"rateLimited": "Too many requests. Please wait a moment and try again.",
 		"invalidEmail": "Please enter a valid email address.",
 		"passkeyRefused": "Your browser didn’t open your passkeys. Try again, use another browser, or continue with email.",
-		"serverError": "Something went wrong. Please try again later."
+		"serverError": "Something went wrong. Please try again later.",
+		"communitySignIn": "Community accounts can’t sign in. Sign in with your own account, then switch."
 	},
 	"onboarding": {
 		"title": "What's your name?",
@@ -635,19 +646,11 @@
 		"usernameConfirmTitle": "Change your username?",
 		"usernameConfirmBody": "Your profile moves to {newPath}. Links to {oldPath} stop working, including ones you’ve shared.",
 		"usernameConfirmCta": "Change username",
-		"turnout_one": "{count} vote on your polls",
 		"privacyTitle": "What others see",
-		"privacyBody": "Choose which profile details appear on your public profile.",
 		"anonymousDefault": "Vote anonymously by default",
 		"anonymousDefaultBody": "Leaves your name out of voter lists. You can change it on each vote, and it doesn’t touch votes you’ve already cast.",
-		"fieldVisible": "{field} is now visible to others.",
-		"fieldHidden": "{field} is now hidden from others.",
 		"anonymousDefaultOn": "New votes are anonymous by default.",
 		"anonymousDefaultOff": "New votes show your name by default.",
-		"field": {
-			"displayName": "Display name",
-			"bio": "Bio"
-		},
 		"saveFailed": "Couldn’t save. Try again.",
 		"signOutTitle": "Signed in as",
 		"signOut": "Log out",
@@ -663,12 +666,23 @@
 		"tabGroups": "Invite lists",
 		"deleteCtaEllipsis": "Delete account…"
 	},
+	"announcement": {
+		"label": "Announcement",
+		"dismiss": "Dismiss announcement"
+	},
 	"cookieConsent": {
 		"label": "Cookie consent",
 		"message": "We’d like to use analytics cookies to understand how vomatt is used. Sign-in and language cookies are always on.",
 		"policy": "Privacy Policy",
 		"accept": "Accept analytics",
 		"decline": "Decline"
+	},
+	"termsNotice": {
+		"label": "Terms and cookies",
+		"message": "By continuing, you agree to vomatt’s {terms} and {privacy}, which explains how we use cookies.",
+		"terms": "Terms of Service",
+		"privacy": "Privacy Policy",
+		"dismiss": "Dismiss"
 	},
 	"invitees": {
 		"title": "Invitees",
@@ -677,6 +691,7 @@
 		"placeholder": "Username or email",
 		"inviteEmail": "Invite {email}",
 		"suggestions": "Matching people",
+		"alreadyAdded": "Everyone with that username is already added.",
 		"noUsers": "No one with that username.",
 		"searchFailed": "Couldn’t search. Try again.",
 		"picked": "Invited",
@@ -689,7 +704,8 @@
 		"addLabel": "Invite more people",
 		"add": "Invite",
 		"addFailed": "Couldn’t invite them. Try again.",
-		"removeFailed": "Couldn’t remove them. Try again."
+		"removeFailed": "Couldn’t remove them. Try again.",
+		"communityNotAllowed": "Community accounts don’t vote, so they can’t be invited."
 	},
 	"groups": {
 		"title": "Invite Lists",
@@ -1028,7 +1044,8 @@
 				"invalid": "Invalid phone number. Use a Taiwan mobile number starting with 09 or a number with a country code (e.g. +886912345678)"
 			},
 			"sms": {
-				"send_failed": "SMS delivery failed: {0}"
+				"send_failed": "SMS delivery failed: {0}",
+				"unavailable": "SMS verification is currently unavailable"
 			},
 			"refresh_token": {
 				"invalid": "Refresh token is invalid or has expired"
@@ -1075,7 +1092,8 @@
 				"self": "You can’t block yourself"
 			},
 			"follow": {
-				"blocked": "You can’t follow a user you blocked; unblock them first"
+				"blocked": "You can’t follow a user you blocked; unblock them first",
+				"community": "A community account can’t follow anyone"
 			},
 			"avatar": {
 				"unsupported_image": "Unsupported image: upload a JPEG, PNG, GIF or BMP of at most 40 megapixels"
@@ -1091,6 +1109,9 @@
 				"not_in_vote": "Option does not belong to this vote"
 			},
 			"not_allowed": "Voting period has ended or not started",
+			"ballot": {
+				"community_not_allowed": "Community accounts don’t vote."
+			},
 			"ended": "This poll has ended; ballots can no longer be cast or retracted",
 			"results": {
 				"sealed": "Results are sealed until the poll ends"
@@ -1173,6 +1194,28 @@
 		"admin": {
 			"self_action_forbidden": "You cannot suspend yourself or remove your own admin role",
 			"last_admin": "Cannot remove the last active admin"
+		},
+		"community": {
+			"invitee_not_allowed": "Community accounts don’t vote, so they can’t be invited.",
+			"roles_fixed": "Community account roles can’t be changed.",
+			"last_owner": "A community account needs at least one owner. Transfer ownership first.",
+			"not_member": "You’re no longer a member of this account.",
+			"username_immutable": "A community account’s username can’t be changed.",
+			"role_forbidden": "Your role in this community account doesn’t allow this. Owners and admins manage the account and its members; chief editors change any poll or comment; editors change only their own; analysts only see result reports.",
+			"invitation": {
+				"not_found": "That invitation is no longer available.",
+				"exists": "They’re already invited. Revoke the pending invitation to send a new one."
+			},
+			"member": {
+				"exists": "They’re already a member.",
+				"invalid": "They can’t be added to this account.",
+				"not_found": "They’re no longer a member. The list has been refreshed."
+			},
+			"limit_reached": "You already own as many community accounts as your plan allows.",
+			"locked": "This community account is locked, so it can’t do that. Upgrade to Pro, or have an owner with room unlock it.",
+			"keep": {
+				"invalid": "Choose exactly as many accounts as asked, all ones you own."
+			}
 		}
 	},
 	"blocks": {
@@ -1197,10 +1240,7 @@
 		"confirmUnfollow": "Unfollow @{username}?",
 		"unfollowFailed": "Couldn’t unfollow. Try again.",
 		"follow": "Follow",
-		"followed": "Following @{username}",
-		"manage": "Manage who you follow",
 		"followFailed": "Couldn’t follow. Try again.",
-		"notFound": "Couldn’t find that user to follow.",
 		"following": "Following",
 		"listFailed": "Couldn’t load this list.",
 		"listEmptyFollowers": "No followers yet.",
@@ -1222,6 +1262,11 @@
 		"privacy": "Privacy and safety",
 		"whatOthersSeeBody": "Choose which details show on your profile.",
 		"shownCount": "{shown} of {total} shown",
+		"analyticsCookies": "Analytics cookies",
+		"analyticsCookiesGranted": "You’ve allowed analytics cookies on vomatt.com and about.vomatt.com.",
+		"analyticsCookiesDenied": "You’ve declined analytics cookies on vomatt.com and about.vomatt.com.",
+		"analyticsCookiesUnset": "Choose in the cookie banner.",
+		"analyticsCookiesChange": "Change",
 		"account": "Account",
 		"help": "Help",
 		"reportProblemBody": "Tell us what went wrong or what’s confusing.",
@@ -1302,9 +1347,161 @@
 		"othersSignedOut": "Other devices signed out",
 		"signOutFailed": "Couldn’t sign out. Please try again."
 	},
+	"communities": {
+		"title": "Community accounts",
+		"members": "Members",
+		"blockedBody": "See and unblock the people this account has blocked.",
+		"invite": "Invite member",
+		"inviteTitle": "Invite a member",
+		"searchLabel": "Username or email",
+		"searchPlaceholder": "Search by username, or enter an email",
+		"role": "Role",
+		"rolesTitle": "What each role can do",
+		"roles": {
+			"OWNER": "Owner",
+			"ADMIN": "Admin",
+			"CHIEF_EDITOR": "Chief editor",
+			"EDITOR": "Editor",
+			"ANALYST": "Analyst"
+		},
+		"roleBodies": {
+			"OWNER": "Everything, including handing over ownership.",
+			"ADMIN": "Everything except changing or removing owners.",
+			"CHIEF_EDITOR": "Posts, and edits or ends anyone’s polls and comments.",
+			"EDITOR": "Posts polls and comments, and edits their own.",
+			"ANALYST": "Sees result reports; doesn’t post."
+		},
+		"you": "(you)",
+		"joined": "joined {date}",
+		"yourRole": "You’re {role}",
+		"memberMore": "More for @{name}",
+		"actions": {
+			"changeRole": "Change role",
+			"transferOwner": "Make owner",
+			"remove": "Remove",
+			"leave": "Leave"
+		},
+		"changeRoleTitle": "Change @{name}’s role",
+		"removeTitle": "Remove @{name}?",
+		"removeBody": "They’ll no longer be able to act as {community}. What they posted stays.",
+		"remove": "Remove",
+		"transferTitle": "Make @{name} the owner?",
+		"transferBody": "@{name} becomes an owner of {community} and you become an admin.",
+		"transfer": "Make owner",
+		"leaveTitle": "Leave {community}?",
+		"leaveBody": "You’ll no longer be able to act as this account. What you posted stays. Only an owner or admin can add you back.",
+		"leave": "Leave",
+		"invited": "Invited {name}",
+		"inviteEmail": "Invite {email}",
+		"inviteUserHint": "They get a notification to accept or decline.",
+		"inviteEmailHint": "If they have no account yet, they get an email asking them to sign up.",
+		"invitationsTitle": "Pending invitations",
+		"invitationExpires": "expires {date}",
+		"invitationExpired": "expired",
+		"revoke": "Revoke invitation",
+		"revoked": "Revoked the invitation to {name}",
+		"roleChanged": "Changed @{name}’s role",
+		"transferred": "@{name} is now an owner",
+		"removed": "Removed @{name}",
+		"left": "You left {community}",
+		"notMemberTitle": "You’re not a member",
+		"notMemberBody": "This community account doesn’t exist, or you’re no longer one of its members.",
+		"goToCommunities": "Community accounts",
+		"deleteLastOwner": "You’re the only owner of a community account. Transfer ownership first.",
+		"communityNotAllowed": "Community accounts can’t be members of another account.",
+		"createTitle": "Create a community account",
+		"createBody": "A page for a group, run by several members. You’ll be its owner.",
+		"createIntro": "A group’s page that several members run together. You become its owner and can add the others.",
+		"nameLabel": "Group name",
+		"nameRequired": "Enter the group’s name.",
+		"usernameHint": "3–50 lowercase letters, numbers or underscores. The account can’t sign in.",
+		"create": "Create",
+		"created": "Created @{name}",
+		"createFailed": "Couldn’t create the account. Please try again.",
+		"profile": "Profile",
+		"editIntro": "Everyone sees these on @{name}’s page. The username stays the same.",
+		"editForbidden": "Only this account’s owners and admins can edit its profile.",
+		"bioPlaceholder": "Tell people about this group",
+		"deleteTitle": "Delete community account",
+		"deleteBody": "Removes its polls, with their votes and comments, and every member. This cannot be undone.",
+		"deleteCtaEllipsis": "Delete account…",
+		"deleteConfirmTitle": "Delete @{name}?",
+		"deleteConfirmBody": "Type {name} to confirm. The account, its polls and their votes and comments will be removed permanently.",
+		"deleteConfirmLabel": "Type the account’s username to confirm",
+		"deleteConfirmMismatch": "Type {name} to delete this account.",
+		"deleteCta": "Delete account",
+		"deleted": "Deleted @{name}",
+		"deleteFailed": "Couldn’t delete the account. It’s still active; try again.",
+		"acting": {
+			"switcher": "Switch account",
+			"you": "You",
+			"actingAs": "Acting as",
+			"banner": "You’re acting as {name}. Polls and comments you post will show its name.",
+			"switchBack": "Switch back to you",
+			"actAsLabel": "Act as {name}",
+			"backToProfile": "Back to {name}’s profile",
+			"backToMembers": "Back to {name}’s members",
+			"switched": "You’re acting as {name}",
+			"switchedBack": "You’re acting as yourself",
+			"ended": "You can no longer act as that account, so you’re acting as yourself again.",
+			"switchFailed": "Couldn’t switch accounts. Please try again.",
+			"noVote": "Community accounts don’t vote.",
+			"postingAs": "Posting as {name}",
+			"settingsTitle": "These settings are your own",
+			"settingsBody": "You’re acting as {name}. Switch back to you to change them.",
+			"manageMembers": "Manage members",
+			"bannerLocked": "You’re acting as {name}. It’s locked, so it can’t post until it’s unlocked."
+		},
+		"limitTitle": "You own as many community accounts as your plan allows",
+		"limitBodyFree": "Upgrade to Pro to own more.",
+		"limitBodyPro": "To create another, transfer ownership of one you own.",
+		"theirLimitReached": "They already own as many community accounts as their plan allows, so they can’t become an owner.",
+		"locked": "Locked",
+		"lockedBody": "Its page and polls stay up, but it can’t post or change anything. You can still hand ownership over or leave it. Upgrade to Pro, or have an owner with room unlock it.",
+		"unlock": "Unlock",
+		"unlockLabel": "Unlock {name}",
+		"unlocked": "Unlocked {name}",
+		"unlockFailed": "Couldn’t unlock the account. Please try again.",
+		"keep": {
+			"title": "Choose which community accounts to keep",
+			"body": "Your plan lets you own {limit}. Choose {count} to keep. The others are locked: their pages and polls stay up, but they can’t post.",
+			"deadline": "Choose by {date}, or the earliest created are kept.",
+			"chosen": "{count} of {required} chosen",
+			"later": "Later",
+			"submit": "Keep these",
+			"done": "Your choice is saved. The others are locked.",
+			"failed": "Couldn’t save your choice. Please try again.",
+			"rowTitle": "You own more community accounts than your plan allows",
+			"choose": "Choose"
+		},
+		"quota": "{owned} of {limit} community accounts owned",
+		"invitationPage": {
+			"title": "Community invitation",
+			"pendingTitle": "You’re invited to join {name}",
+			"role": "You’d join as {role}",
+			"invitedBy": "Invited by {name}",
+			"expires": "Expires {date}",
+			"joinedTitle": "You joined {name} as {role}",
+			"alreadyMemberTitle": "You’re already in {name} as {role}",
+			"joinedBody": "Switch to {name} to post polls and comments under its name.",
+			"switchTo": "Switch to {name}",
+			"viewProfile": "View profile",
+			"locked": "{name} is locked for now, so it can’t take new members. You can accept once an owner unlocks it.",
+			"declinedTitle": "Invitation declined",
+			"declinedBody": "You won’t join {name}.",
+			"unavailableTitle": "This invitation isn’t available",
+			"unavailableBody": "It may have expired, been withdrawn or answered already, or been sent to a different email address.",
+			"signedInAs": "You’re signed in as {account}.",
+			"useDifferentAccount": "Use a different account"
+		}
+	},
 	"meta": {
 		"siteDescription": "Ask a question, vote on other people’s polls, and see what everyone really thinks. Ballots stay sealed until a poll ends, so nobody votes with the crowd.",
 		"exploreDescription": "Browse public polls by topic. Vote on open polls and see the results of polls that have ended.",
 		"profileDescription": "See the polls {name} has asked."
+	},
+	"plan": {
+		"upgrade": "Upgrade to Pro",
+		"comingSoon": "Pro is coming soon."
 	}
 }

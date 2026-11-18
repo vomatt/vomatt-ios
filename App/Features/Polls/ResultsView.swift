@@ -1,13 +1,16 @@
 import SwiftUI
 import VomattCore
 
-/// Card state D: only for Ended Polls, so it never asks for sealed data.
+/// Card state D: only for Ended Polls, and until `sealedUntil` passes it shows when the counts come out
+/// instead, so it never asks for sealed data.
 struct ResultsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let poll: Poll
     let myOptionId: String?
     let turnout: Int?
+    /// From the card's status clock: when an Ended Poll's counts come out, while they are still sealed.
+    let sealedUntil: Date?
     /// `/results` answered 403: the Poll is still sealed, so refetch it.
     let onSealed: () async -> Void
     /// Set when the viewer may see who voted.
@@ -19,7 +22,7 @@ struct ResultsView: View {
 
     private struct TaskKey: Hashable {
         let id: String
-        let revealAt: Date?
+        let sealedUntil: Date?
     }
 
     private static let barDuration = 0.8
@@ -31,15 +34,10 @@ struct ResultsView: View {
 
     var body: some View {
         Group {
-            if let rows {
+            if let sealedUntil {
+                sealedUntilReveal(sealedUntil)
+            } else if let rows {
                 content(rows)
-            } else if let revealAt = poll.revealAt, poll.resultsSealed() {
-                // Ended, but the owner holds the results back until `revealAt`
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(app.t("poll.sealedTitle")).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground)
-                    Text(app.t("poll.sealed", ["date": app.dates.pollMoment(revealAt)]))
-                        .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                }
             } else if failed {
                 Text(app.t("poll.resultsFailed")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             } else {
@@ -48,8 +46,23 @@ struct ResultsView: View {
                 }
             }
         }
-        // Restart when the owner moves or clears `revealAt`, so the wait never uses a stale date
-        .task(id: TaskKey(id: poll.id, revealAt: poll.revealAt)) { await loadIfNeeded() }
+        // Runs again once the counts come out
+        .task(id: TaskKey(id: poll.id, sealedUntil: sealedUntil)) { await loadIfNeeded() }
+    }
+
+    /// An Ended Poll whose counts stay sealed until its `revealAt`, for every viewer (the web's
+    /// `SealedUntilReveal`); Turnout shows in the footer.
+    private func sealedUntilReveal(_ date: Date) -> some View {
+        HStack(spacing: 12) {
+            // A Tide lock, not the SealMark: its Volt check means the viewer's own vote
+            Image(systemName: "lock").font(.system(size: 15, weight: .medium)).foregroundStyle(Tokens.tide)
+                .accessibilityHidden(true)
+            Text(app.t("poll.sealedUntilReveal", ["date": app.dates.pollMoment(date)]))
+                .font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 16).padding(.trailing, 14).padding(.vertical, 14)
+        .tidePanel()
     }
 
     private func content(_ rows: [ResultRow]) -> some View {
@@ -163,13 +176,7 @@ struct ResultsView: View {
     }
 
     private func loadIfNeeded() async {
-        // Held back by the owner: wait for `revealAt`, then fetch without needing the view recreated
-        // Loop in case the sleep wakes before the reveal (clock changes, suspension)
-        while let revealAt = poll.revealAt, poll.resultsSealed() {
-            try? await Task.sleep(for: .seconds(max(0, revealAt.timeIntervalSinceNow)) + .milliseconds(250))
-            if Task.isCancelled { return }
-        }
-        guard poll.inlineResults == nil, fetched == nil, !poll.resultsSealed() else { return }
+        guard sealedUntil == nil, poll.inlineResults == nil, fetched == nil else { return }
         do {
             fetched = try await app.service.results(pollId: poll.id)
         } catch let error as APIError where error.isSealed {

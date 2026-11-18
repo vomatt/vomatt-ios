@@ -171,7 +171,8 @@ private struct PollDetailCard: View {
     }
 
     private func card(status: PollStatus) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let sealedUntil = poll.sealedUntil(at: now)
+        return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 10) {
                     UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
@@ -193,8 +194,8 @@ private struct PollDetailCard: View {
                     if status == .ended {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
-                            onSealed: refetch,
-                            onSelectOption: poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            sealedUntil: sealedUntil, onSealed: refetch,
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
                         )
                     } else {
                         BallotView(
@@ -307,7 +308,9 @@ struct PollAboutView: View {
             RailHeading(text: app.t("pollDetail.about"))
             if status == .ended {
                 Group {
-                    if poll.endedEarly, let deadline = poll.deadline {
+                    if let sealedUntil = poll.sealedUntil(at: now) {
+                        Text(app.t("poll.sealedUntilReveal", ["date": app.dates.pollMoment(sealedUntil)]))
+                    } else if poll.endedEarly, let deadline = poll.deadline {
                         Text(app.t("pollDetail.endedEarly", ["date": app.dates.pollDate(deadline)]))
                     } else {
                         Text(app.t("pollDetail.resultsIn"))

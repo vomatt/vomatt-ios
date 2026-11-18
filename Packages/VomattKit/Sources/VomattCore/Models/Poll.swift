@@ -103,11 +103,6 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var options: [PollOption]
     public var tags: [Tag]
 
-    /// Ended, but the results are still Sealed until `revealAt`.
-    public func resultsSealed(at now: Date = .now) -> Bool {
-        revealAt.map { $0 > now } ?? false
-    }
-
     public init(
         id: String, title: String, description: String? = nil, active: Bool = true,
         votingActive: Bool = true, voterVisibility: VoterVisibility? = nil, audience: Audience? = nil,

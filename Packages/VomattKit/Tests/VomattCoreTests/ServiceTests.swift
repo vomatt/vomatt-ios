@@ -483,7 +483,7 @@ struct ServiceTests {
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let poll = try #require(try await service.poll(id: "p1"))
         #expect(poll.likeCount == 3 && poll.likedByMe && poll.pro)
-        #expect(poll.resultsSealed())
+        #expect(poll.revealAt != nil)
     }
 
     @Test func aPollLikeNotificationIsFiledUnderLikes() async throws {

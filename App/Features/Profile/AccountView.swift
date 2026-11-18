@@ -268,7 +268,7 @@ struct AccountView: View {
         PollRow(poll: poll, sealed: true) {
             joined([
                 Text(app.t("myPolls.youChose")) + Text(" ") + Text(AccountInsights.choice(of: poll)).fontWeight(.medium),
-                poll.endTime.map { Text(app.t("profile.resultsAt", ["date": app.dates.pollMoment($0)])) },
+                poll.revealTime.map { Text(app.t("profile.resultsAt", ["date": app.dates.pollMoment($0)])) },
             ].compactMap { $0 })
         }
     }

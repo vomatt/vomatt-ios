@@ -13,33 +13,27 @@ struct BallotView: View {
 
     /// What the viewer is doing with a cast Ballot (the web's `SealedMode`). Without a Ballot the Vote row shows instead.
     enum SealedMode: Equatable {
-        /// The Seal in full, right after a cast here
-        case moment
-        /// The Seal folded to a row, on later visits
-        case row
+        case sealed
         /// Choosing an option to replace `from`
         case updating(from: String)
-        case withdrawing
     }
 
-    /// The action row's state; each fades in as it takes over.
-    private enum Stage: Hashable { case scheduled, vote, moment, row, updating, withdrawing }
+    /// The action row's states that swap in place (the web's `PANES`). They share one cell, so the card is as tall in each.
+    private enum Stage: Hashable, CaseIterable { case vote, sealed, updating }
 
-    @State private var mode = SealedMode.row
+    @State private var mode = SealedMode.sealed
+    /// An alert over the page, not a mode: the Seal stays put under it, so the card keeps its height
+    @State private var confirmingWithdraw = false
+    /// Counts casts saved here; each one pops the SealMark in
+    @State private var casts = 0
     @State private var shake = 0
     @Namespace private var selection
 
     private var isScheduled: Bool { status == .scheduled }
     private var stage: Stage {
-        if isScheduled { return .scheduled }
         // A first vote in flight already has a Ballot; its Vote button stays (busy) until it is in
         if ballot.myOptionId == nil || ballot.pendingAction == .vote { return .vote }
-        switch mode {
-        case .moment: return .moment
-        case .row: return .row
-        case .updating: return .updating
-        case .withdrawing: return .withdrawing
-        }
+        return mode == .sealed ? .sealed : .updating
     }
 
     /// Signed out there is no Ballot to hide; on some Polls nobody else sees the voter list, so nothing to hide from.
@@ -50,6 +44,11 @@ struct BallotView: View {
 
     /// A pick waits on Vote or Update vote; that row stays on screen until it is pressed.
     private var awaitsConfirm: Bool { (stage == .vote && ballot.selected != nil) || stage == .updating }
+
+    /// What the vote does: who sees the choice once the poll ends, or that it is counted unnamed.
+    private func nameStatus(hidden: Bool) -> String {
+        hidden ? app.t("poll.anonymousHidden") : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? ""
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -63,28 +62,48 @@ struct BallotView: View {
             // A short name: the question is the heading right above
             .accessibilityLabel(app.t("poll.options"))
 
-            // Before the vote the choice only rides along with it, so the line says what the vote will do
-            if let anonymous, stage == .vote {
-                nameLine(hidden: anonymous, status: anonymous
-                    ? app.t("poll.anonymousHidden")
-                    : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? "")
-                    .foregroundStyle(Tokens.mutedForeground)
-                    .padding(.vertical, -4)
+            if isScheduled {
+                Text(app.t("poll.opensHint", ["distance": app.dates.fromNow(poll.startTime)]))
+                    .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
+                    .frame(minHeight: Metrics.minTarget)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 16)
+                    .overlay(alignment: .top) { Hairline() }
+            } else {
+                // The name line rides in the confirm row too, so it stays in view while Vote does
+                VStack(alignment: .leading, spacing: 12) {
+                    // One line through voting, changing and withdrawing, so it never moves. Before a vote the
+                    // choice rides along with it; after, it applies at once
+                    if let anonymous {
+                        nameLine(hidden: anonymous, status: nameStatus(hidden: anonymous))
+                            .foregroundStyle(Tokens.mutedForeground)
+                            .padding(.top, -4)
+                    }
+                    // Each pane is centered in the cell under the divider, which holds still through every state
+                    ZStack {
+                        ForEach(Stage.allCases, id: \.self) { pane in
+                            actions(pane)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .opacity(pane == stage ? 1 : 0)
+                                .allowsHitTesting(pane == stage)
+                                .accessibilityHidden(pane != stage)
+                        }
+                    }
+                    .padding(.top, 16)
+                    .overlay(alignment: .top) { Hairline() }
+                }
+                .modifier(FollowsTabBar(isOn: awaitsConfirm))
             }
-
-            VStack {
-                actions
-                    .id(stage)
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 4)))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 16)
-            .overlay(alignment: .top) { Hairline() }
-            .modifier(FollowsTabBar(isOn: awaitsConfirm))
         }
         .coordinateSpace(.named(FollowsTabBar.space))
         .animation(.easeOut(duration: 0.2), value: stage)
         .sensoryFeedback(.impact(weight: .light), trigger: ballot.myOptionId) { _, new in new != nil }
+        .alert(app.t("poll.withdrawTitle"), isPresented: $confirmingWithdraw) {
+            Button(app.t("poll.keep"), role: .cancel) {}
+            Button(app.t("poll.withdraw"), role: .destructive) { withdraw() }
+        } message: {
+            Text(app.t("poll.withdrawBody"))
+        }
     }
 
     private func optionRow(_ option: PollOption) -> some View {
@@ -145,12 +164,8 @@ struct BallotView: View {
         }
     }
 
-    @ViewBuilder private var actions: some View {
-        switch stage {
-        case .scheduled:
-            Text(app.t("poll.opensHint", ["distance": app.dates.fromNow(poll.startTime)]))
-                .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
-                .frame(minHeight: Metrics.minTarget)
+    @ViewBuilder private func actions(_ pane: Stage) -> some View {
+        switch pane {
         case .vote:
             VStack(alignment: .leading, spacing: 14) {
                 Label {
@@ -169,67 +184,75 @@ struct BallotView: View {
                 .buttonStyle(.vm(.default, size: .lg, fullWidth: true))
                 .disabled(ballot.isPending || ballot.selected == nil)
             }
-        case .moment, .row:
-            seal(full: stage == .moment)
+        case .sealed:
+            seal
         case .updating:
             updating
-        case .withdrawing:
-            withdrawing
         }
     }
 
     /// What a cast Ballot becomes: the Seal, saying when the results open, with the vote's actions.
-    /// In full once per cast here, then a row. Neither who sees the choice nor the turnout: those live elsewhere.
-    private func seal(full: Bool) -> some View {
-        let line = Text(poll.endTime.map { app.t("poll.sealed", ["date": app.dates.pollMoment($0)]) } ?? app.t("poll.sealedNoEnd"))
-        let title = Text(app.t("poll.sealedTitle")).foregroundStyle(Tokens.foreground)
-        return VStack(spacing: 14) {
-            if full {
-                VStack(spacing: 10) {
-                    SealMark(size: 72).padding(.bottom, 4)
-                    title.font(.vm(21, .medium, relativeTo: .title3)).tracking(-0.42)
-                    line.font(.vm(14))
-                    Text(app.t("poll.changeHint")).font(.vm(14))
-                }
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 10)
-            } else {
-                HStack(spacing: 12) {
-                    SealMark(size: 40)
-                    VStack(alignment: .leading, spacing: 2) {
-                        title.font(.vm(14, .medium))
-                        line.font(.vmMeta)
-                        Text(app.t("poll.changeHint")).font(.vmMeta)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            Button { mode = .withdrawing } label: {
-                Text(app.t("poll.withdrawVote")).foregroundStyle(Tokens.tideForeground)
-            }
-            .buttonStyle(.vm(.ghost, fullWidth: true))
-            .disabled(ballot.isPending)
+    /// Two lines, no more: every line the Seal has is room an unvoted card keeps empty above its divider.
+    private var seal: some View {
+        let lines = VStack(alignment: .leading, spacing: 2) {
+            Text(poll.revealTime.map { app.t("poll.sealed", ["date": app.dates.pollMoment($0)]) } ?? app.t("poll.sealedNoEnd"))
+                .font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
+            Text(app.t("poll.changeHint")).font(.vmMeta)
         }
-        .padding(14)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            // Once cast, the choice applies at once, so it reads as where the name stands
-            if let anonymous {
-                nameLine(hidden: anonymous, status: app.t(anonymous ? "poll.nameHidden" : "poll.nameListed"))
-                    .padding(.leading, 16).padding(.trailing, 8).padding(.vertical, 4)
-                    .overlay(alignment: .top) { Rectangle().fill(Tokens.tideLine).frame(height: 1) }
+        // The negative padding keeps the 44pt target off the lines
+        let withdraw = Button { confirmingWithdraw = true } label: {
+            Text(app.t("poll.withdrawVote")).foregroundStyle(Tokens.tideForeground)
+        }
+        .buttonStyle(.vm(.ghost, size: .sm))
+        .disabled(ballot.isPending)
+        .padding(.vertical, -8)
+        return ViewThatFits(in: .horizontal) {
+            // A column of its own, so no line of text runs up against it
+            HStack(spacing: 16) {
+                sealMark(size: 40)
+                lines
+                Spacer(minLength: 0)
+                withdraw
+            }
+            // Phones have no room for one: there it sits under the text
+            HStack(spacing: 12) {
+                sealMark(size: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    lines
+                    withdraw.padding(.leading, -12)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .tidePanel()
         .accessibilityElement(children: .contain)
     }
 
+    private func sealMark(size: CGFloat) -> some View {
+        SealMark(size: size)
+            .keyframeAnimator(initialValue: 1.0, trigger: casts) { mark, scale in
+                mark.scaleEffect(scale)
+            } keyframes: { _ in
+                MoveKeyframe(reduceMotion ? 1 : 0.4)
+                SpringKeyframe(1, duration: 0.4, spring: .bouncy)
+            }
+    }
+
     private var updating: some View {
-        let from = if case let .updating(from) = mode { from } else { "" }
-        let previous = poll.options.first { $0.id == from }?.text ?? ""
+        // What an Update would replace: the vote being changed, or the current one
+        let replacing = if case let .updating(from) = mode { from } else { ballot.myOptionId }
+        let previous = poll.options.first { $0.id == replacing }?.text ?? ""
+        let longest = poll.options.map(\.text).max { $0.count < $1.count } ?? ""
         return VStack(alignment: .leading, spacing: 14) {
             Label {
-                Text(app.t("poll.updatingHint", ["option": previous]))
+                // Sized by the longest option: a line that grew with the option would make the card taller
+                // once it is the vote
+                ZStack(alignment: .topLeading) {
+                    Text(app.t("poll.updatingHint", ["option": previous]))
+                    Text(app.t("poll.updatingHint", ["option": longest])).hidden()
+                }
             } icon: {
                 Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 15)).foregroundStyle(Tokens.input)
             }
@@ -250,27 +273,9 @@ struct BallotView: View {
                     .frame(minWidth: 108)
                 }
                 .buttonStyle(.vm(.default))
-                .disabled(ballot.isPending || ballot.selected == nil || ballot.selected == from)
+                .disabled(ballot.isPending || ballot.selected == nil || ballot.selected == replacing)
             }
         }
-    }
-
-    private var withdrawing: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("poll.withdrawTitle")).font(.vm(14, .medium)).foregroundStyle(Tokens.foreground)
-                Text(app.t("poll.withdrawBody")).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
-            }
-            .accessibilityElement(children: .combine)
-            HStack(spacing: 6) {
-                Spacer(minLength: 0)
-                Button(app.t("poll.keep")) { mode = .row }.buttonStyle(.vm(.outline))
-                Button(app.t("poll.withdraw")) { withdraw() }.buttonStyle(.vm(.destructive))
-            }
-        }
-        .padding(.leading, 20).padding(.trailing, 14).padding(.vertical, 14)
-        .background(Tokens.surfaceSoft, in: RoundedRectangle(cornerRadius: Radius.xl))
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
     }
 
     private func choose(_ optionId: String) {
@@ -283,7 +288,7 @@ struct BallotView: View {
 
     private func cancelUpdate() {
         ballot.selected = ballot.myOptionId
-        mode = .row
+        mode = .sealed
     }
 
     private func castSelected() {
@@ -292,7 +297,8 @@ struct BallotView: View {
             Task {
                 let outcome = await ballot.cast(selected, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
                 if outcome == .saved {
-                    mode = .moment
+                    mode = .sealed
+                    casts += 1
                     announce(app.t(ballot.replacedBallot ? "poll.voteUpdated" : "poll.voteCast"))
                 }
                 if outcome == .failed { shake += 1 }
@@ -303,15 +309,13 @@ struct BallotView: View {
     private func setAnonymous(_ value: Bool) {
         Task {
             let outcome = await ballot.setAnonymous(value, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
-            if outcome == .saved, ballot.myOptionId != nil {
-                announce(app.t(value ? "poll.nameHidden" : "poll.nameListed"))
-            }
+            if outcome == .saved { announce(nameStatus(hidden: value)) }
             if outcome == .failed { shake += 1 }
         }
     }
 
     private func withdraw() {
-        mode = .row
+        mode = .sealed
         Task {
             let outcome = await ballot.retract(app: app, onPollEnded: onPollEnded)
             if outcome == .saved { announce(app.t("poll.voteWithdrawn")) }
