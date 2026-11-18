@@ -37,9 +37,6 @@ struct AccountView: View {
                 // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
                 ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
-                    Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
-                        .buttonStyle(.vm(.outline, size: .icon))
-                        .accessibilityLabel(app.t("navigation.settings"))
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
@@ -112,6 +109,12 @@ struct AccountView: View {
         .canvas()
         .navigationTitle("@\(profile.username)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel(app.t("navigation.settings"))
+            }
+        }
         .task(id: app.sessionGeneration) { await load() }
         .onChange(of: tab) {
             guard tab == .saved, saved == nil else { return }
