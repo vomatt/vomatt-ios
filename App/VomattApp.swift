@@ -34,7 +34,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var app = app
         tabs
-        .toastHost(app)
+        .toastHost(app, colorScheme: theme.colorScheme)
         .preferredColorScheme(theme.colorScheme)
         .sheet(item: $app.pendingAuth) { pending in
             AuthSheet(onSignedIn: pending.onSignedIn)
