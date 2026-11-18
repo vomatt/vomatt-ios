@@ -273,9 +273,13 @@ extension UserSummary {
 }
 
 extension FeedNotification {
-    /// Nil for a kind the app doesn't show; throws for an item that is malformed.
-    init?(_ dto: Schemas.NotificationResponse) throws {
-        guard let kind = FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")) else { return nil }
+    /// Throws for an item that is malformed, or that lacks what its kind is about.
+    init(_ dto: Schemas.NotificationResponse) throws {
+        let kind = FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind"))
+        // The one kind that can't be shown without its summary: the row answers the invitation by its id
+        let communityInvitation = kind == .communityInvitation
+            ? try CommunityInvitationInfo(required(dto.communityInvitation, "NotificationResponse.communityInvitation"))
+            : nil
         self.init(
             id: try required(dto.id, "NotificationResponse.id"),
             kind: kind,
@@ -283,14 +287,14 @@ extension FeedNotification {
             read: dto.read ?? false,
             actor: try dto.actor.map(UserSummary.init),
             poll: try dto.poll.map(PollInfo.init),
-            comment: try dto.comment.map(CommentInfo.init)
+            comment: try dto.comment.map(CommentInfo.init),
+            communityInvitation: communityInvitation
         )
     }
 }
 
 extension FeedNotification.Kind {
-    /// Nil for a kind the app has no row for, so the feed leaves that item out (`notifications`).
-    init?(_ value: Schemas.NotificationResponse.KindPayload) {
+    init(_ value: Schemas.NotificationResponse.KindPayload) {
         switch value {
         case .result: self = .result
         case .cancelled: self = .cancelled
@@ -301,9 +305,8 @@ extension FeedNotification.Kind {
         case .closingSoon: self = .closingSoon
         case .like: self = .like
         case .pollLike: self = .pollLike
-        // The app has no community accounts yet, so there is nothing to open from "your community was locked"
-        // or to answer for an invitation to one
-        case .communityInvitation, .communityLocked: return nil
+        case .communityInvitation: self = .communityInvitation
+        case .communityLocked: self = .communityLocked
         }
     }
 }
@@ -317,6 +320,7 @@ extension FeedNotification.Category {
         case .pollEnd: "POLL_END"
         case .invitation: "INVITATION"
         case .follow: "FOLLOW"
+        case .community: "COMMUNITY"
         }
     }
 }
@@ -335,6 +339,23 @@ extension FeedNotification.PollInfo {
             winningOptionLabels: dto.winningOptionLabels,
             tie: dto.tie
         )
+    }
+}
+
+extension FeedNotification.CommunityInvitationInfo {
+    init(_ dto: Schemas.CommunityInvitationSummary) throws {
+        self.init(
+            id: try required(dto.id, "CommunityInvitationSummary.id"),
+            role: try CommunityRole(required(dto.role, "CommunityInvitationSummary.role")),
+            expiresAt: try required(dto.expiresAt, "CommunityInvitationSummary.expiresAt")
+        )
+    }
+}
+
+extension CommunityRole {
+    /// The generated role enums of the community schemas share their raw values.
+    init<Payload: RawRepresentable<String>>(_ value: Payload) throws {
+        self = try required(CommunityRole(rawValue: value.rawValue), "CommunityRole")
     }
 }
 

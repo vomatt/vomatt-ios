@@ -105,6 +105,7 @@ struct NotificationsView: View {
         case .pollEnd: app.t("notifications.category.POLL_END")
         case .invitation: app.t("notifications.category.INVITATION")
         case .follow: app.t("notifications.category.FOLLOW")
+        case .community: app.t("notifications.category.COMMUNITY")
         }
     }
 
@@ -233,7 +234,7 @@ private struct NotificationRow: View {
             disc("nosign")
         case .closingSoon:
             disc("clock", tint: Tokens.foreground)
-        case .invitation, .followed, .comment, .mention, .like, .pollLike:
+        case .invitation, .followed, .comment, .mention, .like, .pollLike, .communityInvitation, .communityLocked:
             if let actor = item.actor {
                 AvatarView(username: actor.username, avatarUrl: actor.avatarUrl, size: 36).accessibilityHidden(true)
             } else {
@@ -308,6 +309,13 @@ private struct NotificationRow: View {
                 default: item.comment?.parentId != nil ? "notifications.replied" : "notifications.commented"
                 }
                 return Wording(template: app.t(key), parts: ["name": Part(text: actorName, emphasis: .strong), "title": Part(text: title, emphasis: .titled)])
+            case .communityInvitation:
+                return Wording(template: app.t("notifications.communityInvitation"), parts: [
+                    "name": Part(text: actorName, emphasis: .strong),
+                    "role": Part(text: item.communityInvitation.map { app.t("communities.roles.\($0.role.rawValue)") } ?? ""),
+                ])
+            case .communityLocked:
+                return Wording(template: app.t("notifications.communityLocked"), parts: ["name": Part(text: actorName, emphasis: .strong)])
             case .closingSoon:
                 guard let end = item.poll?.endTime, end > .now else {
                     return Wording(template: "{title}", parts: ["title": Part(text: title, emphasis: .titled)])
@@ -351,7 +359,7 @@ private struct NotificationRow: View {
         case .result:
             guard let poll = item.poll else { return [age] }
             return [winners(poll), app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age].compactMap { $0 }
-        case .cancelled:
+        case .cancelled, .communityInvitation, .communityLocked:
             return [age]
         case .invitation:
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
@@ -397,7 +405,7 @@ private struct NotificationRow: View {
             switch item.kind {
             case .result:
                 if let outcome = item.poll.flatMap(outcome) { OutcomeChip(outcome: outcome) }
-            case .cancelled:
+            case .cancelled, .communityInvitation, .communityLocked:
                 EmptyView()
             case .invitation:
                 let canVote = item.poll?.myOptionId == nil && (invitationStatus == .open || invitationStatus == .closing)

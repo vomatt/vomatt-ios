@@ -1,6 +1,6 @@
 import Foundation
 
-/// One item of GET /notifications. Which of `actor`, `poll` and `comment` are set depends on `kind`.
+/// One item of GET /notifications. Which of `actor`, `poll`, `comment` and `communityInvitation` are set depends on `kind`.
 public struct FeedNotification: Identifiable, Hashable, Sendable {
     public enum Kind: String, Sendable {
         /// A Poll you own, hold a Ballot in or are invited to has Ended.
@@ -17,6 +17,11 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         case like
         /// Someone liked your Poll.
         case pollLike
+        /// A community account asks the viewer to join; `actor` is the account. Listed only until it is
+        /// accepted, declined, revoked or expired.
+        case communityInvitation
+        /// A community account the viewer owns was locked; `actor` is the account.
+        case communityLocked
 
         /// The tab the API files this kind under.
         public var category: Category {
@@ -24,15 +29,16 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
             case .comment, .mention: .conversation
             case .like, .pollLike: .like
             case .result, .cancelled, .closingSoon: .pollEnd
-            case .invitation: .invitation
+            case .invitation, .communityInvitation: .invitation
             case .followed: .follow
+            case .communityLocked: .community
             }
         }
     }
 
     /// The feed's tabs: `category` of GET /notifications and /notifications/unread-count.
     public enum Category: String, CaseIterable, Sendable {
-        case conversation, like, pollEnd, invitation, follow
+        case conversation, like, pollEnd, invitation, follow, community
     }
 
     public struct PollInfo: Hashable, Sendable {
@@ -86,6 +92,21 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// What a `communityInvitation` item waits on: answer it with `acceptCommunityInvitation(id:)` or
+    /// `declineCommunityInvitation(id:)`.
+    public struct CommunityInvitationInfo: Hashable, Sendable {
+        public var id: String
+        /// The role the viewer gets on accepting.
+        public var role: CommunityRole
+        public var expiresAt: Date
+
+        public init(id: String, role: CommunityRole, expiresAt: Date) {
+            self.id = id
+            self.role = role
+            self.expiresAt = expiresAt
+        }
+    }
+
     public let id: String
     public var kind: Kind
     public var createdAt: Date
@@ -93,11 +114,15 @@ public struct FeedNotification: Identifiable, Hashable, Sendable {
     public var actor: UserSummary?
     public var poll: PollInfo?
     public var comment: CommentInfo?
+    /// Set on every `communityInvitation` item, and on no other.
+    public var communityInvitation: CommunityInvitationInfo?
 
     public init(
         id: String, kind: Kind, createdAt: Date, read: Bool = false,
-        actor: UserSummary? = nil, poll: PollInfo? = nil, comment: CommentInfo? = nil
+        actor: UserSummary? = nil, poll: PollInfo? = nil, comment: CommentInfo? = nil,
+        communityInvitation: CommunityInvitationInfo? = nil
     ) {
+        self.communityInvitation = communityInvitation
         self.id = id
         self.kind = kind
         self.createdAt = createdAt

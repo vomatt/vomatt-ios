@@ -568,20 +568,69 @@ struct ServiceTests {
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
               {"id":"comment_c2","kind":"COMMENT","category":"THREADS","createdAt":"2026-10-25T09:30:00+08:00","read":true,
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
-              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true},
-              {"id":"locked_1","kind":"COMMUNITY_LOCKED","category":"COMMUNITY","createdAt":"2026-10-23T09:30:00+08:00","read":false,"actor":\#(actor)},
-              {"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,"actor":\#(actor),"communityInvitation":{"id":"ci1","role":"EDITOR","expiresAt":"2026-10-29T09:30:00+08:00"}}
+              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true}
             ],"nextCursor":"n2"}
             """#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let page = try await service.notifications()
-        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known.
-        // COMMUNITY_LOCKED and COMMUNITY_INVITATION are in the contract but have no row in the app, so they are left out too
+        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known
         #expect(page.items.map(\.id) == ["mention_c1", "like_c1", "comment_c2"])
         #expect(page.items.map(\.kind) == [.mention, .like, .comment])
         #expect(page.items[0].comment?.excerpt == "@mei try Nagi" && page.items[0].actor?.username == "bob")
         #expect(page.nextCursor == "n2")
+    }
+
+    // Community cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
+    @Test func aLockedCommunityAccountIsReadInItsOwnTab() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[{"id":"community_locked_9","kind":"COMMUNITY_LOCKED","category":"COMMUNITY","createdAt":"2026-10-26T10:00:00Z","read":false,
+              "actor":{"id":"c1","username":"robotics","community":true},"poll":null,"comment":null}],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let page = try await service.notifications(category: .community)
+        #expect(transport.requests.map(\.path) == ["/api/notifications?category=COMMUNITY&limit=20"])
+        let item = try #require(page.items.first)
+        #expect(item.id == "community_locked_9" && item.kind == .communityLocked && item.kind.category == .community)
+        #expect(item.actor?.isCommunity == true && item.poll == nil && item.communityInvitation == nil)
+    }
+
+    @Test func aCommunityInvitationCarriesWhatToAnswerAndIsFiledUnderInvitations() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[{"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,
+              "actor":{"id":"c1","username":"robotics","displayName":"Robotics Club","community":true},
+              "communityInvitation":{"id":"ci1","role":"CHIEF_EDITOR","expiresAt":"2026-10-29T09:30:00+08:00"}}],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let item = try #require(try await service.notifications(category: .invitation).items.first)
+        #expect(item.kind == .communityInvitation && item.kind.category == .invitation)
+        #expect(item.actor?.displayName == "Robotics Club")
+        #expect(item.communityInvitation?.id == "ci1" && item.communityInvitation?.role == .chiefEditor)
+        #expect(item.communityInvitation?.expiresAt == ISO8601DateFormatter().date(from: "2026-10-29T09:30:00+08:00"))
+    }
+
+    @Test func aCommunityInvitationWithNothingToAnswerIsLeftOut() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[
+              {"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,"actor":{"id":"c1","username":"robotics"}},
+              {"id":"followed_u2","kind":"FOLLOWED","category":"FOLLOW","createdAt":"2026-10-21T09:30:00+08:00","read":false,"actor":{"id":"u2","username":"bob"}}
+            ],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.notifications().items.map(\.id) == ["followed_u2"])
+    }
+
+    @Test func theCommunityTabHasItsOwnUnreadCount() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"count":2}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.unreadCount(category: .community) == 2)
+        #expect(transport.requests.map(\.path) == ["/api/notifications/unread-count?category=COMMUNITY"])
     }
 
     // markAllNotificationsRead() cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
