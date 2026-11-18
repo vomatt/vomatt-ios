@@ -105,7 +105,7 @@ struct PollCardView: View {
     private func header(status: PollStatus, now: Date) -> some View {
         HStack(alignment: .center, spacing: 12) {
             HStack(spacing: 10) {
-                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, avatarSize: 28)
                     .font(.vm(14, .medium))
                     .foregroundStyle(Tokens.foreground)
                     .layoutPriority(1)

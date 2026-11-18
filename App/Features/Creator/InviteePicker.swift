@@ -152,12 +152,7 @@ struct InviteePicker: View {
                     HStack(spacing: 12) {
                         AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 28)
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack(spacing: 12) {
-                                Text(user.username).font(.vm(14)).lineLimit(1)
-                                if let name = user.displayName {
-                                    Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground).lineLimit(1)
-                                }
-                            }
+                            Text(ProfileName.handle(user.username)).font(.vm(14)).lineLimit(1)
                             if user.isCommunity {
                                 Text(app.t("invitees.communityNotAllowed")).font(.vm(12)).multilineTextAlignment(.leading)
                             }
@@ -252,13 +247,14 @@ struct InviteeManagerView: View {
 
     private func row(_ invitee: Invitee) -> some View {
         let name = invitee.person.username ?? invitee.person.email ?? ""
+        let shown = invitee.person.username.map(ProfileName.handle) ?? name
         return HStack(spacing: 10) {
             if let username = invitee.person.username {
                 AvatarView(username: username, avatarUrl: invitee.person.avatarUrl, size: 28)
             } else {
                 Image(systemName: "envelope").frame(width: 28, height: 28).background(Tokens.secondary, in: Circle())
             }
-            Text(name).font(.vm(15)).lineLimit(1)
+            Text(shown).font(.vm(15)).lineLimit(1)
             Spacer()
             if invitee.hasBallot {
                 Chip(text: app.t("invitees.voted"), tint: Tokens.statusOpen)

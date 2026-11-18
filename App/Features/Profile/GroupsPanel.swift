@@ -160,7 +160,7 @@ private struct GroupEditor: View {
             } else {
                 Image(systemName: "envelope").frame(width: 28, height: 28).background(Tokens.secondary, in: Circle())
             }
-            Text(label).font(.vm(15)).lineLimit(1)
+            Text(member.person.username.map(ProfileName.handle) ?? label).font(.vm(15)).lineLimit(1)
             Spacer()
             Button { Task { await remove(member) } } label: { Image(systemName: "xmark") }
                 .buttonStyle(.vm(.ghost, size: .icon))

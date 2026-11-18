@@ -606,7 +606,7 @@ private struct CommentRow: View {
     private func content(author: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Button(author) { app.push(.profile(author)) }
+                Button(ProfileName.handle(author)) { app.push(.profile(author)) }
                     .font(.vm(13, .medium)).foregroundStyle(Tokens.foreground)
                     .disabled(comment.isPending)
                 if isOwn { Chip(text: app.t("comments.you"), tint: Tokens.highlight) }
@@ -1119,13 +1119,8 @@ private struct MentionSuggestions: ViewModifier {
                 Button { choose(user) } label: {
                     HStack(spacing: 12) {
                         AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 32)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(user.username).font(.vm(14, .medium)).foregroundStyle(Tokens.popoverForeground)
-                            if let name = user.displayName {
-                                Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
-                            }
-                        }
-                        .lineLimit(1)
+                        Text(ProfileName.handle(user.username)).font(.vm(14, .medium)).foregroundStyle(Tokens.popoverForeground)
+                            .lineLimit(1)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 12).padding(.vertical, 6)

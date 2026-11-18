@@ -177,7 +177,7 @@ private struct PollDetailCard: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 10) {
-                    UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                    UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, avatarSize: 28)
                         .font(.vm(14, .medium))
                         .foregroundStyle(Tokens.foreground)
                         .layoutPriority(1)
@@ -436,7 +436,7 @@ private struct InvitationPrompt: View {
     var body: some View {
         VStack(spacing: 12) {
             AvatarView(username: owner.username, avatarUrl: owner.avatarUrl, size: 56)
-            Text(app.t("poll.invitation.title", ["username": owner.username]))
+            Text(app.t("poll.invitation.title", ["username": ProfileName.handle(owner.username)]))
                 .pollTitle(25)
                 .accessibilityAddTraits(.isHeader)
             Text(app.t(app.isSignedIn ? "poll.invitation.wrongAccount" : "poll.invitation.signIn"))

@@ -321,24 +321,24 @@ struct AvatarView: View {
     }
 }
 
-/// Avatar and username as one unit, linking to the profile (`UserChip`).
+/// Avatar and @handle as one unit, linking to the profile (`UserChip`). Names show only on the profile.
 struct UserChip: View {
     @Environment(AppModel.self) private var app
     let username: String
     let avatarUrl: String?
-    var label: String?
     var avatarSize: CGFloat = 24
     var link = true
 
     var body: some View {
+        let handle = ProfileName.handle(username)
         let content = HStack(spacing: 6) {
             AvatarView(username: username, avatarUrl: avatarUrl, size: avatarSize)
-            Text(label ?? username).lineLimit(1).truncationMode(.tail)
+            Text(handle).lineLimit(1).truncationMode(.tail)
         }
         if link {
             Button { app.push(.profile(username)) } label: { content }
                 .buttonStyle(.plain)
-                .accessibilityLabel(label ?? username)
+                .accessibilityLabel(handle)
                 .accessibilityHint(app.t("ios.openProfile"))
         } else {
             content

@@ -376,12 +376,10 @@ private struct NotificationRow: View {
         case .result:
             guard let poll = item.poll else { return [age] }
             return [winners(poll), app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age].compactMap { $0 }
-        case .cancelled, .communityInvitation, .communityLocked:
+        case .cancelled, .followed, .communityInvitation, .communityLocked:
             return [age]
         case .invitation:
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
-        case .followed:
-            return [age, item.actor?.displayName].compactMap { $0 }
         case .comment, .mention, .like, .pollLike:
             return [item.comment.map { app.t("notifications.excerpt", ["text": $0.excerpt]) }, age].compactMap { $0 }
         case .closingSoon:
