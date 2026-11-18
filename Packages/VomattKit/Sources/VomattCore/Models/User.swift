@@ -23,15 +23,18 @@ public struct UserProfile: Hashable, Sendable {
     public var mutualFollowersCount: Int?
     /// The first 3 of them.
     public var mutualFollowersPreview: [UserSummary]
+    /// A community account (a group's page run by several members), shown with a badge.
+    public var isCommunity: Bool
 
     public init(
         id: String? = nil, username: String, displayName: String? = nil, firstName: String? = nil, lastName: String? = nil,
         bio: String? = nil, avatarUrl: String? = nil, joinedAt: Date? = nil, totalPolls: Int = 0, totalVotes: Int = 0,
         isFollowing: Bool? = nil, isBlocked: Bool? = nil,
         followersCount: Int = 0, followingCount: Int = 0, followsYou: Bool? = nil,
-        mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = []
+        mutualFollowersCount: Int? = nil, mutualFollowersPreview: [UserSummary] = [], isCommunity: Bool = false
     ) {
         self.id = id
+        self.isCommunity = isCommunity
         self.followersCount = followersCount
         self.followingCount = followingCount
         self.followsYou = followsYou
@@ -112,11 +115,14 @@ public struct UserSummary: Identifiable, Hashable, Sendable {
     /// Whether the viewer follows this user / this user follows the viewer; nil where the API doesn't say.
     public var isFollowing: Bool?
     public var followsYou: Bool?
+    /// A community account (a group's page), shown with a badge.
+    public var isCommunity: Bool
 
     public init(
         id: String, username: String, displayName: String? = nil, avatarUrl: String? = nil,
-        isFollowing: Bool? = nil, followsYou: Bool? = nil
+        isFollowing: Bool? = nil, followsYou: Bool? = nil, isCommunity: Bool = false
     ) {
+        self.isCommunity = isCommunity
         self.isFollowing = isFollowing
         self.followsYou = followsYou
         self.id = id

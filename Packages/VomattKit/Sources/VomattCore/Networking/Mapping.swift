@@ -27,6 +27,7 @@ extension Poll {
             creatorId: try required(dto.creatorId, "VoteResponse.creatorId"),
             creatorUsername: try required(dto.creatorUsername, "VoteResponse.creatorUsername"),
             creatorAvatarUrl: dto.creatorAvatarUrl,
+            creatorIsCommunity: dto.creatorCommunity ?? false,
             createdAt: dto.createdAt ?? dto.startTime ?? .now,
             startTime: try required(dto.startTime, "VoteResponse.startTime"),
             endTime: dto.endTime,
@@ -214,7 +215,8 @@ extension UserProfile {
             followingCount: dto.followingCount.map(Int.init) ?? 0,
             followsYou: dto.followsYou,
             mutualFollowersCount: dto.mutualFollowersCount.map(Int.init),
-            mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init)
+            mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init),
+            isCommunity: dto.community ?? false
         )
     }
 }
@@ -250,7 +252,8 @@ extension UserSummary {
             id: try required(dto.id, "UserDto.id"),
             username: try required(dto.username, "UserDto.username"),
             displayName: dto.displayName,
-            avatarUrl: dto.avatarUrl
+            avatarUrl: dto.avatarUrl,
+            isCommunity: dto.community ?? false
         )
     }
 }
@@ -263,7 +266,8 @@ extension UserSummary {
             displayName: dto.displayName,
             avatarUrl: dto.avatarUrl,
             isFollowing: dto.isFollowing,
-            followsYou: dto.followsYou
+            followsYou: dto.followsYou,
+            isCommunity: dto.community ?? false
         )
     }
 }
