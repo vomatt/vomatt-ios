@@ -25,12 +25,8 @@ struct InviteListsView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        ScrollView {
-            GroupsPanel()
-                .pageColumn(768)
-                .padding(.vertical, 24)
-        }
-        .canvas()
+        GroupsPanel()
+            .canvas()
         .navigationTitle(app.t("account.tabGroups"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -41,12 +37,8 @@ struct DevicesView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        ScrollView {
-            DevicesSection(service: app.service)
-                .pageColumn(768)
-                .padding(.vertical, 24)
-        }
-        .canvas()
+        DevicesSection(service: app.service)
+            .canvas()
         .navigationTitle(app.t("sessions.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -393,6 +385,7 @@ struct BlockedPeopleView: View {
             .pageColumn(768)
             .padding(.vertical, 24)
         }
+        .refreshable { await app.syncBlocked() }
         .canvas()
         .navigationTitle(app.t("blocks.title"))
         .navigationBarTitleDisplayMode(.inline)
@@ -657,6 +650,7 @@ private struct PasskeysSection: View {
 
 /// The Devices screen (the web's `SessionsPanel`): this device, then the others, each of which can be
 /// signed out after confirmation, or all at once. This device signs out with Sign out in Settings.
+/// It scrolls itself, so pulling down can reload the model it owns.
 private struct DevicesSection: View {
     @Environment(AppModel.self) private var app
     @State private var model: DevicesModel
@@ -668,6 +662,32 @@ private struct DevicesSection: View {
     }
 
     var body: some View {
+        ScrollView {
+            list
+                .pageColumn(768)
+                .padding(.vertical, 24)
+        }
+        .refreshable { await model.load() }
+        .task { await model.load() }
+        .alert(
+            app.t("sessions.signOutConfirmTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { device in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("sessions.signOut"), role: .destructive) { Task { await signOut(device) } }
+        } message: { device in
+            Text(app.t("sessions.signOutConfirmBody", ["name": name(device)]))
+        }
+        .alert(app.t("sessions.signOutOthersConfirmTitle"), isPresented: $confirmingOthers) {
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("sessions.signOutOthers"), role: .destructive) { Task { await signOutOthers() } }
+        } message: {
+            Text(app.t("sessions.signOutOthersConfirmBody"))
+        }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 32) {
             Text(app.t("sessions.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             if model.loadFailed {
@@ -706,23 +726,6 @@ private struct DevicesSection: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity)
             }
-        }
-        .task { await model.load() }
-        .alert(
-            app.t("sessions.signOutConfirmTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { device in
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("sessions.signOut"), role: .destructive) { Task { await signOut(device) } }
-        } message: { device in
-            Text(app.t("sessions.signOutConfirmBody", ["name": name(device)]))
-        }
-        .alert(app.t("sessions.signOutOthersConfirmTitle"), isPresented: $confirmingOthers) {
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("sessions.signOutOthers"), role: .destructive) { Task { await signOutOthers() } }
-        } message: {
-            Text(app.t("sessions.signOutOthersConfirmBody"))
         }
     }
 

@@ -13,7 +13,7 @@ struct HomeView: View {
     private var feed: HomeFeed { app.isSignedIn ? picked : .forYou }
 
     var body: some View {
-        FeedView(tag: feed == .forYou ? activeTag : nil, feed: feed, header: AnyView(topicPills))
+        FeedView(tag: feed == .forYou ? activeTag : nil, feed: feed, header: AnyView(topicPills), onRefresh: refreshHeader)
             .id(feed == .forYou ? activeTag?.id : feed.rawValue)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -28,7 +28,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .task { if tags.isEmpty { tags = await app.service.popularTags() } }
+            .task { if tags.isEmpty { await loadTags() } }
             // Once per appearance and session; leaving Results are in may have read results, so check again then
             .task(id: app.sessionGeneration) { await loadResultsUnread() }
             .onChange(of: feed) { old, _ in
@@ -69,6 +69,19 @@ struct HomeView: View {
         feed == .forYou ? "homePage.allTopics" : "homePage.\(feed.rawValue)"
     }
 
+    /// A failed fetch comes back empty; the pills on screen stay.
+    private func loadTags() async {
+        let fresh = await app.service.popularTags()
+        if !fresh.isEmpty { tags = fresh }
+    }
+
+    /// Pulling the feed down also brings the topics and the Results are in dot up to date.
+    private func refreshHeader() async {
+        async let topics: Void = loadTags()
+        await loadResultsUnread()
+        await topics
+    }
+
     /// The Results are in pill's dot: whether a result on that feed's first page is unread.
     private func loadResultsUnread() async {
         guard app.isSignedIn else {
@@ -86,6 +99,8 @@ struct FeedView: View {
     let tag: Tag?
     var feed = HomeFeed.forYou
     var header: AnyView?
+    /// What else a pull to refresh reloads, beside the feed.
+    var onRefresh: (@MainActor () async -> Void)?
     @State private var list: CursorList<Poll>?
 
     var body: some View {
@@ -106,7 +121,11 @@ struct FeedView: View {
             }
             .padding(.bottom, 16)
         }
-        .refreshable { await list?.reload() }
+        .refreshable {
+            async let extra: Void = onRefresh?() ?? ()
+            await list?.reload()
+            await extra
+        }
         .canvas()
         // Home shows the logo; its name is for the back menu of what it pushes
         .navigationTitle(tag.map { "#\($0.name)" } ?? app.t("navigation.home"))

@@ -1,7 +1,8 @@
 import SwiftUI
 import VomattCore
 
-/// Reusable invite lists for Invite-only Polls (the web's `GroupsPanel`).
+/// Reusable invite lists for Invite-only Polls (the web's `GroupsPanel`). It scrolls itself, so pulling
+/// down can reload the lists it holds.
 struct GroupsPanel: View {
     @Environment(AppModel.self) private var app
     @State private var groups: [UserGroup]?
@@ -10,6 +11,24 @@ struct GroupsPanel: View {
     @State private var editing: UserGroup?
 
     var body: some View {
+        ScrollView {
+            panel
+                .pageColumn(768)
+                .padding(.vertical, 24)
+        }
+        .refreshable { await load() }
+        .task { await load() }
+        .sheet(item: $editing) { group in
+            GroupEditor(group: group) { change in
+                switch change {
+                case let .updated(updated): groups = groups?.map { $0.id == updated.id ? updated : $0 }
+                case let .deleted(id): groups?.removeAll { $0.id == id }
+                }
+            }
+        }
+    }
+
+    private var panel: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(app.t("groups.intro")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             HStack(alignment: .bottom, spacing: 8) {
@@ -42,15 +61,6 @@ struct GroupsPanel: View {
                 LoadFailed(message: app.t("groups.loadFailed")) { await load() }
             } else {
                 ProgressView().frame(maxWidth: .infinity)
-            }
-        }
-        .task { await load() }
-        .sheet(item: $editing) { group in
-            GroupEditor(group: group) { change in
-                switch change {
-                case let .updated(updated): groups = groups?.map { $0.id == updated.id ? updated : $0 }
-                case let .deleted(id): groups?.removeAll { $0.id == id }
-                }
             }
         }
     }
