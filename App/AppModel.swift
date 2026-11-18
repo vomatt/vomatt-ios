@@ -99,6 +99,8 @@ final class AppModel {
     /// Non-nil while the sign-in sheet is up; runs once the user is signed in.
     var pendingAuth: PendingAuth?
     var creator: CreatorRequest?
+    /// Bumped when a link closes what is presented; the creator keeps its unsaved poll as a draft then.
+    private(set) var modalDismissals = 0
     var toast: Toast?
     /// Non-nil while Block asks for confirmation; every Block entry point goes through it.
     var blockRequest: BlockRequest?
@@ -246,24 +248,38 @@ final class AppModel {
         paths[selectedTab, default: NavigationPath()].append(route)
     }
 
-    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` and `https://<site>/<username>`.
+    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` and `https://<site>/<username>`. The page opens on
+    /// the tab the person is on, over whatever they had there, once anything presented has closed. A link
+    /// the app has no page for leaves everything as it is.
     func open(_ url: URL) {
         let parts = url.scheme == "vomatt"
             ? [url.host()].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }
             : url.pathComponents.filter { $0 != "/" }
         guard let first = parts.first else { return }
         if first == "notifications" {
+            dismissModals()
             selectedTab = .notifications
             paths[.notifications] = NavigationPath()
-            return
-        }
-        selectedTab = .home
-        paths[.home] = NavigationPath()
-        if first == "poll", parts.count > 1 {
+        } else if first == "poll", parts.count > 1 {
+            dismissModals()
             push(.poll(parts[1]))
         } else if parts.count == 1, !Username.reserved.contains(first) {
+            dismissModals()
             push(.profile(first))
         }
+    }
+
+    /// Closes the sign-in sheet, the creator, a pending confirmation and any sheet a screen presented
+    /// itself, so a page pushed next isn't hidden behind them.
+    private func dismissModals() {
+        pendingAuth = nil
+        creator = nil
+        blockRequest = nil
+        unfollowRequest = nil
+        modalDismissals += 1
+        // Sheets held in a screen's own state: UIKit closes them and SwiftUI clears their bindings
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        windows.first(where: \.isKeyWindow)?.rootViewController?.dismiss(animated: true)
     }
 
     /// Shares a Poll's canonical web link.
