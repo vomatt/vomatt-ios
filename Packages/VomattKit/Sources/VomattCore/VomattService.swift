@@ -659,6 +659,44 @@ public final class VomattService: Sendable {
         await session.signOut()
     }
 
+    // MARK: Communities
+
+    /// The community accounts the signed-in user belongs to, with their role in each.
+    public func myCommunities() async throws -> [MyCommunity] {
+        try await call { try (try await client.listMine().ok.body.json.data ?? []).map(MyCommunity.init) }
+    }
+
+    /// An invitation sent to the signed-in user, by the id in its email link or its notification.
+    /// nil when it can no longer be answered (`APIError.isCommunityInvitationGone`).
+    public func communityInvitation(id: String) async throws -> CommunityInvitationDetail? {
+        do {
+            return try await call {
+                try await CommunityInvitationDetail(
+                    required(client.getInvitation(path: .init(invitationId: id)).ok.body.json.data, "getInvitation.data")
+                )
+            }
+        } catch let error as APIError where error.isCommunityInvitationGone {
+            return nil
+        }
+    }
+
+    /// Joins the community account with the invitation's role; a member already keeps the role they had.
+    /// Fails with `isCommunityInvitationGone`, 403 `community.locked` (it stays and can be accepted once
+    /// unlocked) or 403 `community.limit_reached` (an OWNER invitation over the invitee's plan).
+    @discardableResult
+    public func acceptCommunityInvitation(id: String) async throws -> MyCommunity {
+        try await call {
+            try await MyCommunity(
+                required(client.acceptInvitation(path: .init(invitationId: id)).ok.body.json.data, "acceptInvitation.data")
+            )
+        }
+    }
+
+    /// Fails with `isCommunityInvitationGone` once it is no longer there to decline.
+    public func declineCommunityInvitation(id: String) async throws {
+        _ = try await call { try await client.declineInvitation(path: .init(invitationId: id)).ok }
+    }
+
     // MARK: Passkeys
 
     /// Creation options for a new passkey on the signed-in account; each call issues a challenge

@@ -352,6 +352,33 @@ extension FeedNotification.CommunityInvitationInfo {
     }
 }
 
+extension MyCommunity {
+    init(_ dto: Schemas.MyCommunityResponse) throws {
+        self.init(
+            id: try required(dto.communityId, "MyCommunityResponse.communityId"),
+            username: try required(dto.username, "MyCommunityResponse.username"),
+            displayName: dto.displayName,
+            avatarUrl: dto.avatarUrl,
+            role: try CommunityRole(required(dto.role, "MyCommunityResponse.role")),
+            isLocked: dto.locked ?? false
+        )
+    }
+}
+
+extension CommunityInvitationDetail {
+    init(_ dto: Schemas.CommunityInvitationDetailResponse) throws {
+        self.init(
+            id: try required(dto.id, "CommunityInvitationDetailResponse.id"),
+            role: try CommunityRole(required(dto.role, "CommunityInvitationDetailResponse.role")),
+            expiresAt: try required(dto.expiresAt, "CommunityInvitationDetailResponse.expiresAt"),
+            community: try UserSummary(required(dto.community, "CommunityInvitationDetailResponse.community")),
+            inviter: try dto.inviter.map(UserSummary.init),
+            isLocked: dto.locked ?? false,
+            isMember: dto.member ?? false
+        )
+    }
+}
+
 extension CommunityRole {
     /// The generated role enums of the community schemas share their raw values.
     init<Payload: RawRepresentable<String>>(_ value: Payload) throws {

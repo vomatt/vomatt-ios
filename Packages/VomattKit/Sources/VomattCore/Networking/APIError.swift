@@ -45,6 +45,9 @@ public struct APIError: Error, Equatable, Sendable, LocalizedError {
     public var isNotFound: Bool { status == 404 }
     /// The token still verifies but its account was deleted (on another device, say): treat it as signed out.
     public var isAccountGone: Bool { errorCode == "user.not_found" }
+    /// The community invitation can no longer be answered: it expired, was withdrawn or already answered,
+    /// isn't the viewer's, or its community is suspended. The API doesn't say which.
+    public var isCommunityInvitationGone: Bool { errorCode == "community.invitation.not_found" }
     /// A code was sent to this email moments ago and still works; the API states the seconds left only in its message.
     public var cooldownSeconds: Int? {
         guard errorCode == "auth.otp.resend_cooldown", let message,
