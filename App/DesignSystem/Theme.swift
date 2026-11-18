@@ -49,6 +49,21 @@ extension Font {
     static let vmMeta = vm(13, relativeTo: .footnote)
 }
 
+enum NavigationBarType {
+    /// Geist for the system navigation bar's titles: `text-title-4` inline, the page title large.
+    /// Only the type changes; the bar and its background stay the system's.
+    static func apply() {
+        let bar = UINavigationBar.appearance()
+        bar.titleTextAttributes = [.font: font(17, .headline)]
+        bar.largeTitleTextAttributes = [.font: font(32, .largeTitle), .kern: -0.03 * 32]
+    }
+
+    private static func font(_ size: CGFloat, _ style: UIFont.TextStyle) -> UIFont {
+        guard let geist = UIFont(name: "Geist-Medium", size: size) else { return .preferredFont(forTextStyle: style) }
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: geist)
+    }
+}
+
 extension AnyTransition {
     /// Inline messages and toasts: fade in rising 12pt over 0.3s, fade out rising 12pt over 0.15s.
     /// Only the fade under Reduce Motion.

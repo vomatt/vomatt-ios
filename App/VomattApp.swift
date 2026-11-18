@@ -5,6 +5,8 @@ import VomattCore
 struct VomattApp: App {
     @State private var app = AppModel()
 
+    init() { NavigationBarType.apply() }
+
     var body: some Scene {
         WindowGroup {
             RootView()

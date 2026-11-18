@@ -54,6 +54,7 @@ struct PollDetailView: View {
         }
         .refreshable { await load(reloadComments: true) }
         .canvas()
+        .navigationTitle(app.t("ios.pollTitle"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if case let .ready(poll) = phase {

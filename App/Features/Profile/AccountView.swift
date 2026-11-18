@@ -110,6 +110,7 @@ struct AccountView: View {
             await savedReload
         }
         .canvas()
+        .navigationTitle("@\(profile.username)")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: app.sessionGeneration) { await load() }
         .onChange(of: tab) {

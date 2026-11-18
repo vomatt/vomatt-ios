@@ -16,25 +16,20 @@ struct NotificationsView: View {
         Group {
             if app.isSignedIn {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
-                        content
-                    }
-                    .pageColumn()
-                    .padding(.vertical, 24)
+                    content
+                        .pageColumn()
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                 }
                 .refreshable { await load() }
                 .task(id: app.sessionGeneration) { await load() }
             } else {
-                SignedOutPlaceholder(title: app.t("notifications.title"))
+                SignedOutPlaceholder()
             }
         }
         .canvas()
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var header: some View {
-        Text(app.t("notifications.title")).displayHeading(32).accessibilityAddTraits(.isHeader)
+        .navigationTitle(app.t("notifications.title"))
+        .navigationBarTitleDisplayMode(.large)
     }
 
     /// Nothing at all: unknown kinds are left out, so an empty page can still have more after it.
@@ -444,19 +439,14 @@ private struct FollowBackButton: View {
     }
 }
 
-/// What a signed-in-only tab shows to guests.
+/// What a signed-in-only tab shows to guests, under the tab's navigation title.
 struct SignedOutPlaceholder: View {
-    @Environment(AppModel.self) private var app
-    let title: String
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text(title).displayHeading(32)
-                LoginPromptCard()
-            }
-            .pageColumn()
-            .padding(.vertical, 24)
+            LoginPromptCard()
+                .pageColumn()
+                .padding(.top, 8)
+                .padding(.bottom, 24)
         }
     }
 }

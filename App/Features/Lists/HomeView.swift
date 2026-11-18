@@ -102,7 +102,8 @@ struct FeedView: View {
         }
         .refreshable { await list?.reload() }
         .canvas()
-        .navigationTitle(tag.map { "#\($0.name)" } ?? "")
+        // Home shows the logo; its name is for the back menu of what it pushes
+        .navigationTitle(tag.map { "#\($0.name)" } ?? app.t("navigation.home"))
         .navigationBarTitleDisplayMode(.inline)
         .task(id: app.sessionGeneration) {
             let list = list ?? makeList()
