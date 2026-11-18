@@ -448,6 +448,16 @@ struct ToastView: View {
 }
 
 extension View {
+    /// For a sheet that edits something: while there are changes a swipe down doesn't close it, and Cancel
+    /// (which sets `isPresented`) asks before they are discarded, as the poll creator does.
+    func discardConfirmation(_ app: AppModel, isPresented: Binding<Bool>, hasChanges: Bool, discard: @escaping () -> Void) -> some View {
+        interactiveDismissDisabled(hasChanges)
+            .confirmationDialog(app.t("pollCreator.discardEditTitle"), isPresented: isPresented, titleVisibility: .visible) {
+                Button(app.t("pollCreator.discardEdit"), role: .destructive, action: discard)
+                Button(app.t("pollCreator.keepEditing"), role: .cancel) {}
+            }
+    }
+
     /// Shows `app.toast` for a few seconds and announces it to VoiceOver. The toast gets a window of its
     /// own above the app's, so a sheet or the creator can't cover it.
     func toastHost(_ app: AppModel, colorScheme: ColorScheme?) -> some View {

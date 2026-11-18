@@ -777,6 +777,7 @@ private struct ReportProblemSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
     @State private var error: String?
+    @State private var confirmingDiscard = false
 
     private static let maxLength = 2000
     private var content: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -794,7 +795,9 @@ private struct ReportProblemSheet: View {
             .navigationTitle(app.t("feedback.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(app.t("common.cancel")) { if content.isEmpty { dismiss() } else { confirmingDiscard = true } }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     LoadingButton(style: .vm(.link), action: send) { Text(app.t("feedback.submit")).fontWeight(.semibold) }
                         .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
@@ -802,6 +805,7 @@ private struct ReportProblemSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .discardConfirmation(app, isPresented: $confirmingDiscard, hasChanges: !content.isEmpty) { dismiss() }
     }
 
     private func send() async {

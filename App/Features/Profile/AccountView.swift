@@ -422,6 +422,7 @@ struct EditProfileSheet: View {
     /// A new username breaks old links, so it takes a second step.
     @State private var confirmingUsername = false
     @State private var isSaving = false
+    @State private var confirmingDiscard = false
     @FocusState private var usernameFocused: Bool
 
     private static let displayNameMax = 100
@@ -457,6 +458,7 @@ struct EditProfileSheet: View {
     private var visibilityChanges: [String: Bool] {
         ProfileVisibility.changes(saved: profile.visibilitySettings, next: visibility)
     }
+    private var hasChanges: Bool { detailsChanged || !visibilityChanges.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -465,7 +467,9 @@ struct EditProfileSheet: View {
             .navigationTitle(app.t("profile.editProfile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(app.t("common.cancel")) { if hasChanges { confirmingDiscard = true } else { dismiss() } }
+                }
                 ToolbarItem(placement: .confirmationAction) { saveButton }
             }
             .alert(app.t("account.usernameConfirmTitle"), isPresented: $confirmingUsername) {
@@ -476,6 +480,7 @@ struct EditProfileSheet: View {
                 Text(usernameMove)
             }
         }
+        .discardConfirmation(app, isPresented: $confirmingDiscard, hasChanges: hasChanges) { dismiss() }
         .onAppear(perform: start)
     }
 
