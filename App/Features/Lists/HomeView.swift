@@ -21,6 +21,12 @@ struct HomeView: View {
                         .frame(height: 18).foregroundStyle(Tokens.foreground)
                         .accessibilityLabel("vomatt")
                 }
+                // The web's phone Header: Log in for guests
+                if !app.isSignedIn {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(app.t("loginPrompt.ctaLabel")) { app.signIn() }
+                    }
+                }
             }
             .task { if tags.isEmpty { tags = await app.service.popularTags() } }
             // Once per appearance and session; leaving Results are in may have read results, so check again then
