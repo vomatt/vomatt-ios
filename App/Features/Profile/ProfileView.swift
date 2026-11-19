@@ -351,12 +351,29 @@ struct ProfileHeader<Action: View>: View {
                 marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
                     .accessibilityLabel(spoken(bio, "bio"))
             }
-            if let joinedAt = profile.joinedAt {
-                Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
-                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            if let meta {
+                meta.font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                    .accessibilityLabel([genderMeta.map { spoken($0, "gender") }, joinedText].compactMap { $0 }.joined(separator: ", "))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A community account is a group: it has no gender either.
+    private var genderMeta: String? {
+        guard !profile.isCommunity, let gender = profile.gender else { return nil }
+        return app.t("profile.genderMeta", ["gender": app.t(gender.translationKey)])
+    }
+
+    private var joinedText: String? {
+        profile.joinedAt.map { app.t("profile.joined", ["date": app.dates.monthYear($0)]) }
+    }
+
+    /// "Gender: Female · Joined Aug 2026", the gender only where the API gave one.
+    private var meta: Text? {
+        let parts = [genderMeta.map { marked($0, "gender", lockSize: 10) }, joinedText.map { Text($0) }].compactMap { $0 }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { $0 + Text(verbatim: metaGap) + $1 }
     }
 
     private var firstName: String? { profile.isCommunity ? nil : profile.firstName }

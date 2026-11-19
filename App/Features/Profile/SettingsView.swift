@@ -132,6 +132,7 @@ private struct AccountSettings: View {
     @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
     @State private var confirmingSignOut = false
     @State private var reportingProblem = false
+    @State private var bindingPhone = false
     /// How many invite lists the user has; nil until loaded or when they couldn't be.
     @State private var inviteListCount: Int?
     /// How many devices the user is signed in on; nil until loaded or when they couldn't be.
@@ -218,6 +219,12 @@ private struct AccountSettings: View {
                 .card(padding: nil)
             }
 
+            if let quota = profile.communityQuota {
+                SettingsSection(title: app.t("communities.title")) {
+                    CommunityQuotaRow(quota: quota, plan: profile.plan).card(padding: nil)
+                }
+            }
+
             SettingsSection(title: app.t("settings.account")) {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
@@ -228,6 +235,8 @@ private struct AccountSettings: View {
                     .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
                         Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
                     }
+                    Hairline()
+                    phoneRow
                     Hairline()
                     PasskeysSection(service: app.service).padding(16)
                     Hairline()
@@ -249,6 +258,34 @@ private struct AccountSettings: View {
         .task { await loadInviteListCount() }
         .task { await loadDeviceCount() }
         .sheet(isPresented: $reportingProblem) { ReportProblemSheet() }
+        .sheet(isPresented: $bindingPhone) { PhoneBindSheet(defaultPhone: profile.phoneNumber) }
+    }
+
+    /// The account's phone number: add one, verify one, or show it as verified (the web's `PhoneRow`).
+    private var phoneRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("phoneBind.rowTitle")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
+                if let phone = profile.phoneNumber {
+                    HStack(spacing: 8) {
+                        Text(phone).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
+                        if profile.phoneVerified {
+                            Label(app.t("phoneBind.verified"), systemImage: "checkmark")
+                                .labelStyle(.titleAndIcon).foregroundStyle(Tokens.foreground)
+                        }
+                    }
+                    .font(.vm(13))
+                } else {
+                    Text(app.t("phoneBind.rowBodyNone")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !profile.phoneVerified {
+                Button(app.t(profile.phoneNumber == nil ? "phoneBind.add" : "phoneBind.verify")) { bindingPhone = true }
+                    .buttonStyle(.vm(.outline, size: .sm))
+            }
+        }
+        .settingsRow()
     }
 
     /// The app's language in its own words: "English", "中文".
@@ -276,6 +313,36 @@ private struct AccountSettings: View {
             app.updateMe { $0.anonymousBallotByDefault = savedAnonymousDefault }
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
+    }
+}
+
+/// How many community accounts the user owns against their plan's limit (the web's `KeepRow` and
+/// `CreateCommunityRow`, read-only: choosing, creating and upgrading happen on the web).
+private struct CommunityQuotaRow: View {
+    @Environment(AppModel.self) private var app
+    let quota: CommunityQuota
+    let plan: Plan?
+
+    private var owned: String { app.t("communities.quota", ["owned": quota.owned, "limit": quota.limit]) }
+
+    var body: some View {
+        Group {
+            if quota.selectionRequired {
+                RowText(
+                    title: app.t("communities.keep.rowTitle"),
+                    detail: quota.selectionDeadline.map { app.t("communities.keep.deadline", ["date": app.dates.day($0)]) }
+                )
+            } else if quota.owned >= quota.limit {
+                RowText(
+                    title: app.t("communities.limitTitle"),
+                    detail: app.t(plan == .free ? "communities.limitBodyFree" : "communities.limitBodyPro") + "\n" + owned
+                )
+            } else {
+                Text(owned).font(.vm(15)).monospacedDigit().foregroundStyle(Tokens.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .settingsRow()
     }
 }
 
@@ -480,6 +547,7 @@ private struct VisibilitySettings: View {
         let text: String? = switch setting.key {
         case "realName": ProfileName.realName(firstName: profile.firstName, lastName: profile.lastName)
         case "displayName": profile.displayName
+        case "gender": profile.gender.map { app.t($0.translationKey) }
         case "bio": profile.bio
         default: nil
         }
@@ -540,9 +608,8 @@ private struct PublicPreview: View {
                 if let bio = shown("bio", profile.bio), !bio.isEmpty {
                     Text(bio).font(.vm(14)).foregroundStyle(Tokens.foreground).lineLimit(3)
                 }
-                if let joinedAt = profile.joinedAt {
-                    Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
-                        .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                if !meta.isEmpty {
+                    Text(meta.joined(separator: metaGap)).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
                 }
                 Text("\(app.t.count("profile.recordAskedCount", profile.totalPolls))\(metaGap)\(app.t.count("profile.recordVotedCount", profile.totalVotes))")
                     .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
@@ -551,6 +618,15 @@ private struct PublicPreview: View {
             .card()
         }
         .accessibilityElement(children: .contain)
+    }
+
+    /// The gender, when visitors see it, then when they joined.
+    private var meta: [String] {
+        let gender = ProfileVisibility.isPublic(profile.visibilitySettings, "gender") ? profile.gender : nil
+        return [
+            gender.map { app.t("profile.genderMeta", ["gender": app.t($0.translationKey)]) },
+            profile.joinedAt.map { app.t("profile.joined", ["date": app.dates.monthYear($0)]) },
+        ].compactMap { $0 }
     }
 
     private var nameLine: Text {

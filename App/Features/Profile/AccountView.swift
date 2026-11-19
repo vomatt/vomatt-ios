@@ -401,6 +401,7 @@ struct EditProfileSheet: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var birthday: Date?
+    @State private var gender: Gender?
     @State private var visibility: [String: Bool] = [:]
     @State private var usernameError: String?
     /// A new username breaks old links, so it takes a second step.
@@ -430,8 +431,10 @@ struct EditProfileSheet: View {
     private var formattedBirthday: String? { birthday.map { $0.formatted(Self.birthdayFormat) } }
     // A birthday can't be cleared, so only one the user set counts
     private var birthdayChanged: Bool { formattedBirthday != nil && formattedBirthday != profile.birthday }
+    // Nor a gender: it starts empty only when never set, and no choice empties it
+    private var genderChanged: Bool { gender != nil && gender != profile.gender }
     private var detailsChanged: Bool {
-        usernameChanged || birthdayChanged || displayName != (profile.displayName ?? "") || bio != (profile.bio ?? "")
+        usernameChanged || birthdayChanged || genderChanged || displayName != (profile.displayName ?? "") || bio != (profile.bio ?? "")
             || firstName != (profile.firstName ?? "") || lastName != (profile.lastName ?? "")
     }
     /// "Your profile moves to /new. Links to /old stop working…"
@@ -476,6 +479,7 @@ struct EditProfileSheet: View {
         firstName = profile.firstName ?? ""
         lastName = profile.lastName ?? ""
         birthday = profile.birthday.flatMap { try? Date($0, strategy: Self.birthdayFormat) }
+        gender = profile.gender
         visibility = profile.visibilitySettings
     }
 
@@ -492,7 +496,7 @@ struct EditProfileSheet: View {
         })
     }
 
-    /// The web's order: username, real name, display name, birthday, bio, each with who sees it.
+    /// The web's order: username, real name, display name, birthday, gender, bio, each with who sees it.
     private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -510,6 +514,7 @@ struct EditProfileSheet: View {
                     VMTextField(label: nil, placeholder: app.t("profile.displayNamePlaceholder"), text: limited($displayName, Self.displayNameMax), contentType: .nickname)
                 }
                 birthdayField
+                genderField
                 VStack(alignment: .leading, spacing: 6) {
                     labelRow(app.t("profile.bio")) { pill(.bio) }
                     VMTextEditor(placeholder: app.t("profile.bioPlaceholder"), text: limited($bio, Self.bioMax), minHeight: 72)
@@ -540,6 +545,21 @@ struct EditProfileSheet: View {
                 )
                 .labelsHidden()
             }
+        }
+    }
+
+    /// No "not set": once chosen it can only change.
+    private var genderField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            labelRow(app.t("profile.gender")) { pill(.gender) }
+            FlowLayout(spacing: 8) {
+                ForEach(Gender.allCases, id: \.self) { option in
+                    PillButton(title: app.t(option.translationKey), isOn: gender == option) { gender = option }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(app.t("profile.gender"))
+            Text(app.t("profile.genderReportNote")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
         }
     }
 
@@ -640,7 +660,8 @@ struct EditProfileSheet: View {
                     username: usernameChanged ? username : nil, displayName: displayName, bio: bio,
                     firstName: firstName != (profile.firstName ?? "") ? firstName : nil,
                     lastName: lastName != (profile.lastName ?? "") ? lastName : nil,
-                    birthday: birthdayChanged ? formattedBirthday : nil
+                    birthday: birthdayChanged ? formattedBirthday : nil,
+                    gender: genderChanged ? gender : nil
                 )
             } catch {
                 // A refused username belongs next to its field; anything else is a toast
@@ -658,6 +679,7 @@ struct EditProfileSheet: View {
                 $0.firstName = firstName.isEmpty ? nil : firstName
                 $0.lastName = lastName.isEmpty ? nil : lastName
                 if birthdayChanged { $0.birthday = formattedBirthday }
+                if genderChanged { $0.gender = gender }
             }
         }
         if !changes.isEmpty {
