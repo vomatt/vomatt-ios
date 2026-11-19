@@ -375,7 +375,8 @@ private struct NotificationRow: View {
         switch item.kind {
         case .result:
             guard let poll = item.poll else { return [age] }
-            return [app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age]
+            // "4 voted" stays on one line: a wrap falls between the items, not inside one
+            return [app.t("poll.voted", ["count": app.t.number(poll.turnout)]).replacingOccurrences(of: " ", with: "\u{00A0}"), age]
         case .cancelled, .followed, .communityInvitation, .communityLocked:
             return [age]
         case .invitation:
