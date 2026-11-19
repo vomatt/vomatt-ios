@@ -10,18 +10,22 @@ struct AccountTab: View {
             AccountView(profile: me)
         } else if app.isSignedIn {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity).canvas()
+                .navigationTitle(app.t("navigation.profile"))
+                .navigationBarTitleDisplayMode(.inline)
                 .task { await app.refreshAccount() }
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(app.t("navigation.profile")).displayHeading(32)
                     LoginPromptCard()
                     LegalLinks()
                 }
                 .pageColumn()
-                .padding(.vertical, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .canvas()
+            .navigationTitle(app.t("navigation.profile"))
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }
@@ -71,6 +75,7 @@ struct ProfileView: View {
         }
         .refreshable { await load() }
         .canvas()
+        .navigationTitle("@\(username)")
         .toolbar {
             if let readyProfile {
                 ToolbarItem(placement: .topBarTrailing) { moreMenu(readyProfile) }
@@ -89,16 +94,19 @@ struct ProfileView: View {
         let hidden = profile.mutualFollowersPreview.count - visible.count
         ProfileHeader(profile: profile)
         VStack(alignment: .leading, spacing: 12) {
-            FollowCounts(username: profile.username, followers: followersCount(profile), following: profile.followingCount)
+            // A community account can't follow anyone
+            FollowCounts(username: profile.username, followers: followersCount(profile), following: profile.isCommunity ? nil : profile.followingCount)
             if app.isSignedIn, let line = MutualFollowersLine(count: profile.mutualFollowersCount.map { $0 - hidden }, preview: visible, t: app.t) {
                 MutualFollowersView(line: line) { app.push(.people(username: profile.username, kind: .mutual)) }
             }
         }
         ProfileFollowButton(profile: profile)
+        // Nor does it vote
         StatsGrid(stats: [
             .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.totalPolls)),
+        ] + (profile.isCommunity ? [] : [
             .init(label: app.t("profile.recordVoted"), value: app.t.number(profile.totalVotes)),
-        ])
+        ]), columns: profile.isCommunity ? 1 : 2)
         if let polls { askedList(polls, total: profile.totalPolls) }
     }
 
@@ -205,12 +213,13 @@ struct FollowCounts: View {
     @Environment(AppModel.self) private var app
     let username: String
     let followers: Int
-    let following: Int
+    /// nil leaves the count out.
+    let following: Int?
 
     var body: some View {
         HStack(spacing: 8) {
             count(app.t.count("profile.followersCount", followers), .followers)
-            count(app.t.count("profile.followingCount", following), .following)
+            if let following { count(app.t.count("profile.followingCount", following), .following) }
         }
     }
 
@@ -293,7 +302,7 @@ struct ProfileSkeleton: View {
 }
 
 /// Avatar, name, @username, bio and when they joined (the web's `ProfileHeader`). The name leads with the
-/// real name, then the display name (`ProfileName`).
+/// real name, then the display name (`ProfileName`). A community account is a group: it has no real name.
 struct ProfileHeader<Action: View>: View {
     @Environment(AppModel.self) private var app
     let profile: UserProfile
@@ -342,21 +351,41 @@ struct ProfileHeader<Action: View>: View {
                 marked(bio, "bio", lockSize: 11).font(.vm(14)).foregroundStyle(Tokens.foreground)
                     .accessibilityLabel(spoken(bio, "bio"))
             }
-            if let joinedAt = profile.joinedAt {
-                Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
-                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+            if let meta {
+                meta.font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                    .accessibilityLabel([genderMeta.map { spoken($0, "gender") }, joinedText].compactMap { $0 }.joined(separator: ", "))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// A community account is a group: it has no gender either.
+    private var genderMeta: String? {
+        guard !profile.isCommunity, let gender = profile.gender else { return nil }
+        return app.t("profile.genderMeta", ["gender": app.t(gender.translationKey)])
+    }
+
+    private var joinedText: String? {
+        profile.joinedAt.map { app.t("profile.joined", ["date": app.dates.monthYear($0)]) }
+    }
+
+    /// "Gender: Female · Joined Aug 2026", the gender only where the API gave one.
+    private var meta: Text? {
+        let parts = [genderMeta.map { marked($0, "gender", lockSize: 10) }, joinedText.map { Text($0) }].compactMap { $0 }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { $0 + Text(verbatim: metaGap) + $1 }
+    }
+
+    private var firstName: String? { profile.isCommunity ? nil : profile.firstName }
+    private var lastName: String? { profile.isCommunity ? nil : profile.lastName }
+
     private var name: ProfileName {
-        ProfileName(username: profile.username, displayName: profile.displayName, firstName: profile.firstName, lastName: profile.lastName)
+        ProfileName(username: profile.username, displayName: profile.displayName, firstName: firstName, lastName: lastName)
     }
 
     /// The field whose lock the leading name carries: the real name's halves, or the display name.
     private var primaryField: String {
-        guard ProfileName.realName(firstName: profile.firstName, lastName: profile.lastName) != nil else { return "displayName" }
+        guard ProfileName.realName(firstName: firstName, lastName: lastName) != nil else { return "displayName" }
         return hiddenFields.contains("firstName") ? "firstName" : "lastName"
     }
 

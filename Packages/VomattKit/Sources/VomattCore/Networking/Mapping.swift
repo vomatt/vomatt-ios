@@ -27,6 +27,7 @@ extension Poll {
             creatorId: try required(dto.creatorId, "VoteResponse.creatorId"),
             creatorUsername: try required(dto.creatorUsername, "VoteResponse.creatorUsername"),
             creatorAvatarUrl: dto.creatorAvatarUrl,
+            creatorIsCommunity: dto.creatorCommunity ?? false,
             createdAt: dto.createdAt ?? dto.startTime ?? .now,
             startTime: try required(dto.startTime, "VoteResponse.startTime"),
             endTime: dto.endTime,
@@ -214,7 +215,9 @@ extension UserProfile {
             followingCount: dto.followingCount.map(Int.init) ?? 0,
             followsYou: dto.followsYou,
             mutualFollowersCount: dto.mutualFollowersCount.map(Int.init),
-            mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init)
+            mutualFollowersPreview: try (dto.mutualFollowersPreview ?? []).map(UserSummary.init),
+            isCommunity: dto.community ?? false,
+            gender: dto.gender.flatMap { Gender(rawValue: $0.rawValue) }
         )
     }
 }
@@ -239,7 +242,23 @@ extension MyProfile {
             followersCount: dto.followersCount.map(Int.init) ?? 0,
             followingCount: dto.followingCount.map(Int.init) ?? 0,
             visibilitySettings: dto.visibilitySettings?.additionalProperties ?? [:],
-            anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false
+            anonymousBallotByDefault: dto.anonymousBallotByDefault ?? false,
+            gender: dto.gender.flatMap { Gender(rawValue: $0.rawValue) },
+            phoneNumber: dto.phoneNumber,
+            phoneVerified: dto.phoneVerified ?? false,
+            plan: dto.plan.flatMap { Plan(rawValue: $0.rawValue) },
+            communityQuota: dto.communityQuota.map(CommunityQuota.init)
+        )
+    }
+}
+
+extension CommunityQuota {
+    init(_ dto: Schemas.CommunityQuota) {
+        self.init(
+            owned: dto.owned.map(Int.init) ?? 0,
+            limit: dto.limit.map(Int.init) ?? 0,
+            selectionRequired: dto.selectionRequired ?? false,
+            selectionDeadline: dto.selectionDeadline
         )
     }
 }
@@ -250,7 +269,8 @@ extension UserSummary {
             id: try required(dto.id, "UserDto.id"),
             username: try required(dto.username, "UserDto.username"),
             displayName: dto.displayName,
-            avatarUrl: dto.avatarUrl
+            avatarUrl: dto.avatarUrl,
+            isCommunity: dto.community ?? false
         )
     }
 }
@@ -263,15 +283,20 @@ extension UserSummary {
             displayName: dto.displayName,
             avatarUrl: dto.avatarUrl,
             isFollowing: dto.isFollowing,
-            followsYou: dto.followsYou
+            followsYou: dto.followsYou,
+            isCommunity: dto.community ?? false
         )
     }
 }
 
 extension FeedNotification {
-    /// Nil for a kind the app doesn't show; throws for an item that is malformed.
-    init?(_ dto: Schemas.NotificationResponse) throws {
-        guard let kind = FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind")) else { return nil }
+    /// Throws for an item that is malformed, or that lacks what its kind is about.
+    init(_ dto: Schemas.NotificationResponse) throws {
+        let kind = FeedNotification.Kind(try required(dto.kind, "NotificationResponse.kind"))
+        // The one kind that can't be shown without its summary: the row answers the invitation by its id
+        let communityInvitation = kind == .communityInvitation
+            ? try CommunityInvitationInfo(required(dto.communityInvitation, "NotificationResponse.communityInvitation"))
+            : nil
         self.init(
             id: try required(dto.id, "NotificationResponse.id"),
             kind: kind,
@@ -279,14 +304,14 @@ extension FeedNotification {
             read: dto.read ?? false,
             actor: try dto.actor.map(UserSummary.init),
             poll: try dto.poll.map(PollInfo.init),
-            comment: try dto.comment.map(CommentInfo.init)
+            comment: try dto.comment.map(CommentInfo.init),
+            communityInvitation: communityInvitation
         )
     }
 }
 
 extension FeedNotification.Kind {
-    /// Nil for a kind the app has no row for, so the feed leaves that item out (`notifications`).
-    init?(_ value: Schemas.NotificationResponse.KindPayload) {
+    init(_ value: Schemas.NotificationResponse.KindPayload) {
         switch value {
         case .result: self = .result
         case .cancelled: self = .cancelled
@@ -297,9 +322,8 @@ extension FeedNotification.Kind {
         case .closingSoon: self = .closingSoon
         case .like: self = .like
         case .pollLike: self = .pollLike
-        // The app has no community accounts yet, so there is nothing to open from "your community was locked"
-        // or to answer for an invitation to one
-        case .communityInvitation, .communityLocked: return nil
+        case .communityInvitation: self = .communityInvitation
+        case .communityLocked: self = .communityLocked
         }
     }
 }
@@ -313,6 +337,7 @@ extension FeedNotification.Category {
         case .pollEnd: "POLL_END"
         case .invitation: "INVITATION"
         case .follow: "FOLLOW"
+        case .community: "COMMUNITY"
         }
     }
 }
@@ -331,6 +356,50 @@ extension FeedNotification.PollInfo {
             winningOptionLabels: dto.winningOptionLabels,
             tie: dto.tie
         )
+    }
+}
+
+extension FeedNotification.CommunityInvitationInfo {
+    init(_ dto: Schemas.CommunityInvitationSummary) throws {
+        self.init(
+            id: try required(dto.id, "CommunityInvitationSummary.id"),
+            role: try CommunityRole(required(dto.role, "CommunityInvitationSummary.role")),
+            expiresAt: try required(dto.expiresAt, "CommunityInvitationSummary.expiresAt")
+        )
+    }
+}
+
+extension MyCommunity {
+    init(_ dto: Schemas.MyCommunityResponse) throws {
+        self.init(
+            id: try required(dto.communityId, "MyCommunityResponse.communityId"),
+            username: try required(dto.username, "MyCommunityResponse.username"),
+            displayName: dto.displayName,
+            avatarUrl: dto.avatarUrl,
+            role: try CommunityRole(required(dto.role, "MyCommunityResponse.role")),
+            isLocked: dto.locked ?? false
+        )
+    }
+}
+
+extension CommunityInvitationDetail {
+    init(_ dto: Schemas.CommunityInvitationDetailResponse) throws {
+        self.init(
+            id: try required(dto.id, "CommunityInvitationDetailResponse.id"),
+            role: try CommunityRole(required(dto.role, "CommunityInvitationDetailResponse.role")),
+            expiresAt: try required(dto.expiresAt, "CommunityInvitationDetailResponse.expiresAt"),
+            community: try UserSummary(required(dto.community, "CommunityInvitationDetailResponse.community")),
+            inviter: try dto.inviter.map(UserSummary.init),
+            isLocked: dto.locked ?? false,
+            isMember: dto.member ?? false
+        )
+    }
+}
+
+extension CommunityRole {
+    /// The generated role enums of the community schemas share their raw values.
+    init<Payload: RawRepresentable<String>>(_ value: Payload) throws {
+        self = try required(CommunityRole(rawValue: value.rawValue), "CommunityRole")
     }
 }
 

@@ -262,6 +262,79 @@ struct ServiceTests {
         #expect(json["lastName"] as? String == "")
     }
 
+    @Test func myProfileCarriesGenderPhonePlanAndCommunityQuota() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"id":"u1","username":"alice","gender":"FEMALE","phoneNumber":"+886912345678","phoneVerified":true,"plan":"PRO",
+             "communityQuota":{"owned":3,"limit":1,"selectionRequired":true,"selectionDeadline":"2026-11-18T10:00:00Z"}}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.gender == .female && me.phoneNumber == "+886912345678" && me.phoneVerified && me.plan == .pro)
+        #expect(me.communityQuota == CommunityQuota(
+            owned: 3, limit: 1, selectionRequired: true, selectionDeadline: ISO8601DateFormatter().date(from: "2026-11-18T10:00:00Z")
+        ))
+    }
+
+    @Test func aProfileFromAnAPIOlderThanPlansHasNone() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"id":"u1","username":"alice","gender":null,"phoneNumber":null}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let me = try await service.myProfile()
+        #expect(me.gender == nil && me.phoneNumber == nil && !me.phoneVerified && me.plan == nil && me.communityQuota == nil)
+    }
+
+    @Test func genderIsSentOnlyWhenChangedAndShownWhenVisible() async throws {
+        let transport = StubTransport { request, _ in
+            request.method == .patch
+                ? (200, envelope(#"{"username":"alice","gender":"UNDISCLOSED"}"#), [:])
+                : (200, envelope(#"{"username":"alice","gender":"OTHER"}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.userProfile(username: "alice")?.gender == .other)
+        #expect(try await service.updateProfile(gender: .undisclosed).gender == .undisclosed)
+        _ = try await service.updateProfile(bio: "hi")
+        let bodies = try transport.requests.dropFirst().map {
+            try #require(try JSONSerialization.jsonObject(with: Data(($0.body ?? "").utf8)) as? [String: String])
+        }
+        #expect(bodies == [["gender": "UNDISCLOSED"], ["bio": "hi"]])
+        #expect(Gender.allCases.map(\.translationKey) == [
+            "profile.genders.MALE", "profile.genders.FEMALE", "profile.genders.OTHER", "profile.genders.UNDISCLOSED",
+        ])
+    }
+
+    // Phone bind cases ported from vomatt-web `src/__tests__/features/account/PhoneBindDialog.test.tsx`
+    @Test func bindingAPhoneTextsACodeThenVerifiesIt() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/users/me/phone/verify"
+                ? (200, envelope(#"{"id":"u1","username":"alice","phoneNumber":"+886912345678","phoneVerified":true}"#), [:])
+                : (200, envelope(#"{"success":true}"#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sendPhoneBindOtp(phone: "0912345678")
+        let me = try await service.verifyPhoneBind(phone: "0912345678", code: "123456")
+        #expect(me.phoneNumber == "+886912345678" && me.phoneVerified)
+        #expect(transport.requests.map { "\($0.method.rawValue) \($0.path)" } == ["POST /api/users/me/phone/send-otp", "POST /api/users/me/phone/verify"])
+        let bodies = try transport.requests.map {
+            try #require(try JSONSerialization.jsonObject(with: Data(($0.body ?? "").utf8)) as? [String: String])
+        }
+        #expect(bodies == [["phone": "0912345678"], ["phone": "0912345678", "code": "123456"]])
+    }
+
+    @Test func aPhoneBindResendInsideTheCooldownCarriesTheSecondsLeft() async {
+        let transport = StubTransport { _, _ in (400, failure("auth.otp.resend_cooldown", "Please wait 65 seconds before resending"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.sendPhoneBindOtp(phone: "0912345678") }
+        #expect(error?.cooldownSeconds == 65)
+    }
+
+    @Test func aNumberLinkedToAnotherAccountSaysSo() async throws {
+        let transport = StubTransport { _, _ in (409, failure("user.phone.taken"), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.verifyPhoneBind(phone: "0912345678", code: "123456") }
+        #expect(AuthErrorKey(phoneBindError: try #require(error)) == .phoneTaken)
+    }
+
     @Test func uploadingAnAvatarSendsTheFileAsMultipartAndReturnsTheProfile() async throws {
         let transport = StubTransport { request, _ in
             if request.method == .put {
@@ -483,7 +556,7 @@ struct ServiceTests {
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let poll = try #require(try await service.poll(id: "p1"))
         #expect(poll.likeCount == 3 && poll.likedByMe && poll.pro)
-        #expect(poll.resultsSealed())
+        #expect(poll.revealAt != nil)
     }
 
     @Test func aPollLikeNotificationIsFiledUnderLikes() async throws {
@@ -568,20 +641,69 @@ struct ServiceTests {
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
               {"id":"comment_c2","kind":"COMMENT","category":"THREADS","createdAt":"2026-10-25T09:30:00+08:00","read":true,
                "actor":\#(actor),"poll":\#(poll),"comment":\#(comment)},
-              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true},
-              {"id":"locked_1","kind":"COMMUNITY_LOCKED","category":"COMMUNITY","createdAt":"2026-10-23T09:30:00+08:00","read":false,"actor":\#(actor)},
-              {"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,"actor":\#(actor),"communityInvitation":{"id":"ci1","role":"EDITOR","expiresAt":"2026-10-29T09:30:00+08:00"}}
+              {"kind":"COMMENT","createdAt":"2026-10-24T09:30:00+08:00","read":true}
             ],"nextCursor":"n2"}
             """#), [:])
         }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
         let page = try await service.notifications()
-        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known.
-        // COMMUNITY_LOCKED and COMMUNITY_INVITATION are in the contract but have no row in the app, so they are left out too
+        // A new kind, an unknown category and an item without an id are each left out or ignored; LIKE is known
         #expect(page.items.map(\.id) == ["mention_c1", "like_c1", "comment_c2"])
         #expect(page.items.map(\.kind) == [.mention, .like, .comment])
         #expect(page.items[0].comment?.excerpt == "@mei try Nagi" && page.items[0].actor?.username == "bob")
         #expect(page.nextCursor == "n2")
+    }
+
+    // Community cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
+    @Test func aLockedCommunityAccountIsReadInItsOwnTab() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[{"id":"community_locked_9","kind":"COMMUNITY_LOCKED","category":"COMMUNITY","createdAt":"2026-10-26T10:00:00Z","read":false,
+              "actor":{"id":"c1","username":"robotics","community":true},"poll":null,"comment":null}],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let page = try await service.notifications(category: .community)
+        #expect(transport.requests.map(\.path) == ["/api/notifications?category=COMMUNITY&limit=20"])
+        let item = try #require(page.items.first)
+        #expect(item.id == "community_locked_9" && item.kind == .communityLocked && item.kind.category == .community)
+        #expect(item.actor?.isCommunity == true && item.poll == nil && item.communityInvitation == nil)
+    }
+
+    @Test func aCommunityInvitationCarriesWhatToAnswerAndIsFiledUnderInvitations() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[{"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,
+              "actor":{"id":"c1","username":"robotics","displayName":"Robotics Club","community":true},
+              "communityInvitation":{"id":"ci1","role":"CHIEF_EDITOR","expiresAt":"2026-10-29T09:30:00+08:00"}}],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        let item = try #require(try await service.notifications(category: .invitation).items.first)
+        #expect(item.kind == .communityInvitation && item.kind.category == .invitation)
+        #expect(item.actor?.displayName == "Robotics Club")
+        #expect(item.communityInvitation?.id == "ci1" && item.communityInvitation?.role == .chiefEditor)
+        #expect(item.communityInvitation?.expiresAt == ISO8601DateFormatter().date(from: "2026-10-29T09:30:00+08:00"))
+    }
+
+    @Test func aCommunityInvitationWithNothingToAnswerIsLeftOut() async throws {
+        let transport = StubTransport { _, _ in
+            (200, envelope(#"""
+            {"items":[
+              {"id":"cinv_1","kind":"COMMUNITY_INVITATION","category":"INVITATION","createdAt":"2026-10-22T09:30:00+08:00","read":false,"actor":{"id":"c1","username":"robotics"}},
+              {"id":"followed_u2","kind":"FOLLOWED","category":"FOLLOW","createdAt":"2026-10-21T09:30:00+08:00","read":false,"actor":{"id":"u2","username":"bob"}}
+            ],"nextCursor":null}
+            """#), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.notifications().items.map(\.id) == ["followed_u2"])
+    }
+
+    @Test func theCommunityTabHasItsOwnUnreadCount() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"count":2}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        #expect(try await service.unreadCount(category: .community) == 2)
+        #expect(transport.requests.map(\.path) == ["/api/notifications/unread-count?category=COMMUNITY"])
     }
 
     // markAllNotificationsRead() cases ported from vomatt-web `src/__tests__/features/notifications/service.test.ts`
@@ -765,6 +887,17 @@ struct SessionTests {
         // The refresh call itself never carries the access token
         #expect(transport.requests[1].authorization == nil)
         #expect(store.load()?.refreshToken == "refresh-2")
+    }
+
+    @Test func aWrongPhoneBindCodeIsSentOnceAndNeverSignsOut() async throws {
+        let transport = StubTransport { _, _ in (401, failure("auth.invalid_otp"), [:]) }
+        let store = InMemoryTokenStore(tokens(1))
+        let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
+        let error = await #expect(throws: APIError.self) { try await service.verifyPhoneBind(phone: "0912345678", code: "000000") }
+        #expect(AuthErrorKey(phoneBindError: try #require(error)) == .invalidSmsCode)
+        // No refresh, and no second guess against the 3-wrong-codes lockout
+        #expect(transport.requests.map(\.path) == ["/api/users/me/phone/verify"])
+        #expect(await service.session.isSignedIn && store.load()?.refreshToken == "refresh-1")
     }
 
     @Test func aDeadSessionSurfacesAsNotAuthenticated() async throws {

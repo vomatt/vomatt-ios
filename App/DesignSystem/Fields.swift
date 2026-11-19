@@ -39,6 +39,7 @@ struct VMTextField: View {
     var keyboard: UIKeyboardType = .default
     var autocapitalization: TextInputAutocapitalization = .sentences
     var submitLabel: SubmitLabel = .done
+    var autoFocus = false
     var onSubmit: () -> Void = {}
     @FocusState private var isFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -67,6 +68,7 @@ struct VMTextField: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: error)
+        .onAppear { if autoFocus { isFocused = true } }
     }
 }
 

@@ -37,21 +37,31 @@ struct ProfileVisibilityTests {
         #expect(profile.hiddenFields == ["displayName", "firstName"])
     }
 
+    @Test func aGenderIsHiddenUntilItsOwnerShowsIt() {
+        #expect(MyProfile(id: "1", username: "klaus", gender: .other).hiddenFields == ["gender"])
+        #expect(MyProfile(id: "1", username: "klaus", visibilitySettings: ["gender": true], gender: .other).hiddenFields.isEmpty)
+        #expect(MyProfile(id: "1", username: "klaus").hiddenFields.isEmpty)
+    }
+
+    @Test func theOwnersHeaderGetsTheirGender() {
+        #expect(MyProfile(id: "1", username: "klaus", gender: .female).asOwnProfile.gender == .female)
+    }
+
     // The web's AccountSettings: one per Edit profile setting, the real name shown when either half is
     @Test func shownSettingsCountTheRealNameOnce() {
         #expect(MyProfile(id: "1", username: "klaus").shownSettingCount == 2)
         #expect(MyProfile(id: "1", username: "klaus", visibilitySettings: ["lastName": true, "bio": false]).shownSettingCount == 2)
-        #expect(ProfileVisibility.settings.count == 3)
+        #expect(ProfileVisibility.settings.count == 4)
     }
 
-    @Test func settingsAreRealNameThenDisplayNameThenBio() {
-        #expect(ProfileVisibility.settings.map(\.key) == ["realName", "displayName", "bio"])
+    @Test func settingsAreRealNameThenDisplayNameThenGenderThenBio() {
+        #expect(ProfileVisibility.settings.map(\.key) == ["realName", "displayName", "gender", "bio"])
         #expect(ProfileVisibility.settings[0].fields == ["firstName", "lastName"])
     }
 
-    // The web's VisibilitySettings: the real name hidden and the rest public by default
+    // The web's VisibilitySettings: the real name and gender hidden, the rest public by default
     @Test func settingsFallBackToTheAPIDefaults() {
-        #expect(ProfileVisibility.settings.map { ProfileVisibility.isPublic([:], $0) } == [false, true, true])
+        #expect(ProfileVisibility.settings.map { ProfileVisibility.isPublic([:], $0) } == [false, true, false, true])
     }
 
     @Test func realNameIsShownWhenEitherHalfIs() {
@@ -81,7 +91,12 @@ struct UsernameRuleTests {
     @Test func rejectsTheReservedNamesTheAPIRefuses() {
         for name in Username.reserved { #expect(!Username.isValid(name), "\(name)") }
         #expect(Username.reserved.contains("following"))
-        #expect(Username.reserved.contains("contact"))
+        #expect(Username.reserved.contains("signup"))
+    }
+
+    @Test func rejectsTheRootPagesThatRedirectToTheAboutSite() {
+        #expect(!Username.isValid("about"))
+        #expect(!Username.isValid("contact"))
     }
 
     @Test func acceptsNamesThatOnlyStartWithAReservedName() {

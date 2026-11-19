@@ -5,9 +5,9 @@ public enum BallotOutcome: String, Sendable {
 }
 
 public enum AccountInsights {
-    /// Whether the viewer's pick won an Ended Poll; `pending` while it is still open.
+    /// Whether the viewer's pick won an Ended Poll; `pending` until its results are revealed.
     public static func outcome(of poll: Poll, optionId: String, at now: Date = .now) -> BallotOutcome {
-        guard poll.status(at: now) == .ended else { return .pending }
+        guard poll.isRevealed(at: now) else { return .pending }
         guard let rows = poll.inlineResults else { return .unknown }
         return Results.outcome(of: optionId, in: rows) ?? .lost
     }

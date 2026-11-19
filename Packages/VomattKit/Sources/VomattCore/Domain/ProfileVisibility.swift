@@ -4,7 +4,7 @@ import Foundation
 public enum ProfileVisibility {
     /// Profile fields other people can see once their owner allows it: the API's visibility keys this app
     /// shows. Location, points and membership level are left out, since no page shows them.
-    public static let fields = ["displayName", "bio", "firstName", "lastName"]
+    public static let fields = ["displayName", "bio", "firstName", "lastName", "gender"]
 
     /// A visibility setting a person sets: `key` names its label, `profile.<key>`.
     public struct Setting: Hashable, Sendable {
@@ -13,12 +13,13 @@ public enum ProfileVisibility {
 
         public static let realName = Setting(key: "realName", fields: ["firstName", "lastName"])
         public static let displayName = Setting(key: "displayName", fields: ["displayName"])
+        public static let gender = Setting(key: "gender", fields: ["gender"])
         public static let bio = Setting(key: "bio", fields: ["bio"])
     }
 
     /// The settings in the order Edit profile and Settings › What others see show them: first and last name
     /// share one, Real name.
-    public static let settings: [Setting] = [.realName, .displayName, .bio]
+    public static let settings: [Setting] = [.realName, .displayName, .gender, .bio]
 
     /// Public until the owner turns them off; the rest stay hidden until turned on (the API's defaults).
     private static let publicByDefault: Set = ["displayName", "bio"]
@@ -57,11 +58,12 @@ public extension MyProfile {
         UserProfile(
             id: id, username: username, displayName: displayName, firstName: firstName, lastName: lastName, bio: bio,
             avatarUrl: avatarUrl, joinedAt: joinedAt, totalPolls: totalPolls, totalVotes: totalVotes,
-            followersCount: followersCount, followingCount: followingCount
+            followersCount: followersCount, followingCount: followingCount, gender: gender
         )
     }
 
     private func hasValue(_ field: String) -> Bool {
+        if field == "gender" { return gender != nil }
         let text: String? = switch field {
         case "displayName": displayName
         case "bio": bio

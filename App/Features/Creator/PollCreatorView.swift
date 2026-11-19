@@ -70,6 +70,10 @@ struct PollCreatorView: View {
             }
         }
         .interactiveDismissDisabled(form != initial)
+        // A link closed the creator without asking: a new poll's text is kept as a draft
+        .onChange(of: app.modalDismissals) {
+            if !isEdit, form != initial { app.drafts.save(form, id: request.draft?.id) }
+        }
         .confirmationDialog(
             app.t(isEdit ? "pollCreator.discardEditTitle" : "ios.saveDraftTitle"),
             isPresented: $confirmingClose, titleVisibility: .visible

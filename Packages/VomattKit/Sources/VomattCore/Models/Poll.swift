@@ -70,6 +70,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var creatorId: String
     public var creatorUsername: String
     public var creatorAvatarUrl: String?
+    /// The owner is a community account (a group's page, shown with a badge).
+    public var creatorIsCommunity: Bool
     public var createdAt: Date
     public var startTime: Date
     /// When it ends, or actually ended.
@@ -103,15 +105,10 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var options: [PollOption]
     public var tags: [Tag]
 
-    /// Ended, but the results are still Sealed until `revealAt`.
-    public func resultsSealed(at now: Date = .now) -> Bool {
-        revealAt.map { $0 > now } ?? false
-    }
-
     public init(
         id: String, title: String, description: String? = nil, active: Bool = true,
         votingActive: Bool = true, voterVisibility: VoterVisibility? = nil, audience: Audience? = nil,
-        creatorId: String, creatorUsername: String, creatorAvatarUrl: String? = nil,
+        creatorId: String, creatorUsername: String, creatorAvatarUrl: String? = nil, creatorIsCommunity: Bool = false,
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
         participantCount: Int? = nil, commentCount: Int? = nil, shareCount: Int? = nil, myOptionId: String? = nil,
@@ -133,6 +130,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         self.creatorId = creatorId
         self.creatorUsername = creatorUsername
         self.creatorAvatarUrl = creatorAvatarUrl
+        self.creatorIsCommunity = creatorIsCommunity
         self.createdAt = createdAt
         self.startTime = startTime
         self.endTime = endTime

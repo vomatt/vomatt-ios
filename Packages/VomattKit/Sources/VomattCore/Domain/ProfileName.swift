@@ -32,6 +32,9 @@ public struct ProfileName: Equatable, Sendable {
         return isFamilyFirst(first) && isFamilyFirst(last) ? last + first : "\(first) \(last)"
     }
 
+    /// How the app writes a person wherever it names them: their @handle. Names lead only on the profile card.
+    public static func handle(_ username: String) -> String { "@\(username)" }
+
     // Chinese, Japanese kanji and Korean names put the family name first
     private static func isFamilyFirst(_ text: String) -> Bool {
         text.contains(#/[\p{Script=Han}\p{Script=Hangul}]/#)

@@ -513,17 +513,37 @@ public final class VomattService: Sendable {
         }
     }
 
-    /// Omitted fields stay as they are; a blank name clears it, a birthday can't be cleared. Errors carry the API's localized message.
+    /// Omitted fields stay as they are; a blank name clears it, a birthday or a gender can't be cleared
+    /// (`.undisclosed` instead). Errors carry the API's localized message.
     @discardableResult
     public func updateProfile(
         username: String? = nil, displayName: String? = nil, bio: String? = nil, avatarUrl: String? = nil,
-        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil
+        anonymousBallotByDefault: Bool? = nil, firstName: String? = nil, lastName: String? = nil, birthday: String? = nil,
+        gender: Gender? = nil
     ) async throws -> UserProfile {
         try await call {
             try await UserProfile(required(client.updateMyProfile(body: .json(.init(
                 anonymousBallotByDefault: anonymousBallotByDefault, avatarUrl: avatarUrl, bio: bio, birthday: birthday,
-                displayName: displayName, firstName: firstName, lastName: lastName, username: username
+                displayName: displayName, firstName: firstName, gender: gender.flatMap { .init(rawValue: $0.rawValue) },
+                lastName: lastName, username: username
             ))).ok.body.json.data, "updateMyProfile.data"))
+        }
+    }
+
+    /// Texts a code that binds `phone` (a Taiwan mobile number or E.164) to the signed-in account. A resend
+    /// inside the cooldown fails with `auth.otp.resend_cooldown` (`APIError.cooldownSeconds`).
+    public func sendPhoneBindOtp(phone: String) async throws {
+        try await call { _ = try await client.sendPhoneBindOtp(body: .json(.init(phone: phone))).ok }
+    }
+
+    /// Binds the number the code went to; resolves to the profile with `phoneVerified` true. A wrong or
+    /// expired code is a 401 that doesn't end the session: show it with `AuthErrorKey(phoneBindError:)`.
+    @discardableResult
+    public func verifyPhoneBind(phone: String, code: String) async throws -> MyProfile {
+        try await call {
+            try await MyProfile(required(
+                client.verifyPhoneBind(body: .json(.init(code: code, phone: phone))).ok.body.json.data, "verifyPhoneBind.data"
+            ))
         }
     }
 
@@ -657,6 +677,44 @@ public final class VomattService: Sendable {
         let id = try await myProfile().id
         _ = try await retryingWhenBusy { try await client.deleteUser(path: .init(userId: id)).ok }
         await session.signOut()
+    }
+
+    // MARK: Communities
+
+    /// The community accounts the signed-in user belongs to, with their role in each.
+    public func myCommunities() async throws -> [MyCommunity] {
+        try await call { try (try await client.listMine().ok.body.json.data ?? []).map(MyCommunity.init) }
+    }
+
+    /// An invitation sent to the signed-in user, by the id in its email link or its notification.
+    /// nil when it can no longer be answered (`APIError.isCommunityInvitationGone`).
+    public func communityInvitation(id: String) async throws -> CommunityInvitationDetail? {
+        do {
+            return try await call {
+                try await CommunityInvitationDetail(
+                    required(client.getInvitation(path: .init(invitationId: id)).ok.body.json.data, "getInvitation.data")
+                )
+            }
+        } catch let error as APIError where error.isCommunityInvitationGone {
+            return nil
+        }
+    }
+
+    /// Joins the community account with the invitation's role; a member already keeps the role they had.
+    /// Fails with `isCommunityInvitationGone`, 403 `community.locked` (it stays and can be accepted once
+    /// unlocked) or 403 `community.limit_reached` (an OWNER invitation over the invitee's plan).
+    @discardableResult
+    public func acceptCommunityInvitation(id: String) async throws -> MyCommunity {
+        try await call {
+            try await MyCommunity(
+                required(client.acceptInvitation(path: .init(invitationId: id)).ok.body.json.data, "acceptInvitation.data")
+            )
+        }
+    }
+
+    /// Fails with `isCommunityInvitationGone` once it is no longer there to decline.
+    public func declineCommunityInvitation(id: String) async throws {
+        _ = try await call { try await client.declineInvitation(path: .init(invitationId: id)).ok }
     }
 
     // MARK: Passkeys

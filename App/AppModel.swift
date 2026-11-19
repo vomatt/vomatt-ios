@@ -47,6 +47,8 @@ enum Route: Hashable {
     /// The poll page with the Reply composer open under this Comment (a notification's Reply).
     case pollReply(String, FeedNotification.CommentInfo)
     case profile(String)
+    /// A community account's invitation to join it, by the invitation's id.
+    case communityInvitation(String)
     case topic(Tag)
     case people(username: String, kind: FollowListKind)
     case settings
@@ -77,6 +79,8 @@ final class AppModel {
     /// People the signed-in viewer follows, most recently followed first. Private to the viewer.
     private(set) var following: [UserSummary] = []
     private var followChanges = 0
+    /// Follows and unfollows the viewer made; each one plays a haptic.
+    private(set) var followTaps = 0
     private var followQueue: Task<Void, Never>?
     let language: Language
     let t: Localizer
@@ -97,6 +101,8 @@ final class AppModel {
     /// Non-nil while the sign-in sheet is up; runs once the user is signed in.
     var pendingAuth: PendingAuth?
     var creator: CreatorRequest?
+    /// Bumped when a link closes what is presented; the creator keeps its unsaved poll as a draft then.
+    private(set) var modalDismissals = 0
     var toast: Toast?
     /// Non-nil while Block asks for confirmation; every Block entry point goes through it.
     var blockRequest: BlockRequest?
@@ -244,24 +250,42 @@ final class AppModel {
         paths[selectedTab, default: NavigationPath()].append(route)
     }
 
-    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` and `https://<site>/<username>`.
+    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>`, `https://<site>/<username>` and a community
+    /// invitation's `…/notifications/community-invitations/<id>` (its email's link). The page opens on
+    /// the tab the person is on, over whatever they had there, once anything presented has closed. A link
+    /// the app has no page for leaves everything as it is.
     func open(_ url: URL) {
         let parts = url.scheme == "vomatt"
             ? [url.host()].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }
             : url.pathComponents.filter { $0 != "/" }
         guard let first = parts.first else { return }
-        if first == "notifications" {
+        if parts.count == 3, first == "notifications", parts[1] == "community-invitations" {
+            dismissModals()
+            push(.communityInvitation(parts[2]))
+        } else if first == "notifications" {
+            dismissModals()
             selectedTab = .notifications
             paths[.notifications] = NavigationPath()
-            return
-        }
-        selectedTab = .home
-        paths[.home] = NavigationPath()
-        if first == "poll", parts.count > 1 {
+        } else if first == "poll", parts.count > 1 {
+            dismissModals()
             push(.poll(parts[1]))
         } else if parts.count == 1, !Username.reserved.contains(first) {
+            dismissModals()
             push(.profile(first))
         }
+    }
+
+    /// Closes the sign-in sheet, the creator, a pending confirmation and any sheet a screen presented
+    /// itself, so a page pushed next isn't hidden behind them.
+    private func dismissModals() {
+        pendingAuth = nil
+        creator = nil
+        blockRequest = nil
+        unfollowRequest = nil
+        modalDismissals += 1
+        // Sheets held in a screen's own state: UIKit closes them and SwiftUI clears their bindings
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        windows.first(where: \.isKeyWindow)?.rootViewController?.dismiss(animated: true)
     }
 
     /// Shares a Poll's canonical web link.
@@ -295,6 +319,17 @@ final class AppModel {
         polls.filter { !deletedPollIds.contains($0.id) && !isBlocked($0.creatorUsername) }.map(latest)
     }
 
+    // MARK: Community invitations
+
+    /// Invitations answered, or found gone, on their own page: the API drops their notification, so the
+    /// feed drops its row without refetching.
+    private(set) var closedCommunityInvitations: Set<String> = []
+
+    func didCloseCommunityInvitation(_ id: String) {
+        closedCommunityInvitations.insert(id)
+        Task { await refreshUnread() }
+    }
+
     // MARK: Following
 
     func isFollowing(_ userId: String?) -> Bool {
@@ -307,6 +342,7 @@ final class AppModel {
         guard isSignedIn, !isFollowing(user.id) else { return }
         following.insert(user, at: 0)
         followChanges += 1
+        followTaps += 1
         enqueueFollow { [self] in
             do {
                 try await service.followUser(id: user.id)
@@ -330,6 +366,7 @@ final class AppModel {
         guard let index = following.firstIndex(where: { $0.id == userId }) else { return }
         let user = following.remove(at: index)
         followChanges += 1
+        followTaps += 1
         enqueueFollow { [self] in
             do {
                 try await service.unfollowUser(id: userId)

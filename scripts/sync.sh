@@ -56,6 +56,19 @@ web_avatars() {
 	git -C "$WEB_DIR" ls-tree --name-only "$WEB_REF" public/avatars/ | grep '\.svg$' | sed 's|.*/||; s/\.svg$//' | sort
 }
 
+normalize_contract() {
+	# Stable formatting keeps the git diff readable. A multipart body is marked required: the generator
+	# skips a multipart body that isn't (vomatt-api leaves `required` out), and the file can't be uploaded without one.
+	python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+for path in d.get("paths",{}).values():
+    for op in path.values():
+        body = op.get("requestBody") if isinstance(op, dict) else None
+        if body and "multipart/form-data" in body.get("content", {}): body["required"] = True
+json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$1"
+}
+
 sync_api() {
 	local source="" tmp
 	tmp="$(mktemp)"
@@ -71,16 +84,7 @@ sync_api() {
 		fi
 		if [[ "${1:-}" == "--file" ]]; then cp "$2" "$tmp"; else api_contract > "$tmp"; fi
 	fi
-	# Stable formatting keeps the git diff readable. A multipart body is marked required: the generator
-	# skips a multipart body that isn't (vomatt-api leaves `required` out), and the file can't be uploaded without one.
-	python3 -c '
-import json,sys
-d=json.load(open(sys.argv[1]))
-for path in d.get("paths",{}).values():
-    for op in path.values():
-        body = op.get("requestBody") if isinstance(op, dict) else None
-        if body and "multipart/form-data" in body.get("content", {}): body["required"] = True
-json.dump(d, open(sys.argv[1],"w"), indent=2, ensure_ascii=False, sort_keys=True)' "$tmp"
+	normalize_contract "$tmp"
 	echo "Contract changes from $source:"
 	if [[ -f "$SPEC" ]]; then python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$tmp"; else echo "(first sync)"; fi
 	mv "$tmp" "$SPEC"
@@ -133,7 +137,12 @@ check() {
 	cmp -s <(web_file src/locales/zh.json) "$LOCALES/zh.json" || { echo "locales/zh.json differs from the web"; status=1; }
 	require_api
 	local diff
-	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" <(api_contract))"
+	local fresh
+	fresh="$(mktemp)"
+	api_contract > "$fresh"
+	normalize_contract "$fresh"
+	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$fresh")"
+	rm -f "$fresh"
 	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from vomatt-api:"; echo "$diff"; status=1; }
 	local ios_avatars
 	ios_avatars="$(ls "$AVATARS" | grep imageset | sed 's/^bot-//; s/\.imageset$//' | sort)"

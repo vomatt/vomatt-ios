@@ -45,7 +45,8 @@
 		"seeAll": "See all",
 		"rulesTitle": "Rules voters will see",
 		"rulesChange": "Change",
-		"rulesDone": "Done"
+		"rulesDone": "Done",
+		"pollTitle": "Poll"
 	},
 	"apiError": {
 		"auth.email_not_verified": "This OAuth account's email is not verified; cannot sign in or merge an existing account",

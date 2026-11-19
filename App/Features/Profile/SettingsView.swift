@@ -25,12 +25,8 @@ struct InviteListsView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        ScrollView {
-            GroupsPanel()
-                .pageColumn(768)
-                .padding(.vertical, 24)
-        }
-        .canvas()
+        GroupsPanel()
+            .canvas()
         .navigationTitle(app.t("account.tabGroups"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -41,12 +37,8 @@ struct DevicesView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        ScrollView {
-            DevicesSection(service: app.service)
-                .pageColumn(768)
-                .padding(.vertical, 24)
-        }
-        .canvas()
+        DevicesSection(service: app.service)
+            .canvas()
         .navigationTitle(app.t("sessions.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -140,6 +132,7 @@ private struct AccountSettings: View {
     @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
     @State private var confirmingSignOut = false
     @State private var reportingProblem = false
+    @State private var bindingPhone = false
     /// How many invite lists the user has; nil until loaded or when they couldn't be.
     @State private var inviteListCount: Int?
     /// How many devices the user is signed in on; nil until loaded or when they couldn't be.
@@ -226,6 +219,12 @@ private struct AccountSettings: View {
                 .card(padding: nil)
             }
 
+            if let quota = profile.communityQuota {
+                SettingsSection(title: app.t("communities.title")) {
+                    CommunityQuotaRow(quota: quota, plan: profile.plan).card(padding: nil)
+                }
+            }
+
             SettingsSection(title: app.t("settings.account")) {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
@@ -236,6 +235,8 @@ private struct AccountSettings: View {
                     .confirmationDialog(app.t("account.signOut"), isPresented: $confirmingSignOut) {
                         Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
                     }
+                    Hairline()
+                    phoneRow
                     Hairline()
                     PasskeysSection(service: app.service).padding(16)
                     Hairline()
@@ -257,6 +258,34 @@ private struct AccountSettings: View {
         .task { await loadInviteListCount() }
         .task { await loadDeviceCount() }
         .sheet(isPresented: $reportingProblem) { ReportProblemSheet() }
+        .sheet(isPresented: $bindingPhone) { PhoneBindSheet(defaultPhone: profile.phoneNumber) }
+    }
+
+    /// The account's phone number: add one, verify one, or show it as verified (the web's `PhoneRow`).
+    private var phoneRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.t("phoneBind.rowTitle")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
+                if let phone = profile.phoneNumber {
+                    HStack(spacing: 8) {
+                        Text(phone).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
+                        if profile.phoneVerified {
+                            Label(app.t("phoneBind.verified"), systemImage: "checkmark")
+                                .labelStyle(.titleAndIcon).foregroundStyle(Tokens.foreground)
+                        }
+                    }
+                    .font(.vm(13))
+                } else {
+                    Text(app.t("phoneBind.rowBodyNone")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !profile.phoneVerified {
+                Button(app.t(profile.phoneNumber == nil ? "phoneBind.add" : "phoneBind.verify")) { bindingPhone = true }
+                    .buttonStyle(.vm(.outline, size: .sm))
+            }
+        }
+        .settingsRow()
     }
 
     /// The app's language in its own words: "English", "中文".
@@ -284,6 +313,36 @@ private struct AccountSettings: View {
             app.updateMe { $0.anonymousBallotByDefault = savedAnonymousDefault }
             app.showToast(app.t.message(for: error, fallback: "account.saveFailed"), isError: true)
         }
+    }
+}
+
+/// How many community accounts the user owns against their plan's limit (the web's `KeepRow` and
+/// `CreateCommunityRow`, read-only: choosing, creating and upgrading happen on the web).
+private struct CommunityQuotaRow: View {
+    @Environment(AppModel.self) private var app
+    let quota: CommunityQuota
+    let plan: Plan?
+
+    private var owned: String { app.t("communities.quota", ["owned": quota.owned, "limit": quota.limit]) }
+
+    var body: some View {
+        Group {
+            if quota.selectionRequired {
+                RowText(
+                    title: app.t("communities.keep.rowTitle"),
+                    detail: quota.selectionDeadline.map { app.t("communities.keep.deadline", ["date": app.dates.day($0)]) }
+                )
+            } else if quota.owned >= quota.limit {
+                RowText(
+                    title: app.t("communities.limitTitle"),
+                    detail: app.t(plan == .free ? "communities.limitBodyFree" : "communities.limitBodyPro") + "\n" + owned
+                )
+            } else {
+                Text(owned).font(.vm(15)).monospacedDigit().foregroundStyle(Tokens.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .settingsRow()
     }
 }
 
@@ -393,6 +452,7 @@ struct BlockedPeopleView: View {
             .pageColumn(768)
             .padding(.vertical, 24)
         }
+        .refreshable { await app.syncBlocked() }
         .canvas()
         .navigationTitle(app.t("blocks.title"))
         .navigationBarTitleDisplayMode(.inline)
@@ -487,6 +547,7 @@ private struct VisibilitySettings: View {
         let text: String? = switch setting.key {
         case "realName": ProfileName.realName(firstName: profile.firstName, lastName: profile.lastName)
         case "displayName": profile.displayName
+        case "gender": profile.gender.map { app.t($0.translationKey) }
         case "bio": profile.bio
         default: nil
         }
@@ -547,9 +608,8 @@ private struct PublicPreview: View {
                 if let bio = shown("bio", profile.bio), !bio.isEmpty {
                     Text(bio).font(.vm(14)).foregroundStyle(Tokens.foreground).lineLimit(3)
                 }
-                if let joinedAt = profile.joinedAt {
-                    Text(app.t("profile.joined", ["date": app.dates.monthYear(joinedAt)]))
-                        .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                if !meta.isEmpty {
+                    Text(meta.joined(separator: metaGap)).font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
                 }
                 Text("\(app.t.count("profile.recordAskedCount", profile.totalPolls))\(metaGap)\(app.t.count("profile.recordVotedCount", profile.totalVotes))")
                     .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
@@ -558,6 +618,15 @@ private struct PublicPreview: View {
             .card()
         }
         .accessibilityElement(children: .contain)
+    }
+
+    /// The gender, when visitors see it, then when they joined.
+    private var meta: [String] {
+        let gender = ProfileVisibility.isPublic(profile.visibilitySettings, "gender") ? profile.gender : nil
+        return [
+            gender.map { app.t("profile.genderMeta", ["gender": app.t($0.translationKey)]) },
+            profile.joinedAt.map { app.t("profile.joined", ["date": app.dates.monthYear($0)]) },
+        ].compactMap { $0 }
     }
 
     private var nameLine: Text {
@@ -657,6 +726,7 @@ private struct PasskeysSection: View {
 
 /// The Devices screen (the web's `SessionsPanel`): this device, then the others, each of which can be
 /// signed out after confirmation, or all at once. This device signs out with Sign out in Settings.
+/// It scrolls itself, so pulling down can reload the model it owns.
 private struct DevicesSection: View {
     @Environment(AppModel.self) private var app
     @State private var model: DevicesModel
@@ -668,6 +738,32 @@ private struct DevicesSection: View {
     }
 
     var body: some View {
+        ScrollView {
+            list
+                .pageColumn(768)
+                .padding(.vertical, 24)
+        }
+        .refreshable { await model.load() }
+        .task { await model.load() }
+        .alert(
+            app.t("sessions.signOutConfirmTitle"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { device in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("sessions.signOut"), role: .destructive) { Task { await signOut(device) } }
+        } message: { device in
+            Text(app.t("sessions.signOutConfirmBody", ["name": name(device)]))
+        }
+        .alert(app.t("sessions.signOutOthersConfirmTitle"), isPresented: $confirmingOthers) {
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t("sessions.signOutOthers"), role: .destructive) { Task { await signOutOthers() } }
+        } message: {
+            Text(app.t("sessions.signOutOthersConfirmBody"))
+        }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 32) {
             Text(app.t("sessions.body")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             if model.loadFailed {
@@ -706,23 +802,6 @@ private struct DevicesSection: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity)
             }
-        }
-        .task { await model.load() }
-        .alert(
-            app.t("sessions.signOutConfirmTitle"),
-            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            presenting: confirming
-        ) { device in
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("sessions.signOut"), role: .destructive) { Task { await signOut(device) } }
-        } message: { device in
-            Text(app.t("sessions.signOutConfirmBody", ["name": name(device)]))
-        }
-        .alert(app.t("sessions.signOutOthersConfirmTitle"), isPresented: $confirmingOthers) {
-            Button(app.t("common.cancel"), role: .cancel) {}
-            Button(app.t("sessions.signOutOthers"), role: .destructive) { Task { await signOutOthers() } }
-        } message: {
-            Text(app.t("sessions.signOutOthersConfirmBody"))
         }
     }
 
@@ -777,6 +856,7 @@ private struct ReportProblemSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
     @State private var error: String?
+    @State private var confirmingDiscard = false
 
     private static let maxLength = 2000
     private var content: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -794,7 +874,9 @@ private struct ReportProblemSheet: View {
             .navigationTitle(app.t("feedback.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(app.t("common.cancel")) { if content.isEmpty { dismiss() } else { confirmingDiscard = true } }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     LoadingButton(style: .vm(.link), action: send) { Text(app.t("feedback.submit")).fontWeight(.semibold) }
                         .disabled(content.isEmpty || content.utf16.count > Self.maxLength)
@@ -802,6 +884,7 @@ private struct ReportProblemSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .discardConfirmation(app, isPresented: $confirmingDiscard, hasChanges: !content.isEmpty) { dismiss() }
     }
 
     private func send() async {

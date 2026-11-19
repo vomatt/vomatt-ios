@@ -23,11 +23,28 @@ extension Poll {
         return .open
     }
 
-    /// When the clock next changes the Poll's status: the start of its last day, then its end. Nil once
-    /// Ended or without an end. A Scheduled copy says `votingActive: false`, which would read as Ended
-    /// once the start passes, so only its end counts; it shows as Open once fetched again.
+    /// When the Poll's counts come out: its `revealAt`, or else its end. Nil for a Poll without either.
+    public var revealTime: Date? { revealAt ?? endTime }
+
+    /// Whether the Poll's counts are out: Ended, and past its `revealAt` if it has one. Until then the API
+    /// sends no `votes` and answers `/results` and `/voters` with 403 `vote.results.sealed`.
+    public func isRevealed(at now: Date = .now) -> Bool {
+        // Not `revealTime`: a Poll Ended early by its owner may still carry its planned end
+        status(at: now) == .ended && (revealAt.map { $0 <= now } ?? true)
+    }
+
+    /// When an Ended Poll's counts come out, while they are still sealed (the `sealedUntil` of the web's
+    /// `usePollStatus`). Nil while the Poll is open and once revealed.
+    public func sealedUntil(at now: Date = .now) -> Date? {
+        status(at: now) == .ended && !isRevealed(at: now) ? revealAt : nil
+    }
+
+    /// When the clock next changes the Poll's status: the start of its last day, then its end, then its
+    /// `revealAt`. Nil once revealed or without an end. A Scheduled copy says `votingActive: false`, which
+    /// would read as Ended once the start passes, so only its end counts; it shows as Open once fetched again.
     public func nextStatusChange(at now: Date) -> Date? {
-        guard let endTime, status(at: now) != .ended else { return nil }
+        if status(at: now) == .ended { return revealAt.flatMap { $0 > now ? $0 : nil } }
+        guard let endTime else { return nil }
         let closing = endTime.addingTimeInterval(-closingWindow)
         return votingActive && closing > now ? closing : endTime
     }

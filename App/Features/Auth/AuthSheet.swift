@@ -63,22 +63,6 @@ struct AuthSheet: View {
     }
 }
 
-private struct AuthErrorText: View {
-    @Environment(AppModel.self) private var app
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let error: AuthErrorKey?
-    var body: some View {
-        if let error {
-            Label(app.t(error.translationKey), systemImage: "exclamationmark.circle")
-                .font(.vmMeta)
-                .foregroundStyle(Tokens.destructive)
-                .transition(.vmEnterExit(reduceMotion: reduceMotion))
-                .accessibilityAddTraits(.isStaticText)
-                .task(id: error) { AccessibilityNotification.Announcement(app.t(error.translationKey)).post() }
-        }
-    }
-}
-
 private struct EmailStep: View {
     @Environment(AppModel.self) private var app
     @Binding var email: String
@@ -160,31 +144,14 @@ private struct EmailStep: View {
 
 /// Matches the backend's default OTP resend cooldown.
 private let resendCooldown = 180
-private let codeLength = 6
 
 private struct CodeStep: View {
     @Environment(AppModel.self) private var app
     let email: String
+    let cooldown: Int
     let onEditEmail: () -> Void
     /// Nil when the account is signed in and nothing else is asked.
     let onVerified: (NameStep?) -> Void
-
-    init(email: String, cooldown: Int, onEditEmail: @escaping () -> Void, onVerified: @escaping (NameStep?) -> Void) {
-        self.email = email
-        self.onEditEmail = onEditEmail
-        self.onVerified = onVerified
-        _cooldown = State(initialValue: cooldown)
-    }
-
-    @State private var code = ""
-    @State private var error: AuthErrorKey?
-    @State private var isVerifying = false
-    @State private var cooldown: Int
-    @State private var resent = false
-    /// The server discarded the code (expired or too many tries): only a new one can succeed.
-    /// Kept apart from `error`, so a failed resend doesn't unlock the field.
-    @State private var isCodeDead = false
-    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -200,135 +167,17 @@ private struct CodeStep: View {
             (Text(app.t("verificationCode.subtitle") + " ").foregroundStyle(Tokens.mutedForeground)
                 + Text(email).font(.vm(16, .medium)).foregroundStyle(Tokens.foreground))
                 .font(.vm(16)).lineSpacing(4).padding(.bottom, 32)
-
-            codeField.padding(.bottom, 8)
-            AuthErrorText(error: error).padding(.bottom, 16)
-
-            LoadingButton(style: .vm(.default, fullWidth: true), isLoading: isVerifying, action: { await verify() }) {
-                Text(app.t("common.continue"))
-            }
-            .disabled(code.count != codeLength)
-            .padding(.bottom, 12)
-            Button(app.t("verificationCode.useAnotherEmail"), action: onEditEmail)
-                .buttonStyle(.vm(.outline, fullWidth: true))
-                .padding(.bottom, 32)
-
-            // A dead code has no server-side cooldown left, so a new one can be requested right away
-            if cooldown > 0 && !isCodeDead {
-                Text(app.t("verificationCode.resendIn", ["time": countdown]))
-                    .font(.vm(14)).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
-            } else {
-                LoadingButton(style: .vm(.link), action: resend) {
-                    Text(app.t("verificationCode.resendVerificationCode")).underline()
-                }
-            }
-            if resent {
-                Text(app.t("verificationCode.codeSent")).font(.vm(14)).foregroundStyle(Tokens.positive).padding(.top, 8)
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: error)
-        .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
-        .task(id: cooldown) {
-            guard cooldown > 0 else { return }
-            try? await Task.sleep(for: .seconds(1))
-            cooldown -= 1
-        }
-        .onAppear { isFocused = true }
-    }
-
-    /// One hidden text field drives six slots, so paste and the one-time-code autofill work.
-    private var codeField: some View {
-        ZStack {
-            TextField("", text: $code)
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)
-                .focused($isFocused)
-                .opacity(0.02)
-                .accessibilityLabel(app.t("verificationCode.inputLabel"))
-                .onChange(of: code) { _, value in
-                    let digits = String(value.filter(\.isNumber).prefix(codeLength))
-                    if digits != value { code = digits }
-                    // Clearing the field after a failed attempt must not hide the error; typing again does
-                    if error != nil, !digits.isEmpty { error = nil }
-                    if digits.count == codeLength { Task { await verify() } }
-                }
-            HStack(spacing: 8) {
-                slots(0..<3)
-                Text("–").foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
-                slots(3..<6)
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { isFocused = true }
-        // Not disabled while verifying, so focus (and the keyboard) survives a wrong code.
-        // A dead code needs a new one: resend or another email.
-        .disabled(isCodeDead)
-    }
-
-    private func slots(_ range: Range<Int>) -> some View {
-        HStack(spacing: 6) {
-            ForEach(range, id: \.self) { index in
-                let digits = Array(code)
-                let isCurrent = isFocused && index == min(digits.count, codeLength - 1)
-                let shape = RoundedRectangle(cornerRadius: Radius.lg)
-                // `FieldChrome`'s focus: the edge stays and a ring goes outside it
-                Text(index < digits.count ? String(digits[index]) : "")
-                    .font(.vmMono(22))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(isCurrent ? Tokens.card : Tokens.field, in: shape)
-                    .overlay(shape.strokeBorder(error != nil ? Tokens.destructive : Tokens.borderStrong, lineWidth: 1))
-                    .overlay(shape.inset(by: -2).strokeBorder(Tokens.ring, lineWidth: isCurrent ? 2 : 0))
-            }
-        }
-    }
-
-    private var countdown: String {
-        String(format: "%d:%02d", cooldown / 60, cooldown % 60)
-    }
-
-    private func verify() async {
-        guard code.count == codeLength, !isVerifying else { return }
-        isVerifying = true
-        defer { isVerifying = false }
-        error = nil
-        let submitted = code
-        do {
-            let signIn = try await app.service.verifyOtp(email: email, code: submitted)
-            let me = signIn.isNewUser ? nil : try? await app.service.myProfile()
-            // The field keeps focus while verifying; drop the number pad before the next step appears
-            isFocused = false
-            onVerified(NameStep.after(signIn, me: me))
-        } catch {
-            let key = AuthErrorKey(error)
-            self.error = key
-            isCodeDead = key == .codeExpired || key == .tooManyAttempts
-            if code == submitted || isCodeDead {
-                code = ""
-            } else if code.count == codeLength {
-                // A code typed or pasted while this one was checked: send it once this check is over
-                Task { await verify() }
-            }
-        }
-    }
-
-    private func resend() async {
-        error = nil
-        resent = false
-        do {
-            try await app.service.requestOtp(email: email)
-            resent = true
-            isCodeDead = false
-            code = ""
-            cooldown = resendCooldown
-        } catch {
-            if let seconds = (error as? APIError)?.cooldownSeconds {
-                cooldown = seconds
-            } else {
-                self.error = AuthErrorKey(error)
-            }
+            VerificationForm(
+                cooldown: cooldown, resendCooldown: resendCooldown,
+                editLabel: app.t("verificationCode.useAnotherEmail"), onEdit: onEditEmail,
+                errorKey: { AuthErrorKey($0) },
+                verify: { code in
+                    let signIn = try await app.service.verifyOtp(email: email, code: code)
+                    let me = signIn.isNewUser ? nil : try? await app.service.myProfile()
+                    return { onVerified(NameStep.after(signIn, me: me)) }
+                },
+                resend: { try await app.service.requestOtp(email: email) }
+            )
         }
     }
 }

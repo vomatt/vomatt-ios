@@ -16,31 +16,46 @@ struct NotificationsView: View {
         Group {
             if app.isSignedIn {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
-                        content
+                    // The categories stay under the bar while the feed scrolls, like Home's topics
+                    LazyVStack(alignment: .leading, spacing: 8, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            content.pageColumn().padding(.top, showsCategories ? 0 : 8)
+                        } header: {
+                            if showsCategories { categoryPills.background(Tokens.background.opacity(0.97)) }
+                        }
                     }
-                    .pageColumn()
-                    .padding(.vertical, 24)
+                    .padding(.bottom, 24)
                 }
                 .refreshable { await load() }
                 .task(id: app.sessionGeneration) { await load() }
             } else {
-                SignedOutPlaceholder(title: app.t("notifications.title"))
+                SignedOutPlaceholder()
             }
         }
         .canvas()
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var header: some View {
-        Text(app.t("notifications.title")).displayHeading(32).accessibilityAddTraits(.isHeader)
+        .navigationTitle(app.t("notifications.title"))
+        .navigationBarTitleDisplayMode(.large)
     }
 
     /// Nothing at all: unknown kinds are left out, so an empty page can still have more after it.
     private var isEmpty: Bool {
         guard let list else { return false }
         return category == nil && list.items.isEmpty && !list.hasMore && app.unreadCount == 0
+    }
+
+    /// Once there is a feed to filter; an empty category keeps them, to get back out.
+    private var showsCategories: Bool { list?.phase == .loaded && !isEmpty }
+
+    private var categoryPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            FilterPills(
+                label: app.t("notifications.categoryLabel"),
+                selection: Binding(get: { category }, set: { next in Task { await changeCategory(next) } }),
+                options: [(nil, app.t("profile.filterAll"), nil)] + FeedNotification.Category.allCases.map { ($0, categoryLabel($0), nil) }
+            )
+            .padding(.horizontal, Metrics.gutter)
+            .padding(.vertical, 8)
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -71,17 +86,14 @@ struct NotificationsView: View {
 
     private func feed(_ list: CursorList<FeedNotification>) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                FilterPills(
-                    label: app.t("notifications.categoryLabel"),
-                    selection: Binding(get: { category }, set: { next in Task { await changeCategory(next) } }),
-                    options: [(nil, app.t("profile.filterAll"), nil)] + FeedNotification.Category.allCases.map { ($0, categoryLabel($0), nil) }
-                )
-            }
             if list.items.isEmpty {
                 EmptyState { Text(app.t("notifications.categoryEmpty")) }
             }
-            ForEach(ActivitySection.sections(list.items)) { section in
+            // An invitation answered on its own screen is gone from the API's feed too
+            let items = list.items.filter { item in
+                item.communityInvitation.map { !app.closedCommunityInvitations.contains($0.id) } ?? true
+            }
+            ForEach(ActivitySection.sections(items)) { section in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(app.t("notifications.day.\(section.day.rawValue)"))
                         .font(.vm(12, .medium, relativeTo: .caption)).foregroundStyle(Tokens.mutedForeground)
@@ -105,6 +117,7 @@ struct NotificationsView: View {
         case .pollEnd: app.t("notifications.category.POLL_END")
         case .invitation: app.t("notifications.category.INVITATION")
         case .follow: app.t("notifications.category.FOLLOW")
+        case .community: app.t("notifications.category.COMMUNITY")
         }
     }
 
@@ -176,7 +189,7 @@ private struct NotificationRow: View {
                             .font(.vm(15))
                             .foregroundStyle(item.kind == .cancelled ? Tokens.mutedForeground : Tokens.foreground)
                             .multilineTextAlignment(.leading)
-                        Text(meta.joined(separator: metaGap))
+                        metaLine
                             .font(.vm(12, relativeTo: .caption))
                             .foregroundStyle(tide ? Tokens.tideForeground : Tokens.mutedForeground)
                             .lineLimit(2)
@@ -210,6 +223,11 @@ private struct NotificationRow: View {
         case let .single(item):
             if item.kind == .followed, let actor = item.actor {
                 app.push(.profile(actor.username))
+            } else if let invitation = item.communityInvitation {
+                app.push(.communityInvitation(invitation.id))
+            } else if item.kind == .communityLocked {
+                // The web's `/settings#communities`: Settings says how many the plan allows
+                app.push(.settings)
             } else if let poll = item.poll {
                 app.push(.poll(poll.id))
             }
@@ -233,7 +251,7 @@ private struct NotificationRow: View {
             disc("nosign")
         case .closingSoon:
             disc("clock", tint: Tokens.foreground)
-        case .invitation, .followed, .comment, .mention, .like, .pollLike:
+        case .invitation, .followed, .comment, .mention, .like, .pollLike, .communityInvitation, .communityLocked:
             if let actor = item.actor {
                 AvatarView(username: actor.username, avatarUrl: actor.avatarUrl, size: 36).accessibilityHidden(true)
             } else {
@@ -308,6 +326,13 @@ private struct NotificationRow: View {
                 default: item.comment?.parentId != nil ? "notifications.replied" : "notifications.commented"
                 }
                 return Wording(template: app.t(key), parts: ["name": Part(text: actorName, emphasis: .strong), "title": Part(text: title, emphasis: .titled)])
+            case .communityInvitation:
+                return Wording(template: app.t("notifications.communityInvitation"), parts: [
+                    "name": Part(text: actorName, emphasis: .strong),
+                    "role": Part(text: item.communityInvitation.map { app.t("communities.roles.\($0.role.rawValue)") } ?? ""),
+                ])
+            case .communityLocked:
+                return Wording(template: app.t("notifications.communityLocked"), parts: ["name": Part(text: actorName, emphasis: .strong)])
             case .closingSoon:
                 guard let end = item.poll?.endTime, end > .now else {
                     return Wording(template: "{title}", parts: ["title": Part(text: title, emphasis: .titled)])
@@ -350,13 +375,12 @@ private struct NotificationRow: View {
         switch item.kind {
         case .result:
             guard let poll = item.poll else { return [age] }
-            return [winners(poll), app.t("poll.voted", ["count": app.t.number(poll.turnout)]), age].compactMap { $0 }
-        case .cancelled:
+            // "4 voted" stays on one line: a wrap falls between the items, not inside one
+            return [app.t("poll.voted", ["count": app.t.number(poll.turnout)]).replacingOccurrences(of: " ", with: "\u{00A0}"), age]
+        case .cancelled, .followed, .communityInvitation, .communityLocked:
             return [age]
         case .invitation:
             return [app.t("notifications.inviteOnly"), invitationWhen, age].compactMap { $0 }
-        case .followed:
-            return [age, item.actor?.displayName].compactMap { $0 }
         case .comment, .mention, .like, .pollLike:
             return [item.comment.map { app.t("notifications.excerpt", ["text": $0.excerpt]) }, age].compactMap { $0 }
         case .closingSoon:
@@ -368,12 +392,13 @@ private struct NotificationRow: View {
         }
     }
 
-    /// "Yes won" or "Tie between A and B"; nil when no Ballot named an option.
-    private func winners(_ poll: FeedNotification.PollInfo) -> String? {
-        guard let labels = poll.winningOptionLabels, let first = labels.first else { return nil }
-        guard poll.tie == true else { return app.t("profile.wonBy", ["option": first]) }
-        let list = app.t.list(labels)
-        return app.t("profile.tieBetween", ["options": list])
+    /// A result leads with what it decided, "Yes won" or "Tie between A and B", when a Ballot named an option.
+    private var metaLine: Text {
+        let rest = Text(meta.joined(separator: metaGap))
+        guard case .single = entry, item.kind == .result, let poll = item.poll,
+              let decided = DecidedText(winners: poll.winningOptionLabels ?? [], tie: poll.tie == true).text(app.t, size: 12, relativeTo: .caption1)
+        else { return rest }
+        return decided + Text(verbatim: metaGap) + rest
     }
 
     /// The clock moves a Scheduled poll to Open and an Open one to closing; only Ended comes from the API.
@@ -399,6 +424,8 @@ private struct NotificationRow: View {
                 if let outcome = item.poll.flatMap(outcome) { OutcomeChip(outcome: outcome) }
             case .cancelled:
                 EmptyView()
+            case .communityInvitation, .communityLocked:
+                Button(app.t("notifications.view"), action: open).buttonStyle(.vm(.outline, size: .sm))
             case .invitation:
                 let canVote = item.poll?.myOptionId == nil && (invitationStatus == .open || invitationStatus == .closing)
                 Button(app.t(canVote ? "poll.vote" : "notifications.view"), action: open)
@@ -444,19 +471,14 @@ private struct FollowBackButton: View {
     }
 }
 
-/// What a signed-in-only tab shows to guests.
+/// What a signed-in-only tab shows to guests, under the tab's navigation title.
 struct SignedOutPlaceholder: View {
-    @Environment(AppModel.self) private var app
-    let title: String
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text(title).displayHeading(32)
-                LoginPromptCard()
-            }
-            .pageColumn()
-            .padding(.vertical, 24)
+            LoginPromptCard()
+                .pageColumn()
+                .padding(.top, 8)
+                .padding(.bottom, 24)
         }
     }
 }

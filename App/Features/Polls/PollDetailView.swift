@@ -53,7 +53,9 @@ struct PollDetailView: View {
             if let comments, !showDiscussion { ReplyDock(model: comments) }
         }
         .refreshable { await load(reloadComments: true) }
+        .sensoryFeedback(.success, trigger: comments?.posted ?? 0)
         .canvas()
+        .navigationTitle(app.t("ios.pollTitle"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if case let .ready(poll) = phase {
@@ -171,10 +173,11 @@ private struct PollDetailCard: View {
     }
 
     private func card(status: PollStatus) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let sealedUntil = poll.sealedUntil(at: now)
+        return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 10) {
-                    UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                    UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, avatarSize: 28)
                         .font(.vm(14, .medium))
                         .foregroundStyle(Tokens.foreground)
                         .layoutPriority(1)
@@ -193,8 +196,8 @@ private struct PollDetailCard: View {
                     if status == .ended {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
-                            onSealed: refetch,
-                            onSelectOption: poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            sealedUntil: sealedUntil, onSealed: refetch,
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
                         )
                     } else {
                         BallotView(
@@ -307,7 +310,9 @@ struct PollAboutView: View {
             RailHeading(text: app.t("pollDetail.about"))
             if status == .ended {
                 Group {
-                    if poll.endedEarly, let deadline = poll.deadline {
+                    if let sealedUntil = poll.sealedUntil(at: now) {
+                        Text(app.t("poll.sealedUntilReveal", ["date": app.dates.pollMoment(sealedUntil)]))
+                    } else if poll.endedEarly, let deadline = poll.deadline {
                         Text(app.t("pollDetail.endedEarly", ["date": app.dates.pollDate(deadline)]))
                     } else {
                         Text(app.t("pollDetail.resultsIn"))
@@ -431,7 +436,7 @@ private struct InvitationPrompt: View {
     var body: some View {
         VStack(spacing: 12) {
             AvatarView(username: owner.username, avatarUrl: owner.avatarUrl, size: 56)
-            Text(app.t("poll.invitation.title", ["username": owner.username]))
+            Text(app.t("poll.invitation.title", ["username": ProfileName.handle(owner.username)]))
                 .pollTitle(25)
                 .accessibilityAddTraits(.isHeader)
             Text(app.t(app.isSignedIn ? "poll.invitation.wrongAccount" : "poll.invitation.signIn"))

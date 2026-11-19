@@ -37,9 +37,6 @@ struct AccountView: View {
                 // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
                 ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
                     Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
-                    Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
-                        .buttonStyle(.vm(.outline, size: .icon))
-                        .accessibilityLabel(app.t("navigation.settings"))
                 }
                 FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
                 StatsGrid(stats: [
@@ -110,7 +107,14 @@ struct AccountView: View {
             await savedReload
         }
         .canvas()
+        .navigationTitle("@\(profile.username)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { app.push(.settings) } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel(app.t("navigation.settings"))
+            }
+        }
         .task(id: app.sessionGeneration) { await load() }
         .onChange(of: tab) {
             guard tab == .saved, saved == nil else { return }
@@ -268,7 +272,7 @@ struct AccountView: View {
         PollRow(poll: poll, sealed: true) {
             joined([
                 Text(app.t("myPolls.youChose")) + Text(" ") + Text(AccountInsights.choice(of: poll)).fontWeight(.medium),
-                poll.endTime.map { Text(app.t("profile.resultsAt", ["date": app.dates.pollMoment($0)])) },
+                poll.revealTime.map { Text(app.t("profile.resultsAt", ["date": app.dates.pollMoment($0)])) },
             ].compactMap { $0 })
         }
     }
@@ -322,7 +326,7 @@ struct AskedRow: View {
             if poll.isCancelled {
                 parts = [Text(app.t("notifications.cancelled"))]
             } else {
-                parts = [decided(poll), Text(votedCount(poll, app.t))].compactMap { $0 }
+                parts = [DecidedText(ProfileLists.endedSummary(poll))?.text(app.t, size: 13), Text(votedCount(poll, app.t))].compactMap { $0 }
             }
         } else {
             let when = PollTiming(startTime: poll.startTime, endTime: poll.endTime, status: status, t: app.t, dates: app.dates).when
@@ -334,22 +338,6 @@ struct AskedRow: View {
             joined(parts)
         } aside: {
             StatusChip(poll: poll, timeElsewhere: true)
-        }
-    }
-
-    /// "**Yes** won" or "Tie between **A** and **B**"; nil when there is no winner to name.
-    private func decided(_ poll: Poll) -> Text? {
-        switch ProfileLists.endedSummary(poll) {
-        case let .won(winner):
-            return Text.rich(app.t("profile.wonBy"), ["option": strong(winner)])
-        case let .tie(winners):
-            // The locale's list ("A, B and C"), formatted around placeholders so each name stays bold
-            let keys = winners.indices.map { "{\($0)}" }
-            let list = app.t.list(keys)
-            let names = Dictionary(uniqueKeysWithValues: winners.enumerated().map { ("\($0.offset)", strong($0.element)) })
-            return Text.rich(app.t("profile.tieBetween"), ["options": Text.rich(list, names)])
-        case .none:
-            return nil
         }
     }
 
@@ -413,11 +401,13 @@ struct EditProfileSheet: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var birthday: Date?
+    @State private var gender: Gender?
     @State private var visibility: [String: Bool] = [:]
     @State private var usernameError: String?
     /// A new username breaks old links, so it takes a second step.
     @State private var confirmingUsername = false
     @State private var isSaving = false
+    @State private var confirmingDiscard = false
     @FocusState private var usernameFocused: Bool
 
     private static let displayNameMax = 100
@@ -441,8 +431,10 @@ struct EditProfileSheet: View {
     private var formattedBirthday: String? { birthday.map { $0.formatted(Self.birthdayFormat) } }
     // A birthday can't be cleared, so only one the user set counts
     private var birthdayChanged: Bool { formattedBirthday != nil && formattedBirthday != profile.birthday }
+    // Nor a gender: it starts empty only when never set, and no choice empties it
+    private var genderChanged: Bool { gender != nil && gender != profile.gender }
     private var detailsChanged: Bool {
-        usernameChanged || birthdayChanged || displayName != (profile.displayName ?? "") || bio != (profile.bio ?? "")
+        usernameChanged || birthdayChanged || genderChanged || displayName != (profile.displayName ?? "") || bio != (profile.bio ?? "")
             || firstName != (profile.firstName ?? "") || lastName != (profile.lastName ?? "")
     }
     /// "Your profile moves to /new. Links to /old stop working…"
@@ -453,6 +445,7 @@ struct EditProfileSheet: View {
     private var visibilityChanges: [String: Bool] {
         ProfileVisibility.changes(saved: profile.visibilitySettings, next: visibility)
     }
+    private var hasChanges: Bool { detailsChanged || !visibilityChanges.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -461,7 +454,9 @@ struct EditProfileSheet: View {
             .navigationTitle(app.t("profile.editProfile"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(app.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(app.t("common.cancel")) { if hasChanges { confirmingDiscard = true } else { dismiss() } }
+                }
                 ToolbarItem(placement: .confirmationAction) { saveButton }
             }
             .alert(app.t("account.usernameConfirmTitle"), isPresented: $confirmingUsername) {
@@ -472,6 +467,7 @@ struct EditProfileSheet: View {
                 Text(usernameMove)
             }
         }
+        .discardConfirmation(app, isPresented: $confirmingDiscard, hasChanges: hasChanges) { dismiss() }
         .onAppear(perform: start)
     }
 
@@ -483,6 +479,7 @@ struct EditProfileSheet: View {
         firstName = profile.firstName ?? ""
         lastName = profile.lastName ?? ""
         birthday = profile.birthday.flatMap { try? Date($0, strategy: Self.birthdayFormat) }
+        gender = profile.gender
         visibility = profile.visibilitySettings
     }
 
@@ -499,7 +496,7 @@ struct EditProfileSheet: View {
         })
     }
 
-    /// The web's order: username, real name, display name, birthday, bio, each with who sees it.
+    /// The web's order: username, real name, display name, birthday, gender, bio, each with who sees it.
     private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -517,6 +514,7 @@ struct EditProfileSheet: View {
                     VMTextField(label: nil, placeholder: app.t("profile.displayNamePlaceholder"), text: limited($displayName, Self.displayNameMax), contentType: .nickname)
                 }
                 birthdayField
+                genderField
                 VStack(alignment: .leading, spacing: 6) {
                     labelRow(app.t("profile.bio")) { pill(.bio) }
                     VMTextEditor(placeholder: app.t("profile.bioPlaceholder"), text: limited($bio, Self.bioMax), minHeight: 72)
@@ -547,6 +545,21 @@ struct EditProfileSheet: View {
                 )
                 .labelsHidden()
             }
+        }
+    }
+
+    /// No "not set": once chosen it can only change.
+    private var genderField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            labelRow(app.t("profile.gender")) { pill(.gender) }
+            FlowLayout(spacing: 8) {
+                ForEach(Gender.allCases, id: \.self) { option in
+                    PillButton(title: app.t(option.translationKey), isOn: gender == option) { gender = option }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(app.t("profile.gender"))
+            Text(app.t("profile.genderReportNote")).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
         }
     }
 
@@ -647,7 +660,8 @@ struct EditProfileSheet: View {
                     username: usernameChanged ? username : nil, displayName: displayName, bio: bio,
                     firstName: firstName != (profile.firstName ?? "") ? firstName : nil,
                     lastName: lastName != (profile.lastName ?? "") ? lastName : nil,
-                    birthday: birthdayChanged ? formattedBirthday : nil
+                    birthday: birthdayChanged ? formattedBirthday : nil,
+                    gender: genderChanged ? gender : nil
                 )
             } catch {
                 // A refused username belongs next to its field; anything else is a toast
@@ -665,6 +679,7 @@ struct EditProfileSheet: View {
                 $0.firstName = firstName.isEmpty ? nil : firstName
                 $0.lastName = lastName.isEmpty ? nil : lastName
                 if birthdayChanged { $0.birthday = formattedBirthday }
+                if genderChanged { $0.gender = gender }
             }
         }
         if !changes.isEmpty {

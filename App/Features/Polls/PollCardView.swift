@@ -1,7 +1,8 @@
 import SwiftUI
 import VomattCore
 
-/// Shows the Ballot until the Poll Ends, then the Results (the web's `PollCard` in a feed). The whole
+/// Shows the Ballot until the Poll Ends, then the Results, or when they come out until its `revealAt`
+/// (the web's `PollCard` in a feed). The whole
 /// card opens the poll page, but the Ballot or Results, owner actions and footer keep their own taps, so
 /// a stray tap in the Ballot can't drop an uncast choice.
 struct PollCardView: View {
@@ -27,7 +28,7 @@ struct PollCardView: View {
     var body: some View {
         // Re-evaluated every minute so the age and chip text follow the clock
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            card(status: poll.status(at: now), now: context.date)
+            card(status: poll.status(at: now), sealedUntil: poll.sealedUntil(at: now), now: context.date)
         }
         .statusClock($now, for: poll, onEnded: refetch)
         .onChange(of: initialPoll) { _, fresh in
@@ -41,7 +42,7 @@ struct PollCardView: View {
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
     }
 
-    private func card(status: PollStatus, now: Date) -> some View {
+    private func card(status: PollStatus, sealedUntil: Date?, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 header(status: status, now: now)
@@ -50,8 +51,8 @@ struct PollCardView: View {
                     if status == .ended {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
-                            onSealed: refetch,
-                            onSelectOption: poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            sealedUntil: sealedUntil, onSealed: refetch,
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
                         )
                     } else {
                         BallotView(
@@ -104,7 +105,7 @@ struct PollCardView: View {
     private func header(status: PollStatus, now: Date) -> some View {
         HStack(alignment: .center, spacing: 12) {
             HStack(spacing: 10) {
-                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, label: "@\(poll.creatorUsername)", avatarSize: 28)
+                UserChip(username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl, avatarSize: 28)
                     .font(.vm(14, .medium))
                     .foregroundStyle(Tokens.foreground)
                     .layoutPriority(1)
@@ -164,16 +165,17 @@ struct PollCardView: View {
 extension View {
     /// Moves `now` on at the moment the clock next changes the Poll's status (the web's `usePollStatus`),
     /// so a Poll left on screen past its end shows it Ended without a refresh. `onEnded` runs when the
-    /// clock, not a refetch, Ends it.
+    /// clock, not a refetch, Ends it. Passing `revealAt` doesn't call it again: the Results fetch the counts.
     func statusClock(_ now: Binding<Date>, for poll: Poll, onEnded: @escaping () async -> Void) -> some View {
         task(id: poll.nextStatusChange(at: now.wrappedValue)) {
             guard let next = poll.nextStatusChange(at: now.wrappedValue) else { return }
             // Without a tolerance the system coalesces a long sleep, waking it seconds late
             do { try await Task.sleep(for: .seconds(next.timeIntervalSinceNow), tolerance: .milliseconds(100)) } catch { return }
             // The sleep's clock can wake a moment before the wall clock reaches `next`
+            let wasEnded = poll.status(at: now.wrappedValue) == .ended
             now.wrappedValue = max(.now, next)
             // The new status cancels this task, so the refetch runs on its own
-            if poll.status(at: now.wrappedValue) == .ended { Task { await onEnded() } }
+            if !wasEnded, poll.status(at: now.wrappedValue) == .ended { Task { await onEnded() } }
         }
     }
 }
@@ -302,19 +304,19 @@ struct PollFooter: View {
     let commentCount: Int?
     let onComments: () -> Void
 
+    /// Too narrow for one row (a small phone, large type, or a non-Public audience), the actions wrap to a
+    /// second row on the right, as the web's do.
     var body: some View {
-        HStack(spacing: 20) {
-            if !meta.isEmpty {
-                Text(meta).font(.vmMono(13)).monospacedDigit().lineLimit(1)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 0) {
+                leading
+                Spacer(minLength: 8)
+                actions
             }
-            Button(action: onComments) {
-                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
+            VStack(alignment: .trailing, spacing: 0) {
+                leading.frame(maxWidth: .infinity, alignment: .leading)
+                actions
             }
-            .frame(minHeight: Metrics.minTarget)
-            // On a narrow card the turnout line gives way; the comment count never breaks mid-word
-            .fixedSize()
-            Spacer(minLength: 0)
-            PollFooterActions(poll: $poll)
         }
         .font(.vm(14))
         .foregroundStyle(Tokens.mutedForeground)
@@ -323,12 +325,35 @@ struct PollFooter: View {
         .overlay(alignment: .top) { Hairline() }
     }
 
-    /// "18 voted", gap, "invite only"; a Public Poll says nothing about its Audience.
-    private var meta: String {
-        [
-            turnout.map { app.t("poll.voted", ["count": app.t.number($0)]) },
-            poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") },
-        ].compactMap { $0 }.joined(separator: metaGap)
+    /// "18 voted", gap, "invite only", then the comments. The count and the comments never truncate or
+    /// break mid-word; the Audience gives way when even two rows are too narrow.
+    private var leading: some View {
+        HStack(spacing: 16) {
+            if turnout != nil || audience != nil {
+                HStack(spacing: 13) {
+                    if let turnout {
+                        Text(app.t("poll.voted", ["count": app.t.number(turnout)])).fixedSize()
+                    }
+                    if let audience { Text(audience).lineLimit(1) }
+                }
+                .font(.vmMono(13)).monospacedDigit()
+            }
+            Button(action: onComments) {
+                Label(commentLabel, systemImage: "bubble.left").labelStyle(.titleAndIcon)
+            }
+            .frame(minHeight: Metrics.minTarget)
+            .fixedSize()
+        }
+    }
+
+    /// The last icon sits on the card's text edge, not a tap target's half-width inside it.
+    private var actions: some View {
+        PollFooterActions(poll: $poll).padding(.trailing, -(Metrics.minTarget - 20) / 2)
+    }
+
+    /// A Public Poll says nothing about its Audience.
+    private var audience: String? {
+        poll.audience.flatMap { $0 == .public ? nil : app.t("poll.audienceMeta.\($0.rawValue)") }
     }
 
     private var commentLabel: String {
@@ -364,6 +389,7 @@ private struct LikeButton: View {
     @Environment(AppModel.self) private var app
     @Binding var poll: Poll
     @State private var isSaving = false
+    @State private var taps = 0
 
     var body: some View {
         let liked = poll.likedByMe
@@ -375,10 +401,12 @@ private struct LikeButton: View {
         .accessibilityValue(poll.likeCount > 0 ? app.t.number(poll.likeCount) : "")
         .accessibilityAddTraits(liked ? .isSelected : [])
         .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
+        .sensoryFeedback(.impact(weight: .light), trigger: taps)
     }
 
     private func toggle() async {
         guard !isSaving else { return }
+        taps += 1
         let next = !poll.likedByMe
         let (previousLiked, previousCount) = (poll.likedByMe, poll.likeCount)
         set(next)
@@ -419,6 +447,7 @@ private struct BookmarkButton: View {
     @Environment(AppModel.self) private var app
     @Binding var poll: Poll
     @State private var isSaving = false
+    @State private var taps = 0
 
     var body: some View {
         let saved = poll.bookmarked == true
@@ -428,10 +457,12 @@ private struct BookmarkButton: View {
         .foregroundStyle(saved ? Tokens.foreground : Tokens.mutedForeground)
         .accessibilityAddTraits(saved ? .isSelected : [])
         .frame(minWidth: Metrics.minTarget, minHeight: Metrics.minTarget)
+        .sensoryFeedback(.impact(weight: .light), trigger: taps)
     }
 
     private func toggle() async {
         guard !isSaving else { return }
+        taps += 1
         let next = poll.bookmarked != true
         set(next)
         isSaving = true

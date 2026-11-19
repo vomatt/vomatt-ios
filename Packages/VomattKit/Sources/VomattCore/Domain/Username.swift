@@ -4,9 +4,12 @@ import Foundation
 public enum Username {
     public static let maxLength = 50
 
+    /// The API's reserved names, plus the root URLs the web serves or redirects itself: `following`,
+    /// `signup` and the about site's pages (the web's `RESERVED_USERNAMES` and `ABOUT_SITE_SLUGS`).
     public static let reserved: Set<String> = [
         "search", "account", "explore", "following", "login", "notifications", "poll", "sanity",
-        "api", "me", "my", "admin", "settings", "contact",
+        "api", "me", "my", "admin", "settings", "signup",
+        "about", "contact", "privacy-policy", "terms-of-service", "cookies-policy",
     ]
 
     public static func isValid(_ username: String) -> Bool {

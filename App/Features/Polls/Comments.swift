@@ -34,6 +34,8 @@ final class CommentsModel {
     private(set) var comments: [Comment] = []
     private(set) var replies: [String: ReplyList] = [:]
     private(set) var total: Int?
+    /// Comments and Replies posted from here; each one plays a haptic on the poll page.
+    private(set) var posted = 0
     private(set) var status = Status.loading
     private(set) var isLoadingMore = false
     /// What the docked composer answers; nil while it is closed.
@@ -152,6 +154,7 @@ final class CommentsModel {
                 comments.removeAll { $0.id == saved.id }
             }
             replace(tempId) { _ in saved }
+            posted += 1
         } catch {
             if let rootId {
                 replies[rootId]?.items.removeAll { $0.id == tempId }
@@ -603,7 +606,7 @@ private struct CommentRow: View {
     private func content(author: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Button(author) { app.push(.profile(author)) }
+                Button(ProfileName.handle(author)) { app.push(.profile(author)) }
                     .font(.vm(13, .medium)).foregroundStyle(Tokens.foreground)
                     .disabled(comment.isPending)
                 if isOwn { Chip(text: app.t("comments.you"), tint: Tokens.highlight) }
@@ -1116,13 +1119,8 @@ private struct MentionSuggestions: ViewModifier {
                 Button { choose(user) } label: {
                     HStack(spacing: 12) {
                         AvatarView(username: user.username, avatarUrl: user.avatarUrl, size: 32)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(user.username).font(.vm(14, .medium)).foregroundStyle(Tokens.popoverForeground)
-                            if let name = user.displayName {
-                                Text(name).font(.vm(12)).foregroundStyle(Tokens.mutedForeground)
-                            }
-                        }
-                        .lineLimit(1)
+                        Text(ProfileName.handle(user.username)).font(.vm(14, .medium)).foregroundStyle(Tokens.popoverForeground)
+                            .lineLimit(1)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 12).padding(.vertical, 6)
