@@ -90,7 +90,7 @@ public struct PollForm: Codable, Hashable, Sendable {
     }
 
     public enum Field: Hashable, Sendable {
-        case title, option(Int), endTime, invitees
+        case title, description, option(Int), endTime, invitees
     }
 
     /// Validation errors as translation keys (the web's `pollCreator.errors.*`).
@@ -99,10 +99,12 @@ public struct PollForm: Codable, Hashable, Sendable {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.isEmpty { errors[.title] = "pollCreator.errors.titleRequired" }
         else if title.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
+        if description.count > pollDescriptionMax { errors[.description] = "pollCreator.errors.descriptionTooLong" }
         // Two options with the same text split one opinion into two counts
         var seen = Set<String>()
         for (index, option) in options.enumerated() {
-            let key = option.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            // Compared as saved: a pasted line break is a space
+            let key = Self.singleLine(option).lowercased()
             if key.isEmpty {
                 errors[.option(index)] = "pollCreator.errors.optionRequired"
             } else if !seen.insert(key).inserted {
@@ -158,7 +160,7 @@ public struct PollForm: Codable, Hashable, Sendable {
         endTime = (startTime ?? now).addingTimeInterval(preset.duration)
     }
 
-    /// The question as one line: pasted line breaks become spaces.
+    /// The question or an option as one line: pasted line breaks become spaces.
     public static func singleLine(_ text: String) -> String {
         text.replacingOccurrences(of: #"\s*\n\s*"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -169,7 +171,7 @@ public struct PollForm: Codable, Hashable, Sendable {
         return PollInput(
             title: Self.singleLine(title),
             description: description.isEmpty ? nil : description,
-            options: options.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            options: options.map(Self.singleLine),
             startTime: startTime ?? now,
             endTime: endTime ?? now,
             voterVisibility: voterVisibility,

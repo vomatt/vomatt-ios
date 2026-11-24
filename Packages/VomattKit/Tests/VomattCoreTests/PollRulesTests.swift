@@ -358,6 +358,23 @@ struct PollFormTests {
         #expect(form.input(now: now).title == "Market night Friday or Saturday?")
     }
 
+    @Test func publishesAnOptionWithAPastedLineBreakAsOneLine() {
+        let form = PollForm(title: "Q", options: ["Keep Lisbon\n (flights booked) ", "B"], endTime: hours(5))
+        #expect(form.input(now: now).options == ["Keep Lisbon (flights booked)", "B"])
+    }
+
+    @Test func countsOptionsThatDifferOnlyByALineBreakAsTheSame() {
+        let form = PollForm(title: "Q", options: ["Keep\nLisbon", "Keep Lisbon"], endTime: hours(5))
+        #expect(form.errors(now: now)[.option(1)] == "pollCreator.errors.optionDuplicate")
+    }
+
+    @Test func rejectsContextPast1000Characters() {
+        var form = PollForm(title: "Q", description: String(repeating: "a", count: 1001), options: ["A", "B"], endTime: hours(5))
+        #expect(form.errors(now: now)[.description] == "pollCreator.errors.descriptionTooLong")
+        form.description = String(repeating: "a", count: 1000)
+        #expect(form.errors(now: now)[.description] == nil)
+    }
+
     @Test func rejectsAnEndBeforeTheStart() {
         let form = PollForm(title: "Q", options: ["A", "B"], startTime: hours(48), endTime: hours(24))
         #expect(form.errors(now: now)[.endTime] == "pollCreator.errors.endBeforeStart")
