@@ -26,7 +26,8 @@ struct AppConfig {
         )
     }()
 
-    func pollURL(_ id: String) -> URL { siteURL.appending(path: "poll/\(id)") }
+    /// A Poll's web link, by the short id the web writes.
+    func pollURL(_ id: String) -> URL { siteURL.appending(path: "poll/\(PollID.shortId(id) ?? id)") }
     func profileURL(_ username: String) -> URL { siteURL.appending(path: username) }
 }
 
@@ -250,7 +251,7 @@ final class AppModel {
         paths[selectedTab, default: NavigationPath()].append(route)
     }
 
-    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>`, `https://<site>/<username>` and a community
+    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` (by UUID or short id), `https://<site>/<username>` and a community
     /// invitation's `…/notifications/community-invitations/<id>` (its email's link). The page opens on
     /// the tab the person is on, over whatever they had there, once anything presented has closed. A link
     /// the app has no page for leaves everything as it is.
@@ -268,7 +269,7 @@ final class AppModel {
             paths[.notifications] = NavigationPath()
         } else if first == "poll", parts.count > 1 {
             dismissModals()
-            push(.poll(parts[1]))
+            push(.poll(PollID.fromLink(parts[1]) ?? parts[1]))
         } else if parts.count == 1, !Username.reserved.contains(first) {
             dismissModals()
             push(.profile(first))
