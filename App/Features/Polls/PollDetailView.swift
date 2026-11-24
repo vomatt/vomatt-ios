@@ -104,9 +104,11 @@ struct PollDetailView: View {
             now = .now
             phase = .ready(poll)
             app.didUpdate(poll)
-            if reloadComments || commentsSession != app.sessionGeneration {
+            if commentsSession != app.sessionGeneration {
                 commentsSession = app.sessionGeneration
                 await comments.reload(app.service)
+            } else if reloadComments, !(await comments.refresh(app.service, total: poll.commentCount)) {
+                app.showToast(app.t("comments.loadFailed"), isError: true)
             }
             if let link = replyTo {
                 replyTo = nil
