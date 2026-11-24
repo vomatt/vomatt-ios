@@ -30,7 +30,7 @@ public struct DateFormatting: Sendable {
         string(date, template: "MMMyyyy", timeZone: TimeZone(identifier: "UTC")!)
     }
 
-    /// "today" / "tomorrow" / "yesterday", the weekday within six days ("Fri"), else "Oct 24";
+    /// "today" / "tomorrow" / "yesterday", the weekday within six days ("Fri"), else "Oct 24" ("Oct 24, 2025" in another year);
     /// zh 今天 / 週五 / 10月24日. Counts calendar days in the reader's time zone.
     public func pollDay(_ date: Date, now: Date = .now) -> String {
         let days = calendarDays(from: now, to: date)
@@ -39,7 +39,7 @@ public struct DateFormatting: Sendable {
             let words = language == .zh ? ["昨天", "今天", "明天"] : ["yesterday", "today", "tomorrow"]
             return words[days + 1]
         case 2...6: return string(date, fixed: "EEE", timeZone: timeZone)
-        default: return string(date, template: "MMMd", timeZone: timeZone)
+        default: return monthDay(date, now: now)
         }
     }
 
@@ -66,7 +66,7 @@ public struct DateFormatting: Sendable {
         return unit(Int((interval / 86_400).rounded()), en: "d", zh: "天")
     }
 
-    /// A post's age for an author line: "now" (剛剛) under a minute, "45m", "2h", "3d", then "Oct 7".
+    /// A post's age for an author line: "now" (剛剛) under a minute, "45m", "2h", "3d", then "Oct 7" ("Oct 7, 2025" in another year).
     public func age(_ date: Date, now: Date = .now) -> String {
         let seconds = now.timeIntervalSince(date)
         switch seconds {
@@ -74,8 +74,16 @@ public struct DateFormatting: Sendable {
         case ..<3600: return unit(Int(seconds / 60), en: "m", zh: "分鐘")
         case ..<86_400: return unit(Int(seconds / 3600), en: "h", zh: "小時")
         case ..<(7 * 86_400): return unit(Int(seconds / 86_400), en: "d", zh: "天")
-        default: return string(date, template: "MMMd", timeZone: timeZone)
+        default: return monthDay(date, now: now)
         }
+    }
+
+    /// "Oct 24" within the reader's current year; "Oct 24, 2023" in any other, so an old date never reads as an upcoming one.
+    private func monthDay(_ date: Date, now: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        return string(date, template: sameYear ? "MMMd" : "yMMMd", timeZone: timeZone)
     }
 
     private func unit(_ value: Int, en: String, zh: String) -> String {
