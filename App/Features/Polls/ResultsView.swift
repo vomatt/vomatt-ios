@@ -14,7 +14,9 @@ struct ResultsView: View {
     /// `/results` answered 403: the Poll is still sealed, so refetch it.
     let onSealed: () async -> Void
     /// Set when the viewer may see who voted.
-    var onSelectOption: ((ResultRow) -> Void)?
+    var onSelectOption: ((VotersSelection) -> Void)?
+    /// The Poll ended while on screen: fill the bars and count up. A card that loads ended shows them still.
+    var reveal = false
 
     @State private var fetched: PollResults?
     @State private var failed = false
@@ -25,8 +27,12 @@ struct ResultsView: View {
         let sealedUntil: Date?
     }
 
-    private static let barDuration = 0.8
-    private static let barEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: barDuration)
+    private static let barDuration = 0.3
+    private static let stagger = 0.05
+    private static let barEase = Animation.timingCurve(0.23, 1, 0.32, 1, duration: barDuration)
+
+    /// Bars and percentages at their final values: drawn still unless the Poll ended on screen.
+    private var filled: Bool { revealed || !reveal || reduceMotion }
 
     private var rows: [ResultRow]? {
         poll.inlineResults ?? fetched?.options.map { ResultRow(id: $0.id, text: $0.text, votes: $0.voteCount) }
@@ -72,8 +78,7 @@ struct ResultsView: View {
             summary(rows, participants: participants)
             VStack(spacing: 10) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    resultRow(row, percent: Results.support(votes: row.votes, participants: participants),
-                              isWinner: winners.contains(row), delay: Double(index) * 0.08)
+                    resultRow(row, participants: participants, isWinner: winners.contains(row), delay: Double(index) * Self.stagger)
                 }
             }
             if onSelectOption != nil, !winners.isEmpty {
@@ -120,12 +125,13 @@ struct ResultsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func resultRow(_ row: ResultRow, percent: Int, isWinner: Bool, delay: Double) -> some View {
+    private func resultRow(_ row: ResultRow, participants: Int, isWinner: Bool, delay: Double) -> some View {
+        let percent = Results.support(votes: row.votes, participants: participants)
         let shape = RoundedRectangle(cornerRadius: Radius.xl)
         let isMine = row.id == myOptionId
-        let bar = reduceMotion ? nil : Self.barEase.delay(delay)
+        let bar = reduceMotion || !reveal ? nil : Self.barEase.delay(delay)
         let label = HStack(spacing: 12) {
-            if isWinner { ElectedStamp(label: app.t("poll.elected")) }
+            if isWinner { ElectedStamp(label: app.t("poll.elected"), pressesIn: reveal) }
             Text(row.text)
                 .font(.vm(16, isWinner ? .medium : .regular))
                 .multilineTextAlignment(.leading)
@@ -139,7 +145,7 @@ struct ResultsView: View {
                     .overlay(Capsule().strokeBorder(Tokens.highlightForeground))
                     .fixedSize()
             }
-            CountUpText(value: revealed || reduceMotion ? Double(percent) : 0)
+            CountUpText(value: filled ? Double(percent) : 0)
                 .animation(bar, value: revealed)
                 .font(.vmMono(14))
                 .foregroundStyle(isWinner ? Tokens.foreground : Tokens.mutedForeground)
@@ -153,7 +159,7 @@ struct ResultsView: View {
             GeometryReader { proxy in
                 Rectangle()
                     .fill(Tokens.muted)
-                    .frame(width: proxy.size.width * (revealed || reduceMotion ? CGFloat(percent) / 100 : 0))
+                    .frame(width: proxy.size.width * (filled ? CGFloat(percent) / 100 : 0))
                     .animation(bar, value: revealed)
             }
         }
@@ -163,7 +169,7 @@ struct ResultsView: View {
 
         return Group {
             if let onSelectOption, row.votes > 0 {
-                Button { onSelectOption(row) } label: { label.contentShape(shape) }
+                Button { onSelectOption(VotersSelection(option: row, participants: participants)) } label: { label.contentShape(shape) }
                     .buttonStyle(.plain)
                     .accessibilityHint(app.t("poll.voters"))
             } else {
@@ -202,23 +208,33 @@ struct CountUpText: View, Animatable {
     }
 }
 
-/// The red ballot stamp (a ring with a 卜 mark) on the winning option, pressed down once its bar fills.
+/// The red ballot stamp (a ring with a 卜 mark) on the winning option. When `pressesIn`, it is pressed down once its
+/// bar fills; otherwise it is drawn still.
 struct ElectedStamp: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let label: String
+    var pressesIn = false
     @State private var pressed = false
 
     var body: some View {
+        let still = pressed || !pressesIn || reduceMotion
         ElectedStampShape()
             .stroke(Tokens.elected, lineWidth: 18 * 9.5 / 130)
             .frame(width: 18, height: 18)
-            .scaleEffect(pressed || reduceMotion ? 1 : 1.6)
-            .opacity(pressed || reduceMotion ? 1 : 0)
+            .scaleEffect(still ? 1 : 1.6)
+            .opacity(still ? 1 : 0)
             .onAppear {
-                withAnimation(.timingCurve(0.25, 1, 0.5, 1, duration: 0.3).delay(0.8)) { pressed = true }
+                withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3).delay(0.3)) { pressed = true }
             }
             .accessibilityLabel(label)
     }
+}
+
+/// An option of an Ended Poll whose voters to list, with the Poll's Turnout: the total a list of everyone falls short of.
+struct VotersSelection: Identifiable, Hashable {
+    let option: ResultRow
+    let participants: Int
+    var id: String { option.id }
 }
 
 /// The stamp's ring and 卜 (viewBox 0 0 130 130).
@@ -240,7 +256,10 @@ struct VotersSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     let pollId: String
-    let option: ResultRow
+    let selection: VotersSelection
+    /// The viewer's option when their own Ballot is anonymous, so it is counted among the unlisted.
+    let myAnonymousOptionId: String?
+    private var option: ResultRow { selection.option }
 
     enum Phase { case loading, ready([Voter], capped: Bool), hidden, failed }
     @State private var state = Phase.loading
@@ -258,19 +277,21 @@ struct VotersSheet: View {
                 case .failed:
                     LoadFailed(message: app.t("poll.votersFailed")) { await load() }
                 case let .ready(voters, capped):
-                    // Choices are withheld for everyone while an Anonymous Ballot is in the Poll
-                    let choicesHidden = voters.contains { $0.optionId == nil }
-                    let chose = choicesHidden ? voters : voters.filter { $0.optionId == option.id }
-                    if chose.isEmpty {
+                    let list = VoterList(
+                        voters: voters, optionId: option.id, votes: option.votes, participants: selection.participants,
+                        complete: !capped, myAnonymousOptionId: myAnonymousOptionId
+                    )
+                    if list.listed.isEmpty, list.unlisted == 0, !capped {
                         message(app.t("poll.votersNone"))
                     } else {
                         List {
-                            if choicesHidden {
+                            // Choices are withheld for everyone while an Anonymous Ballot is in the Poll
+                            if list.choicesHidden {
                                 Text(app.t("ios.votersChoicesHidden"))
                                     .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
                                     .listRowBackground(Color.clear)
                             }
-                            ForEach(chose) { voter in
+                            ForEach(list.listed) { voter in
                                 Button {
                                     dismiss()
                                     app.push(.profile(voter.username))
@@ -280,6 +301,9 @@ struct VotersSheet: View {
                                         .foregroundStyle(Tokens.foreground)
                                 }
                                 .listRowBackground(Tokens.card)
+                            }
+                            if list.unlisted > 0 {
+                                unlistedRow(list).listRowBackground(Tokens.card)
                             }
                             if capped {
                                 Text(app.t("poll.votersTruncated", ["count": maxPages * maxPageSize]))
@@ -300,6 +324,29 @@ struct VotersSheet: View {
         }
         .presentationDetents([.medium, .large])
         .task { await load() }
+    }
+
+    /// Anonymous Ballots and removed accounts: counted, never listed. Says when the viewer's own is among them.
+    private func unlistedRow(_ list: VoterList) -> some View {
+        let title = list.includesMine && list.unlisted == 1
+            ? app.t("poll.votersUnlistedYou")
+            : app.t.count(list.listed.isEmpty ? "poll.votersUnlistedAll" : "poll.votersUnlisted", list.unlisted)
+        let why = !list.includesMine ? "poll.votersUnlistedWhy"
+            : list.unlisted == 1 ? "poll.votersUnlistedYouWhy" : "poll.votersUnlistedMine"
+        return HStack(spacing: 12) {
+            Text("+\(list.unlisted)")
+                .font(.vm(11)).monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .frame(width: 32, height: 32)
+                .background(Tokens.muted, in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.vmBody)
+                Text(app.t(why)).font(.vmMeta)
+            }
+        }
+        .foregroundStyle(Tokens.mutedForeground)
+        .accessibilityElement(children: .combine)
     }
 
     private func message(_ text: String) -> some View {

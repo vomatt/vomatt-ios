@@ -151,7 +151,9 @@ private struct PollDetailCard: View {
 
     @State private var poll: Poll
     @State private var ballot: BallotModel
-    @State private var votersOption: ResultRow?
+    @State private var votersOption: VotersSelection?
+    /// Results fill in only when the end or reveal happens on screen.
+    @State private var revealedOnMount: Bool
 
     init(poll: Poll, now: Date, commentCount: Int?, onOpenDiscussion: @escaping () -> Void) {
         initialPoll = poll
@@ -160,6 +162,7 @@ private struct PollDetailCard: View {
         self.onOpenDiscussion = onOpenDiscussion
         _poll = State(initialValue: poll)
         _ballot = State(initialValue: BallotModel(poll: poll))
+        _revealedOnMount = State(initialValue: poll.isRevealed(at: now))
     }
 
     var body: some View {
@@ -171,7 +174,9 @@ private struct PollDetailCard: View {
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
             if let fresh, fresh != poll { apply(fresh) }
         }
-        .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
+        .sheet(item: $votersOption) { selection in
+            VotersSheet(pollId: poll.id, selection: selection, myAnonymousOptionId: ballot.anonymousOptionId)
+        }
     }
 
     private func card(status: PollStatus) -> some View {
@@ -199,7 +204,8 @@ private struct PollDetailCard: View {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
                             sealedUntil: sealedUntil, onSealed: refetch,
-                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil,
+                            reveal: !revealedOnMount
                         )
                     } else {
                         BallotView(

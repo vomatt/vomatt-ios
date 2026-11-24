@@ -41,6 +41,9 @@ final class BallotModel {
         anonymity.shown(hasBallot: myOptionId != nil || pendingAction == .retract, accountDefault: accountDefault)
     }
 
+    /// The saved option when the Ballot is left out of the voter list, which counts it among the unlisted.
+    var anonymousOptionId: String? { anonymity.ballot == true ? savedOptionId : nil }
+
     /// A refetched Poll carries fresh counts and the viewer's Ballot.
     func sync(_ poll: Poll) {
         guard !isPending else { return }
