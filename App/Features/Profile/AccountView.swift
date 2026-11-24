@@ -32,74 +32,79 @@ struct AccountView: View {
         let voted = ProfileLists.voted(visible, viewerId: profile.id)
         let askedSplit = ProfileLists.splitAsked(asked)
         let votedSplit = ProfileLists.splitVoted(voted)
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
-                ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
-                    Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
-                }
-                FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
-                StatsGrid(stats: [
-                    .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.createdPollCount ?? profile.totalPolls)),
-                    // Not votedPollCount: it counts Ballots on the owner's own polls, which the Voted tab leaves out (vomatt-web#121)
-                    .init(label: app.t("profile.recordVoted"), value: polls == nil ? "–" : app.t.number(voted.count)),
-                    .init(
-                        label: app.t("profile.recordVotesReceived"),
-                        value: polls == nil ? "–" : app.t.number(ProfileLists.votesReceived(asked)),
-                        onlyYou: true
-                    ),
-                    .init(
-                        label: app.t("profile.recordPicksWon"),
-                        value: ProfileLists.picksWonRate(voted).map { "\(app.t.number($0))%" } ?? "–",
-                        onlyYou: true
-                    ),
-                ])
+        ScrollViewReader { scroller in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Every field, with a lock on each one visitors don't see (the web's `hiddenFields`)
+                    ProfileHeader(profile: profile.asOwnProfile, onAvatarTap: { showAvatar = true }, hiddenFields: profile.hiddenFields) {
+                        Button(app.t("profile.editProfile")) { showEdit = true }.buttonStyle(.vm(.outline, size: .sm))
+                    }
+                    FollowCounts(username: profile.username, followers: profile.followersCount, following: profile.followingCount)
+                    StatsGrid(stats: [
+                        .init(label: app.t("profile.recordAsked"), value: app.t.number(profile.createdPollCount ?? profile.totalPolls),
+                              onSelect: { open(.asked, scroller) }),
+                        // Not votedPollCount: it counts Ballots on the owner's own polls, which the Voted tab leaves out (vomatt-web#121)
+                        .init(label: app.t("profile.recordVoted"), value: polls == nil ? "–" : app.t.number(voted.count),
+                              onSelect: { open(.voted, scroller) }),
+                        .init(
+                            label: app.t("profile.recordVotesReceived"),
+                            value: polls == nil ? "–" : app.t.number(ProfileLists.votesReceived(asked)),
+                            onlyYou: true
+                        ),
+                        .init(
+                            label: app.t("profile.recordPicksWon"),
+                            value: ProfileLists.picksWonRate(voted).map { "\(app.t.number($0))%" } ?? "–",
+                            onlyYou: true
+                        ),
+                    ])
 
-                VStack(alignment: .leading, spacing: 12) {
-                    LineTabs(items: [
-                        (Tab.asked, app.t("profile.tabAsked")),
-                        (Tab.voted, app.t("profile.tabVoted")),
-                        (Tab.saved, app.t("profile.tabSaved")),
-                    ], selection: $tab) { value in
-                        switch value {
-                        case .asked:
-                            TabCount(count: asked.count)
-                            if askedSplit.ended.contains(where: { $0.unread == true }) {
-                                UnreadDot(label: app.t("profile.askedUnread"))
+                    VStack(alignment: .leading, spacing: 12) {
+                        LineTabs(items: [
+                            (Tab.asked, app.t("profile.tabAsked")),
+                            (Tab.voted, app.t("profile.tabVoted")),
+                            (Tab.saved, app.t("profile.tabSaved")),
+                        ], selection: $tab) { value in
+                            switch value {
+                            case .asked:
+                                TabCount(count: asked.count)
+                                if askedSplit.ended.contains(where: { $0.unread == true }) {
+                                    UnreadDot(label: app.t("profile.askedUnread"))
+                                }
+                            case .voted:
+                                TabCount(count: voted.count)
+                                OnlyYouMarker()
+                                let unread = votedSplit.decided.filter { $0.unread == true }.count
+                                if unread > 0 { UnreadBadge(count: formatUnreadCount(unread), label: app.t("notifications.unread")) }
+                            case .saved:
+                                OnlyYouMarker()
                             }
+                        }
+                        .id(Self.tabsAnchor)
+                        switch tab {
+                        case .asked:
+                            FilterPills(label: app.t("profile.filterLabel"), selection: $askedFilter, options: [
+                                (AskedFilter.all, app.t("profile.filterAll"), nil),
+                                (AskedFilter.drafts, app.t("myPolls.tabDrafts"), nil),
+                                (AskedFilter.open, app.t("profile.filterOpen"), nil),
+                                (AskedFilter.ended, app.t("myPolls.tabEnded"), nil),
+                            ])
+                            lists { askedList(askedSplit) }
                         case .voted:
-                            TabCount(count: voted.count)
-                            OnlyYouMarker()
-                            let unread = votedSplit.decided.filter { $0.unread == true }.count
-                            if unread > 0 { UnreadBadge(count: formatUnreadCount(unread), label: app.t("notifications.unread")) }
+                            FilterPills(label: app.t("profile.filterLabel"), selection: $votedFilter, options: [
+                                (VotedFilter.all, app.t("profile.filterAll"), nil),
+                                (VotedFilter.sealed, app.t("profile.filterSealed"), nil),
+                                (VotedFilter.decided, app.t("profile.filterDecided"), nil),
+                            ])
+                            lists { votedList(votedSplit) }
                         case .saved:
-                            OnlyYouMarker()
+                            savedList
                         }
                     }
-                    switch tab {
-                    case .asked:
-                        FilterPills(label: app.t("profile.filterLabel"), selection: $askedFilter, options: [
-                            (AskedFilter.all, app.t("profile.filterAll"), nil),
-                            (AskedFilter.drafts, app.t("myPolls.tabDrafts"), nil),
-                            (AskedFilter.open, app.t("profile.filterOpen"), nil),
-                            (AskedFilter.ended, app.t("myPolls.tabEnded"), nil),
-                        ])
-                        lists { askedList(askedSplit) }
-                    case .voted:
-                        FilterPills(label: app.t("profile.filterLabel"), selection: $votedFilter, options: [
-                            (VotedFilter.all, app.t("profile.filterAll"), nil),
-                            (VotedFilter.sealed, app.t("profile.filterSealed"), nil),
-                            (VotedFilter.decided, app.t("profile.filterDecided"), nil),
-                        ])
-                        lists { votedList(votedSplit) }
-                    case .saved:
-                        savedList
-                    }
+                    tabNote
                 }
-                tabNote
+                .pageColumn(768)
+                .padding(.vertical, 24)
             }
-            .pageColumn(768)
-            .padding(.vertical, 24)
         }
         .refreshable {
             async let savedReload: Void = saved?.reload() ?? ()
@@ -223,6 +228,14 @@ struct AccountView: View {
                 }
             }
         }
+    }
+
+    private static let tabsAnchor = "tabs"
+
+    /// From the record's counts: their list, brought into view on a short screen.
+    private func open(_ next: Tab, _ scroller: ScrollViewProxy) {
+        tab = next
+        withAnimation { scroller.scrollTo(Self.tabsAnchor) }
     }
 
     /// What the open tab shows to whom, on the Tide surface (the web's rail note, which follows the lists on a phone).
