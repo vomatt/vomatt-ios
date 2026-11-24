@@ -39,7 +39,8 @@ struct PollQRSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button(app.t("common.close")) { dismiss() } }
             }
         }
-        .presentationDetents([.medium, .large])
+        // At half height the Copy link button sits under the fold on a phone
+        .presentationDetents([.large])
     }
 
     private static let context = CIContext()

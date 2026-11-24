@@ -6,6 +6,7 @@ import VomattCore
 /// found replaces the search.
 struct ExploreView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var query = ""
     @State private var status = VomattService.ListStatus.open
     @State private var sort = VomattService.ListSort.newest
@@ -83,8 +84,13 @@ struct ExploreView: View {
     private var filters: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) { statusPills; sortPills }
-            VStack(alignment: .leading, spacing: 8) { statusPills; sortPills }
+            // Stacked, a hidden Sort row would leave a hole above the list, so Ended removes it here
+            VStack(alignment: .leading, spacing: 8) {
+                statusPills
+                if status == .open { sortPills.transition(.opacity) }
+            }
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: status)
     }
 
     private func filterRow(_ label: String, @ViewBuilder pills: () -> some View) -> some View {
@@ -109,7 +115,7 @@ struct ExploreView: View {
             PillButton(title: app.t("explore.sortEnding"), isOn: sort == .closing) { sort = .closing }
             PillButton(title: app.t("explore.sortTop"), isOn: sort == .top) { sort = .top }
         }
-        // Ended Polls take no sort; hidden, not removed, so the list doesn't jump
+        // Ended Polls take no sort; beside Status it is hidden, not removed, so the row keeps its width
         .opacity(status == .open ? 1 : 0)
         .disabled(status != .open)
         .accessibilityHidden(status != .open)
