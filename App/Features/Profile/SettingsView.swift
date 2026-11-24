@@ -132,7 +132,6 @@ private struct AccountSettings: View {
     @AppStorage(ThemeChoice.storageKey) private var theme = ThemeChoice.system
     @State private var confirmingSignOut = false
     @State private var reportingProblem = false
-    @State private var bindingPhone = false
     /// How many invite lists the user has; nil until loaded or when they couldn't be.
     @State private var inviteListCount: Int?
     /// How many devices the user is signed in on; nil until loaded or when they couldn't be.
@@ -236,8 +235,6 @@ private struct AccountSettings: View {
                         Button(app.t("account.signOut"), role: .destructive) { Task { await app.signOut() } }
                     }
                     Hairline()
-                    phoneRow
-                    Hairline()
                     PasskeysSection(service: app.service).padding(16)
                     Hairline()
                     NavigationRow(
@@ -274,34 +271,6 @@ private struct AccountSettings: View {
         .task { await loadInviteListCount() }
         .task { await loadDeviceCount() }
         .sheet(isPresented: $reportingProblem) { ReportProblemSheet() }
-        .sheet(isPresented: $bindingPhone) { PhoneBindSheet(defaultPhone: profile.phoneNumber) }
-    }
-
-    /// The account's phone number: add one, verify one, or show it as verified (the web's `PhoneRow`).
-    private var phoneRow: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.t("phoneBind.rowTitle")).font(.vm(15, .medium)).foregroundStyle(Tokens.foreground)
-                if let phone = profile.phoneNumber {
-                    HStack(spacing: 8) {
-                        Text(phone).monospacedDigit().foregroundStyle(Tokens.mutedForeground)
-                        if profile.phoneVerified {
-                            Label(app.t("phoneBind.verified"), systemImage: "checkmark")
-                                .labelStyle(.titleAndIcon).foregroundStyle(Tokens.foreground)
-                        }
-                    }
-                    .font(.vm(13))
-                } else {
-                    Text(app.t("phoneBind.rowBodyNone")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if !profile.phoneVerified {
-                Button(app.t(profile.phoneNumber == nil ? "phoneBind.add" : "phoneBind.verify")) { bindingPhone = true }
-                    .buttonStyle(.vm(.outline, size: .sm))
-            }
-        }
-        .settingsRow()
     }
 
     /// The app's language in its own words: "English", "中文".
