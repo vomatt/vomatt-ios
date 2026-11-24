@@ -250,10 +250,26 @@ private struct AccountSettings: View {
                 .card(padding: nil)
             }
 
+            SettingsSection(title: app.t("settings.about")) {
+                VStack(spacing: 0) {
+                    NavigationRow(title: app.t("settings.aboutVomatt"), external: true) { openURL(LegalLinks.about(app.language)) }
+                    Hairline()
+                    NavigationRow(title: app.t("settings.terms"), external: true) { openURL(LegalLinks.terms(app.language)) }
+                    Hairline()
+                    NavigationRow(title: app.t("settings.privacyPolicy"), external: true) { openURL(LegalLinks.privacy(app.language)) }
+                    if let mail = LegalLinks.contact(app.config.supportEmail) {
+                        Hairline()
+                        NavigationRow(title: app.t("ios.contact"), detail: app.config.supportEmail, external: true) { openURL(mail) }
+                    }
+                }
+                .card(padding: nil)
+            }
+
             // Kept apart, at the end, and quiet until opened
             DeleteAccountSection(username: profile.username)
 
-            LegalLinks()
+            Text(LegalLinks.version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                .frame(maxWidth: .infinity)
         }
         .task { await loadInviteListCount() }
         .task { await loadDeviceCount() }
@@ -952,7 +968,7 @@ private struct DeleteAccountSection: View {
     }
 }
 
-/// Terms, Privacy and Contact, then the version (the web's `LegalLinks`); shown signed in or out.
+/// Terms, Privacy and Contact, then the version (the web's `LegalLinks`), for guests; Settings lists them as rows.
 struct LegalLinks: View {
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
@@ -961,6 +977,8 @@ struct LegalLinks: View {
     private static let aboutSite = URL(string: "https://about.vomatt.com")!
     static func terms(_ language: Language) -> URL { aboutPage("terms-of-service", language) }
     static func privacy(_ language: Language) -> URL { aboutPage("privacy-policy", language) }
+    static func about(_ language: Language) -> URL { aboutPage("about", language) }
+    static func contact(_ email: String) -> URL? { email.isEmpty ? nil : URL(string: "mailto:\(email)") }
 
     /// The about site serves Chinese under /zh, falling back to English for a page with no translation.
     private static func aboutPage(_ slug: String, _ language: Language) -> URL {
@@ -978,14 +996,14 @@ struct LegalLinks: View {
             HStack(spacing: pagesOnly ? 20 : 18) {
                 link(app.t("settings.terms"), Self.terms(app.language))
                 link(app.t("settings.privacyPolicy"), Self.privacy(app.language))
-                if !pagesOnly, !app.config.supportEmail.isEmpty, let mail = URL(string: "mailto:\(app.config.supportEmail)") {
+                if !pagesOnly, let mail = Self.contact(app.config.supportEmail) {
                     link(app.t("ios.contact"), mail)
                 }
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(app.t("settings.legal"))
+            .accessibilityLabel(app.t("settings.about"))
             if !pagesOnly {
-                Text(version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
+                Text(Self.version).font(.vmMono(12)).foregroundStyle(Tokens.mutedForeground)
             }
         }
         .frame(maxWidth: .infinity, alignment: pagesOnly ? .leading : .center)
@@ -999,7 +1017,7 @@ struct LegalLinks: View {
             .frame(minHeight: Metrics.minTarget)
     }
 
-    private var version: String {
+    static var version: String {
         let info = Bundle.main.infoDictionary
         return "v\(info?["CFBundleShortVersionString"] as? String ?? "") (\(info?["CFBundleVersion"] as? String ?? ""))"
     }

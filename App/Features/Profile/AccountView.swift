@@ -288,7 +288,7 @@ struct AccountView: View {
                     ? Text(app.t("myPolls.votedAnonymously"))
                     : Text(app.t("myPolls.youChose")) + Text(" ") + strong(AccountInsights.choice(of: poll)),
                 Text(poll.isCancelled ? app.t("notifications.cancelled") : votedCount(poll, app.t)),
-                unread ? Text(app.t("profile.new")).foregroundStyle(Tokens.alert) : nil,
+                unread ? Text(app.t("profile.new")).foregroundStyle(Tokens.alertText) : nil,
             ].compactMap { $0 })
         } aside: {
             if let outcome, outcome == .won || outcome == .tied || outcome == .lost { OutcomeChip(outcome: outcome) }
@@ -333,7 +333,7 @@ struct AskedRow: View {
             if status != .scheduled { parts.append(Text(votedCount(poll, app.t)).foregroundStyle(Tokens.foreground)) }
             if let when { parts.append(Text(when)) }
         }
-        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alert)) }
+        if unread { parts.append(Text(app.t("profile.new")).foregroundStyle(Tokens.alertText)) }
         return PollRow(poll: poll, unread: unread) {
             joined(parts)
         } aside: {

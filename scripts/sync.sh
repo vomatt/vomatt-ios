@@ -144,6 +144,14 @@ check() {
 	diff="$(python3 "$ROOT/scripts/api-diff.py" "$SPEC" "$fresh")"
 	rm -f "$fresh"
 	[[ "$diff" == "No contract changes." ]] || { echo "API contract differs from vomatt-api:"; echo "$diff"; status=1; }
+	local css generated
+	css="$(mktemp)"
+	generated="$(mktemp -d)"
+	web_file src/styles/global.css > "$css"
+	python3 "$ROOT/scripts/tokens.py" "$css" "$generated/Colors.xcassets" "$generated/Tokens.generated.swift" >/dev/null
+	diff -rq "$generated/Colors.xcassets" "$COLORS" >/dev/null && cmp -s "$generated/Tokens.generated.swift" "$TOKENS_SWIFT" \
+		|| { echo "color tokens differ from the web"; status=1; }
+	rm -rf "$css" "$generated"
 	local ios_avatars
 	ios_avatars="$(ls "$AVATARS" | grep imageset | sed 's/^bot-//; s/\.imageset$//' | sort)"
 	[[ "$(web_avatars)" == "$ios_avatars" ]] || { echo "avatars differ from the web"; status=1; }

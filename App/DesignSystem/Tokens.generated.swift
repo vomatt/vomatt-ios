@@ -3,10 +3,9 @@ import SwiftUI
 
 /// The web's semantic color tokens; each has a light and a dark value.
 enum Tokens {
-    static let accent = Color("accent")
-    static let accentForeground = Color("accent-foreground")
     static let alert = Color("alert")
     static let alertForeground = Color("alert-foreground")
+    static let alertText = Color("alert-text")
     static let avatarGreen = Color("avatar-green")
     static let avatarLavender = Color("avatar-lavender")
     static let avatarPeach = Color("avatar-peach")
@@ -17,7 +16,7 @@ enum Tokens {
     static let border = Color("border")
     static let borderStrong = Color("border-strong")
     static let card = Color("card")
-    static let cardForeground = Color("card-foreground")
+    static let chosenLine = Color("chosen-line")
     static let destructive = Color("destructive")
     static let elected = Color("elected")
     static let field = Color("field")
@@ -44,6 +43,7 @@ enum Tokens {
     static let statusOpenEnds = Color("status-open-ends")
     static let statusScheduled = Color("status-scheduled")
     static let surfaceSoft = Color("surface-soft")
+    static let targetTint = Color("target-tint")
     static let tide = Color("tide")
     static let tideForeground = Color("tide-foreground")
     static let tideLine = Color("tide-line")
