@@ -423,7 +423,7 @@ struct PollCreatorView: View {
                 VStack(spacing: 8) {
                     ForEach(Array(form.options.enumerated()), id: \.offset) { _, option in
                         HStack(spacing: 12) {
-                            BallotMark(checked: false)
+                            BallotMark(chosen: nil)
                             Text(PollForm.singleLine(option)).font(.vm(16))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }

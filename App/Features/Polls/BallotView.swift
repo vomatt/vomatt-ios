@@ -389,11 +389,6 @@ struct BallotMark: View {
         self.cast = cast
     }
 
-    /// The empty ring, for options nobody can pick yet (the creator's review).
-    init(checked: Bool) {
-        self.init(chosen: checked ? "" : nil)
-    }
-
     var body: some View {
         ZStack {
             if let chosen {
