@@ -468,3 +468,25 @@ struct BlockListTests {
         #expect(!list.contains("alice"))
     }
 }
+
+@Suite("Invitees")
+struct InviteeTests {
+    private func invitee(_ username: String, voted: Bool) -> Invitee {
+        Invitee(person: Person(userId: "u-\(username)", username: username), hasBallot: voted)
+    }
+
+    @Test func removingTheLastOneWhoHasNotVotedEndsThePoll() {
+        let list = [invitee("ana", voted: true), invitee("ben", voted: false)]
+        #expect(list[1].removalEndsPoll(in: list))
+    }
+
+    @Test func removingWhileSomeoneElseHasNotVotedKeepsItOpen() {
+        let list = [invitee("ana", voted: true), invitee("ben", voted: false), invitee("cy", voted: false)]
+        #expect(!list[1].removalEndsPoll(in: list))
+    }
+
+    @Test func removingTheOnlyInviteeLeavesNobodyToEndIt() {
+        let list = [invitee("ana", voted: false)]
+        #expect(!list[0].removalEndsPoll(in: list))
+    }
+}

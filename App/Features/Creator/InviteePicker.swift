@@ -206,6 +206,11 @@ struct InviteeManagerView: View {
     @State private var invitees: [Invitee]?
     @State private var failed = false
     @State private var adding = InviteeSelection()
+    /// The Invitee the confirmation names; kept while it closes so its words don't change.
+    @State private var confirming: Invitee?
+    @State private var isConfirmOpen = false
+    @State private var isChecking = false
+    @State private var isRemoving = false
 
     var body: some View {
         NavigationStack {
@@ -243,10 +248,31 @@ struct InviteeManagerView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(app.t("common.close")) { dismiss() } } }
         }
         .task { await load() }
+        .alert(
+            app.t("invitees.removeTitle", ["name": confirming.map(Self.name) ?? ""]),
+            isPresented: $isConfirmOpen,
+            presenting: confirming
+        ) { invitee in
+            Button(app.t("common.cancel"), role: .cancel) {}
+            Button(app.t(endsPoll(invitee) ? "invitees.removeAndEnd" : "invitees.removeConfirm"), role: .destructive) {
+                Task { await remove(invitee) }
+            }
+            .disabled(isChecking)
+        } message: { invitee in
+            Text(app.t(endsPoll(invitee) ? "invitees.removeEndsBody" : "invitees.removeBody"))
+        }
+    }
+
+    private static func name(_ invitee: Invitee) -> String {
+        invitee.person.username ?? invitee.person.email ?? ""
+    }
+
+    private func endsPoll(_ invitee: Invitee) -> Bool {
+        invitee.removalEndsPoll(in: invitees ?? [])
     }
 
     private func row(_ invitee: Invitee) -> some View {
-        let name = invitee.person.username ?? invitee.person.email ?? ""
+        let name = Self.name(invitee)
         let shown = invitee.person.username.map(ProfileName.handle) ?? name
         return HStack(spacing: 10) {
             if let username = invitee.person.username {
@@ -259,9 +285,10 @@ struct InviteeManagerView: View {
             if invitee.hasBallot {
                 Chip(text: app.t("invitees.voted"), tint: Tokens.statusOpen)
             } else {
-                Button { Task { await remove(invitee) } } label: { Image(systemName: "xmark") }
+                Button { Task { await askToRemove(invitee) } } label: { Image(systemName: "xmark") }
                     .buttonStyle(.vm(.ghost, size: .icon))
                     .foregroundStyle(Tokens.mutedForeground)
+                    .disabled(isRemoving)
                     .accessibilityLabel(app.t("invitees.remove", ["name": name]))
             }
         }
@@ -290,13 +317,32 @@ struct InviteeManagerView: View {
         }
     }
 
+    /// Keeps the list it has when the reload fails.
+    private func refresh() async {
+        if let list = try? await app.service.invitees(pollId: pollId) { invitees = list }
+    }
+
+    /// Who has voted may have changed since the list loaded, and it decides whether removing Ends the Poll.
+    private func askToRemove(_ invitee: Invitee) async {
+        confirming = invitee
+        isConfirmOpen = true
+        isChecking = true
+        await refresh()
+        isChecking = false
+    }
+
     private func remove(_ invitee: Invitee) async {
+        guard !isRemoving else { return }
+        isRemoving = true
+        defer { isRemoving = false }
         do {
             let list = try await app.service.removeInvitee(pollId: pollId, invitee.person)
             invitees = list
             onChanged(list)
         } catch {
             app.showToast(app.t.message(for: error, fallback: "invitees.removeFailed"), isError: true)
+            // e.g. they voted meanwhile: show the list as it is now
+            await refresh()
         }
     }
 }
