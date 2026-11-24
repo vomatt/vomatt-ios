@@ -165,7 +165,7 @@ struct ResultsView: View {
         }
         .background(Tokens.card)
         .clipShape(shape)
-        .overlay(shape.strokeBorder(isMine ? Tokens.foreground : Tokens.border, lineWidth: isMine ? 1.5 : 1))
+        .overlay(shape.strokeBorder(isMine ? Tokens.chosenLine : Tokens.border, lineWidth: isMine ? 1.5 : 1))
 
         return Group {
             if let onSelectOption, row.votes > 0 {

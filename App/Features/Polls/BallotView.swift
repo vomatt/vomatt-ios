@@ -114,7 +114,7 @@ struct BallotView: View {
             choose(option.id)
         } label: {
             HStack(spacing: 14) {
-                BallotMark(checked: isSelected)
+                BallotMark(chosen: isSelected ? option.id : nil, cast: isCast)
                 Text(option.text)
                     .font(.vm(16, .medium))
                     .foregroundStyle(isScheduled ? Tokens.mutedForeground : Tokens.foreground)
@@ -133,7 +133,7 @@ struct BallotView: View {
                     RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border)
                     if isSelected {
                         RoundedRectangle(cornerRadius: Radius.xl).fill(Tokens.highlightTint)
-                            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.primary, lineWidth: 1.5))
+                            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.chosenLine, lineWidth: 1.5))
                             .matchedGeometryEffect(id: "selection", in: selection)
                             .opacity(ballot.isPending ? 0.55 : 1)
                     }
@@ -377,31 +377,69 @@ nonisolated struct ShakeEffect: GeometryEffect {
     }
 }
 
-/// The 22pt radio circle (the web's `BallotMark`): a 2pt `input` ring at rest; once chosen, ink filled
-/// around a Volt check. The ink is `highlight-foreground`, not `primary`: in dark `primary` is off-white and
-/// the check would vanish into it.
+/// The 22pt radio mark (the web's `BallotMark`): a 2pt `input` ring at rest; once chosen, the red ballot stamp.
 struct BallotMark: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
-    let checked: Bool
+    /// The chosen option's id, which seeds its stamp's angle; nil draws the empty ring.
+    let chosen: String?
+    /// The chosen option is the cast vote. One already cast when the mark appears is drawn still.
+    var cast = false
+
+    init(chosen: String?, cast: Bool = false) {
+        self.chosen = chosen
+        self.cast = cast
+    }
+
+    /// The empty ring, for options nobody can pick yet (the creator's review).
+    init(checked: Bool) {
+        self.init(chosen: checked ? "" : nil)
+    }
 
     var body: some View {
         ZStack {
-            if checked {
-                // In dark the ink is the canvas, so a Volt edge keeps the disc's shape on a card or the tint
-                Circle().fill(Tokens.highlightForeground)
-                    .overlay(Circle().strokeBorder(Tokens.highlight, lineWidth: colorScheme == .dark ? 2 : 0))
-                CheckShape()
-                    .stroke(Tokens.highlight, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .frame(width: 12, height: 12)
-                    .transition(reduceMotion ? .opacity : .scale)
+            if let chosen {
+                PressedStamp(seed: chosen, pressed: !cast)
             } else {
                 Circle().fill(Tokens.card).overlay(Circle().strokeBorder(Tokens.input, lineWidth: 2))
             }
         }
         .frame(width: 22, height: 22)
-        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: checked)
         .accessibilityHidden(true)
+    }
+}
+
+/// The angle each option was last pressed at this session, so a cast stamp redrawn after Cancel or on another
+/// screen keeps it.
+private var pressedAngles: [String: Double] = [:]
+
+/// The ballot stamp at its own angle, picked once when it appears so it holds through the cast. A press lands at a
+/// random angle and springs in; a vote already cast is drawn still, at the angle it was pressed at this session or
+/// else one taken from `seed` (the web's `PressedStamp`).
+private struct PressedStamp: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let seed: String
+    @State private var angle: Double
+    @State private var landed: Bool
+
+    init(seed: String, pressed: Bool) {
+        self.seed = seed
+        _angle = State(initialValue: pressedAngles[seed] ?? StampAngle.seeded(seed))
+        _landed = State(initialValue: !pressed)
+    }
+
+    var body: some View {
+        ElectedStampShape()
+            .stroke(Tokens.elected, lineWidth: 22 * 9.5 / 130)
+            .rotationEffect(.degrees(angle))
+            .scaleEffect(landed || reduceMotion ? 1 : 1.4)
+            .opacity(landed ? 1 : 0)
+            .onAppear {
+                // Once per press: a stamp that scrolls back into view stays where it landed
+                guard !landed else { return }
+                angle = StampAngle.angle(Double.random(in: 0..<1))
+                pressedAngles[seed] = angle
+                // Critically damped, so it settles without overshoot
+                withAnimation(.interpolatingSpring(mass: 1, stiffness: 520, damping: 46)) { landed = true }
+            }
     }
 }
 
