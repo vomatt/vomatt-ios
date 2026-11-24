@@ -13,6 +13,8 @@ struct ExploreView: View {
     @State private var tag: String?
     @State private var topics: [Tag] = []
     @State private var list: CursorList<Poll>?
+    /// Accounts whose username matches the search; fetched with each first page, so both land together.
+    @State private var people: [UserSummary] = []
     /// A new query's first page is loading; the previous results stay, dimmed, until it arrives
     @State private var isSearching = false
     @State private var gridWidth: CGFloat = 0
@@ -35,7 +37,7 @@ struct ExploreView: View {
                     .pageColumn(Metrics.wideWidth)
                 } header: {
                     VStack(alignment: .leading, spacing: 12) {
-                        SearchField(placeholder: app.t("explore.searchPlaceholder"), text: $query)
+                        SearchField(placeholder: app.t(app.isSignedIn ? "explore.searchPlaceholderPeople" : "explore.searchPlaceholder"), text: $query)
                             .accessibilityLabel(app.t("explore.searchLabel"))
                         filters
                     }
@@ -47,7 +49,11 @@ struct ExploreView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.immediately)
-        .refreshable { await list?.reload() }
+        .refreshable {
+            async let found = findPeople(apiQuery.q)
+            await list?.reload()
+            people = await found
+        }
         .canvas()
         .navigationTitle(app.t("explore.title"))
         .navigationBarTitleDisplayMode(.inline)
@@ -57,16 +63,20 @@ struct ExploreView: View {
             if list != nil { try? await Task.sleep(for: .milliseconds(300)) }
             guard !Task.isCancelled else { return }
             let next = makeList()
+            async let found = findPeople(apiQuery.q)
             guard list != nil else {
                 list = next
                 await next.reload()
+                people = await found
                 return
             }
             isSearching = true
             defer { isSearching = false }
             await next.reload()
+            let nextPeople = await found
             guard !Task.isCancelled else { return }
             list = next
+            people = nextPeople
         }
     }
 
@@ -134,6 +144,7 @@ struct ExploreView: View {
     @ViewBuilder private var results: some View {
         if let list {
             Group {
+                if !people.isEmpty { peopleRow }
                 switch list.phase {
                 case .idle, .loading:
                     placeholder
@@ -156,6 +167,34 @@ struct ExploreView: View {
             // Before the first list exists is loading too
             placeholder
         }
+    }
+
+    /// Accounts whose username matches the search, each opening their profile.
+    private var peopleRow: some View {
+        HStack(spacing: 16) {
+            Text(app.t("explore.people")).font(.vm(13)).foregroundStyle(Tokens.mutedForeground).accessibilityHidden(true)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(people) { user in
+                        Button { app.push(.profile(user.username)) } label: {
+                            UserChip(username: user.username, avatarUrl: user.avatarUrl, link: false)
+                        }
+                        .buttonStyle(.vm(.outline, size: .sm, pill: true))
+                        .accessibilityLabel(ProfileName.handle(user.username))
+                        .accessibilityHint(app.t("ios.openProfile"))
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(app.t("explore.people"))
+        }
+    }
+
+    /// People whose username matches the search, or none when signed out: the API allows it only signed in.
+    /// Without them the polls still show; a failed lookup just lists nobody.
+    private func findPeople(_ q: String?) async -> [UserSummary] {
+        guard app.isSignedIn, let q else { return [] }
+        return (try? await app.service.searchUsers(q).items) ?? []
     }
 
     /// A topic with no search is what emptied the grid, so it points at the topic.
