@@ -22,11 +22,13 @@ public enum VoterVisibility: String, Codable, CaseIterable, Sendable {
     case signedIn = "signed-in"
 }
 
-/// The level shown to the viewer: on an Invite-only Poll "signed in" covers only the owner and Invitees.
+/// The level shown to the viewer: on an Invite-only Poll "signed in" covers only the owner and Invitees, and on a
+/// community account's Poll "owner" means its owners, admins and analysts.
 public enum VisibilityLevel: String, Sendable {
     case nobody, owner
     case signedIn = "signed-in"
     case invited
+    case community
 }
 
 public struct PollOption: Identifiable, Hashable, Sendable {
@@ -69,6 +71,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public var audience: Audience?
     public var creatorId: String
     public var creatorUsername: String
+    /// nil when the owner hid it or never set one.
+    public var creatorDisplayName: String?
     public var creatorAvatarUrl: String?
     /// The owner is a community account (a group's page, shown with a badge).
     public var creatorIsCommunity: Bool
@@ -108,7 +112,8 @@ public struct Poll: Identifiable, Hashable, Sendable {
     public init(
         id: String, title: String, description: String? = nil, active: Bool = true,
         votingActive: Bool = true, voterVisibility: VoterVisibility? = nil, audience: Audience? = nil,
-        creatorId: String, creatorUsername: String, creatorAvatarUrl: String? = nil, creatorIsCommunity: Bool = false,
+        creatorId: String, creatorUsername: String, creatorDisplayName: String? = nil, creatorAvatarUrl: String? = nil,
+        creatorIsCommunity: Bool = false,
         createdAt: Date, startTime: Date, endTime: Date?, deadline: Date? = nil,
         inviteeCount: Int? = nil, deletable: Bool? = nil,
         participantCount: Int? = nil, commentCount: Int? = nil, shareCount: Int? = nil, myOptionId: String? = nil,
@@ -129,6 +134,7 @@ public struct Poll: Identifiable, Hashable, Sendable {
         self.audience = audience
         self.creatorId = creatorId
         self.creatorUsername = creatorUsername
+        self.creatorDisplayName = creatorDisplayName
         self.creatorAvatarUrl = creatorAvatarUrl
         self.creatorIsCommunity = creatorIsCommunity
         self.createdAt = createdAt

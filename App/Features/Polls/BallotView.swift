@@ -47,7 +47,7 @@ struct BallotView: View {
 
     /// What the vote does: who sees the choice once the poll ends, or that it is counted unnamed.
     private func nameStatus(hidden: Bool) -> String {
-        hidden ? app.t("poll.anonymousHidden") : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)") } ?? ""
+        hidden ? app.t("poll.anonymousHidden") : poll.visibilityLevel.map { app.t("poll.visibility.\($0.rawValue)", ["name": poll.creatorName]) } ?? ""
     }
 
     var body: some View {

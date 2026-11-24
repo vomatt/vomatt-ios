@@ -46,11 +46,15 @@ struct CommunityTests {
     @Test func aPollSaysWhenItsOwnerIsACommunityAccount() async throws {
         let poll = #"{"id":"p1","title":"Q","creatorId":"c1","creatorUsername":"robotics","startTime":"2026-10-20T09:00:00+08:00","options":[]"#
         let transport = StubTransport { request, _ in
-            (200, envelope(poll + (request.path == "/api/votes/p1" ? #","creatorCommunity":true}"# : "}")), [:])
+            (200, envelope(poll + (request.path == "/api/votes/p1" ? #","creatorCommunity":true,"creatorDisplayName":"Robotics Club"}"# : "}")), [:])
         }
         let service = service(transport)
-        #expect(try await service.poll(id: "p1")?.creatorIsCommunity == true)
-        #expect(try await service.poll(id: "p2")?.creatorIsCommunity == false)
+        let community = try await service.poll(id: "p1")
+        #expect(community?.creatorIsCommunity == true)
+        #expect(community?.creatorName == "Robotics Club")
+        let personal = try await service.poll(id: "p2")
+        #expect(personal?.creatorIsCommunity == false)
+        #expect(personal?.creatorName == "robotics")
     }
 }
 

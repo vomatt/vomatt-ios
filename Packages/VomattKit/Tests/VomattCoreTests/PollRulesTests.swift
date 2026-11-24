@@ -114,6 +114,24 @@ struct PollHelperTests {
         #expect(poll(audience: .public, visibility: .signedIn).visibilityLevel == .signedIn)
     }
 
+    @Test func communityOwnerOnlyReadsAsCommunity() {
+        var community = poll(visibility: .owner)
+        community.creatorIsCommunity = true
+        #expect(community.visibilityLevel == .community)
+        community.voterVisibility = .nobody
+        #expect(community.visibilityLevel == .nobody)
+        #expect(poll(audience: .inviteOnly, visibility: .owner).visibilityLevel == .owner)
+    }
+
+    @Test func creatorNameFallsBackToUsername() {
+        var named = poll()
+        #expect(named.creatorName == "alice")
+        named.creatorDisplayName = ""
+        #expect(named.creatorName == "alice")
+        named.creatorDisplayName = "Alice Chen"
+        #expect(named.creatorName == "Alice Chen")
+    }
+
     @Test func otherViewersOfInviteOnlyAreInvitees() {
         #expect(poll(audience: .inviteOnly).isInvitee(viewerId: "someone"))
         #expect(!poll(audience: .inviteOnly).isInvitee(viewerId: "owner"))

@@ -339,7 +339,7 @@ struct PollAboutView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     rule("lock", app.t("pollDetail.ruleSealed"))
                     rule("person", app.t("pollDetail.ruleOneVote"))
-                    if let level = poll.visibilityLevel { rule("eye", app.t("poll.visibility.\(level.rawValue)")) }
+                    if let level = poll.visibilityLevel { rule("eye", app.t("poll.visibility.\(level.rawValue)", ["name": poll.creatorName])) }
                 }
                 .font(.vm(14))
                 .lineSpacing(3)
