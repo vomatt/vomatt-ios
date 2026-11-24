@@ -15,6 +15,7 @@ struct PollCardView: View {
     @State private var ballot: BallotModel
     @State private var votersOption: ResultRow?
     @State private var reporting = false
+    @State private var showingQR = false
     /// The status clock: it moves only when the Poll's status changes.
     @State private var now = Date.now
 
@@ -40,6 +41,7 @@ struct PollCardView: View {
         }
         .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
+        .sheet(isPresented: $showingQR) { PollQRSheet(poll: poll) }
     }
 
     private func card(status: PollStatus, sealedUntil: Date?, now: Date) -> some View {
@@ -94,6 +96,7 @@ struct PollCardView: View {
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            Button { showingQR = true } label: { Label(app.t("poll.showQr"), systemImage: "qrcode") }
             if app.userId != poll.creatorId {
                 ReportPollButton { reporting = true }
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))

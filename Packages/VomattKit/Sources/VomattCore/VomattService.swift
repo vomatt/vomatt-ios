@@ -376,11 +376,15 @@ public final class VomattService: Sendable {
         _ = try await call { try await client.deleteComment(path: .init(voteId: pollId, commentId: commentId)).ok }
     }
 
+    /// Where a Poll's link was shared: the system share sheet, or copied.
+    public enum ShareChannel: Sendable { case native, copyLink }
+
     /// Signed-in only (signed-out shares aren't counted: 401). Idempotent per user and Poll; returns the Poll's `shareCount`.
     @discardableResult
-    public func sharePoll(id: String) async throws -> Int {
+    public func sharePoll(id: String, channel: ShareChannel) async throws -> Int {
         try await call {
-            let data = try await client.share(path: .init(voteId: id), body: .json(.init(channel: .native))).ok.body.json.data
+            let body = Components.Schemas.ShareVoteRequest(channel: channel == .native ? .native : .copyLink)
+            let data = try await client.share(path: .init(voteId: id), body: .json(body)).ok.body.json.data
             return try Int(required(data?.shareCount, "share.shareCount"))
         }
     }

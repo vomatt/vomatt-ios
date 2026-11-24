@@ -484,10 +484,18 @@ struct ServiceTests {
     @Test func sharingAPollSendsTheNativeChannelAndReturnsTheCount() async throws {
         let transport = StubTransport { _, _ in (200, envelope(#"{"shareCount":18}"#), [:]) }
         let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
-        let count = try await service.sharePoll(id: "p1")
+        let count = try await service.sharePoll(id: "p1", channel: .native)
         let sent = try #require(transport.requests.first)
         #expect(count == 18 && sent.method == .post && sent.path == "/api/votes/p1/share")
         #expect(try JSONSerialization.jsonObject(with: Data((sent.body ?? "").utf8)) as? [String: String] == ["channel": "NATIVE"])
+    }
+
+    @Test func copyingAPollLinkSendsTheCopyLinkChannel() async throws {
+        let transport = StubTransport { _, _ in (200, envelope(#"{"shareCount":3}"#), [:]) }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(), language: { .en }, transport: transport)
+        try await service.sharePoll(id: "p1", channel: .copyLink)
+        let sent = try #require(transport.requests.first)
+        #expect(try JSONSerialization.jsonObject(with: Data((sent.body ?? "").utf8)) as? [String: String] == ["channel": "COPY_LINK"])
     }
 
     @Test func reportingACommentSendsTheReasonAndTrimmedNote() async throws {

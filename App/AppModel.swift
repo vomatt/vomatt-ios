@@ -294,9 +294,16 @@ final class AppModel {
 
     /// Tells the API a signed-in user opened the share sheet for a Poll (signed-out shares aren't counted).
     /// `ShareLink` reports no completion, so this counts the tap, not the delivery.
-    func recordShare(of poll: Poll) {
+    func recordShare(of poll: Poll, channel: VomattService.ShareChannel = .native) {
         guard isSignedIn else { return }
-        Task { try? await service.sharePoll(id: poll.id) }
+        Task { try? await service.sharePoll(id: poll.id, channel: channel) }
+    }
+
+    /// Copies a Poll's canonical link and says so; counted as a share like the share sheet's.
+    func copyLink(of poll: Poll) {
+        UIPasteboard.general.url = shareURL(for: poll)
+        showToast(t("poll.linkCopied"))
+        recordShare(of: poll, channel: .copyLink)
     }
 
     // MARK: Poll cache
