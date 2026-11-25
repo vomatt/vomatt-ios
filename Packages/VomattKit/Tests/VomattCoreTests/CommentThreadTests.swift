@@ -56,6 +56,19 @@ struct CommentThreadTests {
         #expect(ids(thread.comments) == ["pending-1", "saved", "c1"])
     }
 
+    @Test func anOlderCommentPostedHereStaysInItsPlace() {
+        var thread = CommentThread(comments: [comment("c2", minute: 2), comment("mine", minute: 1)])
+        thread.applyFirstPage(page([comment("c3", minute: 3), comment("c2", minute: 2)], "cursor"), keepLoaded: true,
+                              postedHere: ["mine"])
+        #expect(ids(thread.comments) == ["c3", "c2", "mine"])
+    }
+
+    @Test func aCompleteFirstPageDropsAnOlderCommentItNoLongerLists() {
+        var thread = CommentThread(comments: [comment("c3", minute: 3), comment("c2", minute: 2), comment("c1", minute: 1)])
+        thread.applyFirstPage(page([comment("c3", minute: 3), comment("c2", minute: 2)], nil), keepLoaded: true, postedHere: [])
+        #expect(ids(thread.comments) == ["c3", "c2"])
+    }
+
     @Test func aPostedCommentThePageListsComesFromThePage() {
         var thread = CommentThread(comments: [comment("saved", minute: 4), comment("c1")])
         thread.applyFirstPage(page([comment("saved", minute: 4), comment("c1")], nil), keepLoaded: true, postedHere: ["saved"])
@@ -66,10 +79,26 @@ struct CommentThreadTests {
         let r = (1...3).map { comment("r\($0)", minute: Double($0), parentId: "c1") }
         var thread = CommentThread(comments: [comment("c1", replies: Array(r.prefix(2)))],
                                    replies: ["c1": ReplyList(items: r, nextCursor: nil)])
-        let fresh = comment("c1", replies: Array(r.prefix(2)))
+        var fresh = comment("c1", replies: Array(r.prefix(2)))
+        fresh.repliesNextCursor = "after-r2"
         thread.applyFirstPage(page([fresh], nil), keepLoaded: true, postedHere: [])
         #expect(ids(thread.replies["c1"]?.items ?? []) == ["r1", "r2", "r3"])
         #expect(thread.replies["c1"]?.nextCursor == nil)
+    }
+
+    @Test func dropsAReplyThePreviewNoLongerLists() {
+        let r = (1...2).map { comment("r\($0)", minute: Double($0), parentId: "c1") }
+        var thread = CommentThread(comments: [comment("c1", replies: r)], replies: ["c1": ReplyList(items: r)])
+        thread.applyFirstPage(page([comment("c1", replies: [r[1]])], nil), keepLoaded: true, postedHere: [])
+        #expect(ids(thread.replies["c1"]?.items ?? []) == ["r2"])
+    }
+
+    @Test func dropsTheRepliesOfACommentNoLongerShown() {
+        let r1 = comment("r1", parentId: "c2")
+        var thread = CommentThread(comments: [comment("c1", minute: 1), comment("c2", minute: 2, replies: [r1])],
+                                   replies: ["c2": ReplyList(items: [r1])])
+        thread.applyFirstPage(page([comment("c3", minute: 3), comment("c1", minute: 1)], nil), keepLoaded: true, postedHere: [])
+        #expect(thread.replies["c2"] == nil)
     }
 
     @Test func keepsAReplyStillPostingUnderACommentTheRefreshBringsAgain() {

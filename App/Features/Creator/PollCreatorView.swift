@@ -122,8 +122,8 @@ struct PollCreatorView: View {
                     if value.count == old.count + 1, value.hasSuffix("\n") {
                         form.title = old
                         focus = .option(0)
-                    } else if value.count > pollTitleMax {
-                        form.title = String(value.prefix(pollTitleMax))
+                    } else if value.utf16.count > pollTitleMax {
+                        form.title = PollForm.prefix(value, utf16: pollTitleMax)
                     }
                     if errors[.title] != nil { errors = form.errors() }
                 }
@@ -134,7 +134,7 @@ struct PollCreatorView: View {
                     Text(app.t("pollCreator.questionNote"))
                 }
                 Spacer()
-                Text("\(form.title.count)/\(pollTitleMax)").font(.vmMono(12)).monospacedDigit()
+                Text("\(form.title.utf16.count)/\(pollTitleMax)").font(.vmMono(12)).monospacedDigit()
             }
             .font(.vm(12))
             .foregroundStyle(Tokens.mutedForeground)
@@ -154,15 +154,15 @@ struct PollCreatorView: View {
                     .fieldChrome(isFocused: focus == .description, isInvalid: errors[.description] != nil, minHeight: 80)
                     .accessibilityLabel(app.t("pollCreator.descriptionLabel"))
                     .onChange(of: form.description) { _, value in
-                        if value.count > pollDescriptionMax { form.description = String(value.prefix(pollDescriptionMax)) }
+                        if value.utf16.count > pollDescriptionMax { form.description = PollForm.prefix(value, utf16: pollDescriptionMax) }
                         if errors[.description] != nil { errors = form.errors() }
                     }
                 // A saved text past the limit says so; the counter shows near it
-                if errors[.description] != nil || form.description.count > pollDescriptionMax - 100 {
+                if errors[.description] != nil || form.description.utf16.count > pollDescriptionMax - 100 {
                     HStack(alignment: .top) {
                         fieldError(.description)
                         Spacer()
-                        Text("\(form.description.count)/\(pollDescriptionMax)").font(.vmMono(12)).monospacedDigit()
+                        Text("\(form.description.utf16.count)/\(pollDescriptionMax)").font(.vmMono(12)).monospacedDigit()
                             .foregroundStyle(Tokens.mutedForeground)
                     }
                 }

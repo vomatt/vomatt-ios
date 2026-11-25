@@ -44,31 +44,43 @@ public struct CommentThread: Equatable, Sendable {
     public mutating func applyFirstPage(_ page: CursorPage<Comment>, keepLoaded: Bool,
                                         postedHere: Set<String>) -> Bool {
         let listed = Set(page.items.map(\.id))
-        // Posted while the page loaded, so not on it; one the page has comes from the page
+        // Still posting, or saved here; one the page has comes from the page
         let isPostedOnly = { (c: Comment) in
             !listed.contains(c.id) && (c.id.hasPrefix(pendingCommentPrefix) || postedHere.contains(c.id))
         }
+        // A Comment posted while the page loaded is newer than all of it; an older one posted here is placed by time
+        let isNewerPostedOnly = { (c: Comment) in
+            isPostedOnly(c) && (c.id.hasPrefix(pendingCommentPrefix) || page.items.first.map { c.createdAt > $0.createdAt } ?? true)
+        }
         let keep = keepLoaded && comments.contains { listed.contains($0.id) }
-        // Older than the new first page, so pushed past it; one the page skips is gone (deleted elsewhere)
+        // Older than the new first page, so pushed past it; one the page skips is gone (deleted elsewhere), and
+        // so is any the page doesn't list when it is the whole list
         let isOlder = { (c: Comment) in
-            guard keep, let last = page.items.last else { return false }
-            return !listed.contains(c.id) && !isPostedOnly(c) && c.createdAt <= last.createdAt
+            guard keep, page.nextCursor != nil, let last = page.items.last else { return false }
+            return !listed.contains(c.id) && !isNewerPostedOnly(c) && c.createdAt <= last.createdAt
         }
         let previous = self
-        comments = previous.comments.filter(isPostedOnly) + page.items + previous.comments.filter(isOlder)
+        comments = previous.comments.filter(isNewerPostedOnly) + page.items + previous.comments.filter(isOlder)
 
         var preview = Self.previewLists(page.items)
         if keep {
-            // Replies loaded past the preview, and one still posting, stay
-            var merged = previous.replies
-            for (rootId, list) in preview {
-                if var loaded = merged[rootId] {
-                    loaded.items = mergeById(loaded.items, list.items).sorted { $0.createdAt < $1.createdAt }
-                    merged[rootId] = loaded
-                } else {
-                    merged[rootId] = list
+            // The preview replaces the oldest Replies it covers, so one deleted elsewhere goes; Replies loaded past
+            // it, and one still posting, stay. A list whose Comment is no longer shown goes with it.
+            let shown = Set(comments.map(\.id))
+            var merged: [String: ReplyList] = [:]
+            for (rootId, loaded) in previous.replies where shown.contains(rootId) {
+                guard listed.contains(rootId) else { merged[rootId] = loaded; continue }
+                let fresh = preview[rootId] ?? ReplyList()
+                let later = fresh.nextCursor == nil ? [] : loaded.items.filter { reply in
+                    fresh.items.last.map { reply.createdAt > $0.createdAt } ?? false
                 }
+                var list = loaded
+                list.items = mergeById(fresh.items + later, loaded.items.filter(isPostedOnly))
+                    .sorted { $0.createdAt < $1.createdAt }
+                list.nextCursor = later.isEmpty ? fresh.nextCursor : loaded.nextCursor
+                merged[rootId] = list
             }
+            for (rootId, list) in preview where merged[rootId] == nil { merged[rootId] = list }
             replies = merged
         } else {
             // Starting over still keeps a Reply that is posting, so it is shown once saved

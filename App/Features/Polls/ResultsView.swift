@@ -131,7 +131,7 @@ struct ResultsView: View {
         let isMine = row.id == myOptionId
         let bar = reduceMotion || !reveal ? nil : Self.barEase.delay(delay)
         let label = HStack(spacing: 12) {
-            if isWinner { ElectedStamp(label: app.t("poll.elected"), pressesIn: reveal) }
+            if isWinner { ElectedStamp(label: app.t("poll.elected"), pressesIn: reveal, delay: delay + Self.barDuration) }
             Text(row.text)
                 .font(.vm(16, isWinner ? .medium : .regular))
                 .multilineTextAlignment(.leading)
@@ -214,6 +214,8 @@ struct ElectedStamp: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let label: String
     var pressesIn = false
+    /// When its bar has filled.
+    var delay = 0.3
     @State private var pressed = false
 
     var body: some View {
@@ -224,7 +226,7 @@ struct ElectedStamp: View {
             .scaleEffect(still ? 1 : 1.6)
             .opacity(still ? 1 : 0)
             .onAppear {
-                withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3).delay(0.3)) { pressed = true }
+                withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.3).delay(delay)) { pressed = true }
             }
             .accessibilityLabel(label)
     }

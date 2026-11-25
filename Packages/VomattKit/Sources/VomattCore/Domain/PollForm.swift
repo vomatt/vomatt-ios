@@ -98,8 +98,8 @@ public struct PollForm: Codable, Hashable, Sendable {
         var errors: [Field: String] = [:]
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.isEmpty { errors[.title] = "pollCreator.errors.titleRequired" }
-        else if title.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
-        if description.count > pollDescriptionMax { errors[.description] = "pollCreator.errors.descriptionTooLong" }
+        else if title.utf16.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
+        if description.utf16.count > pollDescriptionMax { errors[.description] = "pollCreator.errors.descriptionTooLong" }
         // Two options with the same text split one opinion into two counts
         var seen = Set<String>()
         for (index, option) in options.enumerated() {
@@ -158,6 +158,18 @@ public struct PollForm: Codable, Hashable, Sendable {
 
     public mutating func apply(_ preset: EndPreset, now: Date = .now) {
         endTime = (startTime ?? now).addingTimeInterval(preset.duration)
+    }
+
+    /// The longest start of `text` within `max` UTF-16 units, the length the API and the web count, in whole characters.
+    public static func prefix(_ text: String, utf16 max: Int) -> String {
+        var used = 0
+        var end = text.startIndex
+        for index in text.indices {
+            used += text[index].utf16.count
+            if used > max { break }
+            end = text.index(after: index)
+        }
+        return String(text[..<end])
     }
 
     /// The question or an option as one line: pasted line breaks become spaces.

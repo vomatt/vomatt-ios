@@ -393,6 +393,17 @@ struct PollFormTests {
         #expect(form.errors(now: now)[.description] == nil)
     }
 
+    @Test func countsContextAsTheAPIDoesInUTF16Units() {
+        let form = PollForm(title: "Q", description: String(repeating: "👍", count: 501), options: ["A", "B"], endTime: hours(5))
+        #expect(form.errors(now: now)[.description] == "pollCreator.errors.descriptionTooLong")
+    }
+
+    @Test func cutsTextToTheLimitInWholeCharacters() {
+        #expect(PollForm.prefix("ab👍c", utf16: 3) == "ab")
+        #expect(PollForm.prefix("ab👍c", utf16: 4) == "ab👍")
+        #expect(PollForm.prefix("abc", utf16: 10) == "abc")
+    }
+
     @Test func rejectsAnEndBeforeTheStart() {
         let form = PollForm(title: "Q", options: ["A", "B"], startTime: hours(48), endTime: hours(24))
         #expect(form.errors(now: now)[.endTime] == "pollCreator.errors.endBeforeStart")

@@ -104,7 +104,8 @@ final class CommentsModel {
         replies = next.replies
         nextCursor = next.nextCursor
         hasLaterPages = next.hasLaterPages
-        for comment in page.items where previewCounts[comment.id] == nil {
+        // The previews were rebuilt from the page, so their counts follow it
+        for comment in page.items {
             previewCounts[comment.id] = comment.replies.count
         }
         // The dock can't answer a thread that is no longer listed

@@ -10,8 +10,9 @@ that doesn't send email, so the code can be read from Redis. Without `E2E_OTP_DI
 scripts/e2e-api.sh up
 ```
 
-It builds `../vomatt-api` (`API_DIR`), and runs it on :8080 with its own Postgres and Redis on a private
-network, so your usual `docker compose` data is left alone. Flyway creates the schema, email is off, and
+It builds vomatt-api's `API_REF` (default `origin/main`, fetched first) from `../vomatt-api` (`API_DIR`), so
+uncommitted work there is left out (set `API_REF=HEAD` for a local commit). It runs it under the `dev` profile
+on :8080 with its own Postgres and Redis on a private network, so your usual `docker compose` data is left alone. Flyway creates the schema, email is off, and
 `JWT_EXPIRATION_SECONDS=120` makes the refresh test meaningful (the app refreshes 60s before expiry).
 
 ## 2. Hand codes to the tests

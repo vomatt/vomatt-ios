@@ -329,6 +329,8 @@ struct InviteeManagerView: View {
         isChecking = true
         await refresh()
         isChecking = false
+        // Voted or gone meanwhile: the API would refuse, and the row now shows why
+        if invitees?.first(where: { $0.id == invitee.id })?.hasBallot != false { isConfirmOpen = false }
     }
 
     private func remove(_ invitee: Invitee) async {

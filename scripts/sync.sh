@@ -149,7 +149,7 @@ check() {
 	generated="$(mktemp -d)"
 	web_file src/styles/global.css > "$css"
 	python3 "$ROOT/scripts/tokens.py" "$css" "$generated/Colors.xcassets" "$generated/Tokens.generated.swift" >/dev/null
-	diff -rq "$generated/Colors.xcassets" "$COLORS" >/dev/null && cmp -s "$generated/Tokens.generated.swift" "$TOKENS_SWIFT" \
+	diff -rq -x .DS_Store "$generated/Colors.xcassets" "$COLORS" >/dev/null && cmp -s "$generated/Tokens.generated.swift" "$TOKENS_SWIFT" \
 		|| { echo "color tokens differ from the web"; status=1; }
 	rm -rf "$css" "$generated"
 	local ios_avatars

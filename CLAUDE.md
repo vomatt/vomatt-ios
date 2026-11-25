@@ -36,7 +36,7 @@ Command-line `xcodebuild` needs `-skipPackagePluginValidation` (the Makefile pas
 - **Strings come from the web.** `App/Resources/Locales/en.json`/`zh.json` are copies: change them
   in vomatt-web and run `scripts/sync.sh locales`. iOS-only keys go in `ios.en.json`/`ios.zh.json`.
 - **Colors come from the web.** Use `Tokens.*` (generated from `global.css` by `scripts/sync.sh
-  tokens`); no raw colors, no new one-off tokens. Volt is only for the viewer's own choice and unread.
+  tokens`); no raw colors (but a QR code is black on white in both themes, as scanners need), no new one-off tokens. Volt is only for the viewer's own choice and unread.
 - **Building blocks**: `VMButtonStyle` (`.vm(...)`), `fieldChrome`, `VMTextField`, `Chip`,
   `StatusChip`, `EmptyState`, `UnreadDot`, `LineTabs`, `PollRow`, `.card()`. Don't restyle at the
   call site; add a variant.
