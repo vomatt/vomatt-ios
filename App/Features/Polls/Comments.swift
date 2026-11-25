@@ -22,13 +22,8 @@ final class CommentsModel {
         let userId: String?
     }
 
-    enum Status { case loading, ready, error }
-
-    struct ReplyList {
-        var items: [Comment] = []
-        var nextCursor: String?
-        var status: Status = .ready
-    }
+    typealias Status = LoadStatus
+    typealias ReplyList = VomattCore.ReplyList
 
     let pollId: String
     private(set) var comments: [Comment] = []
@@ -46,6 +41,13 @@ final class CommentsModel {
     private var previewCounts: [String: Int] = [:]
     private var nextCursor: String?
     var hasMore: Bool { nextCursor != nil }
+    /// Whether pages after the first are listed; a refresh keeps them and the cursor after them.
+    private var hasLaterPages = false
+    /// Saved Comments and Replies posted from here; a first page that doesn't list them yet keeps them.
+    private var postedIds: Set<String> = []
+    /// Bumped when the list starts over from its first page, so a later page asked for before then is dropped.
+    private var firstPageLoads = 0
+    private var hasLoaded = false
 
     init(pollId: String, initialTotal: Int?) {
         self.pollId = pollId
@@ -53,27 +55,78 @@ final class CommentsModel {
     }
 
     func reload(_ service: VomattService) async {
+        firstPageLoads += 1
+        let load = firstPageLoads
         status = .loading
         replyTarget = nil
         do {
             let page = try await service.comments(pollId: pollId)
+            guard load == firstPageLoads else { return }
             comments = page.items
             replies = [:]
             folded = []
             previewCounts = [:]
             seedReplies(page.items)
             nextCursor = page.nextCursor
+            hasLaterPages = false
+            hasLoaded = true
             status = .ready
         } catch {
+            guard load == firstPageLoads else { return }
             status = .error
         }
+    }
+
+    /// Pulling down to refresh: loads the first page again in place, keeping the Comments loaded below it,
+    /// the Replies loaded and posting, and the open composer. `total` is the Poll's new `commentCount`.
+    /// A failure keeps the list as it is and returns false.
+    func refresh(_ service: VomattService, total newTotal: Int?) async -> Bool {
+        // Comments still posting aren't in the Poll's count yet
+        total = shiftCount(newTotal, by: thread.postingCount)
+        firstPageLoads += 1
+        let load = firstPageLoads
+        let page: CursorPage<Comment>
+        do {
+            page = try await service.comments(pollId: pollId)
+        } catch {
+            guard load == firstPageLoads else { return true }
+            // A load this one replaced may have left the list loading
+            status = hasLoaded ? .ready : .error
+            return false
+        }
+        guard load == firstPageLoads else { return true }
+        var next = thread
+        if !next.applyFirstPage(page, keepLoaded: true, postedHere: postedIds) {
+            folded = []
+            previewCounts = [:]
+        }
+        comments = next.comments
+        replies = next.replies
+        nextCursor = next.nextCursor
+        hasLaterPages = next.hasLaterPages
+        // The previews were rebuilt from the page, so their counts follow it
+        for comment in page.items {
+            previewCounts[comment.id] = comment.replies.count
+        }
+        // The dock can't answer a thread that is no longer listed
+        if let target = replyTarget, !comments.contains(where: { $0.id == target.rootId }) { replyTarget = nil }
+        hasLoaded = true
+        status = .ready
+        return true
+    }
+
+    private var thread: CommentThread {
+        CommentThread(comments: comments, replies: replies, nextCursor: nextCursor, hasLaterPages: hasLaterPages)
     }
 
     func loadMore(_ service: VomattService) async {
         guard let cursor = nextCursor, !isLoadingMore else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
-        guard let page = try? await service.comments(pollId: pollId, cursor: cursor) else { return }
+        let startedAt = firstPageLoads
+        guard let page = try? await service.comments(pollId: pollId, cursor: cursor),
+              startedAt == firstPageLoads else { return }
+        hasLaterPages = true
         comments = mergeById(comments, page.items)
         seedReplies(page.items)
         nextCursor = page.nextCursor
@@ -133,7 +186,7 @@ final class CommentsModel {
     /// Shows the Comment at once as pending, then swaps in the saved one.
     /// The pending one shows the viewer as they will be once it is saved, so nothing changes then.
     func add(_ text: String, author: PendingAuthor, rootId: String?, _ service: VomattService) async throws {
-        let tempId = "pending-\(UUID().uuidString)"
+        let tempId = pendingCommentPrefix + UUID().uuidString
         let pending = Comment(id: tempId, userId: author.userId, author: author.name, authorAvatarUrl: author.avatarUrl,
                               text: text, createdAt: .now, parentId: rootId)
         // Replies read oldest first, top-level Comments newest first
@@ -154,6 +207,7 @@ final class CommentsModel {
                 comments.removeAll { $0.id == saved.id }
             }
             replace(tempId) { _ in saved }
+            postedIds.insert(saved.id)
             posted += 1
         } catch {
             if let rootId {

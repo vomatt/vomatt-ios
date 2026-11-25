@@ -104,9 +104,11 @@ struct PollDetailView: View {
             now = .now
             phase = .ready(poll)
             app.didUpdate(poll)
-            if reloadComments || commentsSession != app.sessionGeneration {
+            if commentsSession != app.sessionGeneration {
                 commentsSession = app.sessionGeneration
                 await comments.reload(app.service)
+            } else if reloadComments, !(await comments.refresh(app.service, total: poll.commentCount)) {
+                app.showToast(app.t("comments.loadFailed"), isError: true)
             }
             if let link = replyTo {
                 replyTo = nil
@@ -149,7 +151,9 @@ private struct PollDetailCard: View {
 
     @State private var poll: Poll
     @State private var ballot: BallotModel
-    @State private var votersOption: ResultRow?
+    @State private var votersOption: VotersSelection?
+    /// Results fill in only when the end or reveal happens on screen.
+    @State private var revealedOnMount: Bool
 
     init(poll: Poll, now: Date, commentCount: Int?, onOpenDiscussion: @escaping () -> Void) {
         initialPoll = poll
@@ -158,6 +162,7 @@ private struct PollDetailCard: View {
         self.onOpenDiscussion = onOpenDiscussion
         _poll = State(initialValue: poll)
         _ballot = State(initialValue: BallotModel(poll: poll))
+        _revealedOnMount = State(initialValue: poll.isRevealed(at: now))
     }
 
     var body: some View {
@@ -169,7 +174,9 @@ private struct PollDetailCard: View {
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
             if let fresh, fresh != poll { apply(fresh) }
         }
-        .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
+        .sheet(item: $votersOption) { selection in
+            VotersSheet(pollId: poll.id, selection: selection, myAnonymousOptionId: ballot.anonymousOptionId)
+        }
     }
 
     private func card(status: PollStatus) -> some View {
@@ -197,7 +204,8 @@ private struct PollDetailCard: View {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
                             sealedUntil: sealedUntil, onSealed: refetch,
-                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil,
+                            reveal: !revealedOnMount
                         )
                     } else {
                         BallotView(
@@ -240,8 +248,8 @@ private struct PollDetailCard: View {
     }
 }
 
-/// The poll page's ••• menu. The owner's controls (the web's `OwnerActions` menu) with Share, destructive
-/// ones last; for anyone else Share, Follow, Report and Block.
+/// The poll page's ••• menu. The owner's controls (the web's `OwnerActions` menu) with Share and Show QR code,
+/// destructive ones last; for anyone else Share, Show QR code, Follow, Report and Block.
 private struct PollMenu: View {
     @Environment(AppModel.self) private var app
     let poll: Poll
@@ -250,6 +258,7 @@ private struct PollMenu: View {
 
     @State private var pending: OwnerAction?
     @State private var reporting = false
+    @State private var showingQR = false
 
     var body: some View {
         let isOwner = app.userId == poll.creatorId
@@ -272,6 +281,7 @@ private struct PollMenu: View {
                 Label(app.t("poll.share"), systemImage: "square.and.arrow.up")
             }
             .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            Button { showingQR = true } label: { Label(app.t("poll.showQr"), systemImage: "qrcode") }
             if isOwner {
                 if actions.canDelete {
                     Divider()
@@ -289,6 +299,7 @@ private struct PollMenu: View {
         }
         .accessibilityLabel(app.t("poll.moreActions", ["title": poll.title]))
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
+        .sheet(isPresented: $showingQR) { PollQRSheet(poll: poll) }
         .ownerActionFlows($pending, poll: poll, onChanged: onChanged, onInviteeCount: { count in
             var changed = poll
             changed.inviteeCount = count
@@ -334,7 +345,7 @@ struct PollAboutView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     rule("lock", app.t("pollDetail.ruleSealed"))
                     rule("person", app.t("pollDetail.ruleOneVote"))
-                    if let level = poll.visibilityLevel { rule("eye", app.t("poll.visibility.\(level.rawValue)")) }
+                    if let level = poll.visibilityLevel { rule("eye", app.t("poll.visibility.\(level.rawValue)", ["name": poll.creatorName])) }
                 }
                 .font(.vm(14))
                 .lineSpacing(3)

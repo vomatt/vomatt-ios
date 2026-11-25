@@ -114,6 +114,24 @@ struct PollHelperTests {
         #expect(poll(audience: .public, visibility: .signedIn).visibilityLevel == .signedIn)
     }
 
+    @Test func communityOwnerOnlyReadsAsCommunity() {
+        var community = poll(visibility: .owner)
+        community.creatorIsCommunity = true
+        #expect(community.visibilityLevel == .community)
+        community.voterVisibility = .nobody
+        #expect(community.visibilityLevel == .nobody)
+        #expect(poll(audience: .inviteOnly, visibility: .owner).visibilityLevel == .owner)
+    }
+
+    @Test func creatorNameFallsBackToUsername() {
+        var named = poll()
+        #expect(named.creatorName == "alice")
+        named.creatorDisplayName = ""
+        #expect(named.creatorName == "alice")
+        named.creatorDisplayName = "Alice Chen"
+        #expect(named.creatorName == "Alice Chen")
+    }
+
     @Test func otherViewersOfInviteOnlyAreInvitees() {
         #expect(poll(audience: .inviteOnly).isInvitee(viewerId: "someone"))
         #expect(!poll(audience: .inviteOnly).isInvitee(viewerId: "owner"))
@@ -358,6 +376,34 @@ struct PollFormTests {
         #expect(form.input(now: now).title == "Market night Friday or Saturday?")
     }
 
+    @Test func publishesAnOptionWithAPastedLineBreakAsOneLine() {
+        let form = PollForm(title: "Q", options: ["Keep Lisbon\n (flights booked) ", "B"], endTime: hours(5))
+        #expect(form.input(now: now).options == ["Keep Lisbon (flights booked)", "B"])
+    }
+
+    @Test func countsOptionsThatDifferOnlyByALineBreakAsTheSame() {
+        let form = PollForm(title: "Q", options: ["Keep\nLisbon", "Keep Lisbon"], endTime: hours(5))
+        #expect(form.errors(now: now)[.option(1)] == "pollCreator.errors.optionDuplicate")
+    }
+
+    @Test func rejectsContextPast1000Characters() {
+        var form = PollForm(title: "Q", description: String(repeating: "a", count: 1001), options: ["A", "B"], endTime: hours(5))
+        #expect(form.errors(now: now)[.description] == "pollCreator.errors.descriptionTooLong")
+        form.description = String(repeating: "a", count: 1000)
+        #expect(form.errors(now: now)[.description] == nil)
+    }
+
+    @Test func countsContextAsTheAPIDoesInUTF16Units() {
+        let form = PollForm(title: "Q", description: String(repeating: "👍", count: 501), options: ["A", "B"], endTime: hours(5))
+        #expect(form.errors(now: now)[.description] == "pollCreator.errors.descriptionTooLong")
+    }
+
+    @Test func cutsTextToTheLimitInWholeCharacters() {
+        #expect(PollForm.prefix("ab👍c", utf16: 3) == "ab")
+        #expect(PollForm.prefix("ab👍c", utf16: 4) == "ab👍")
+        #expect(PollForm.prefix("abc", utf16: 10) == "abc")
+    }
+
     @Test func rejectsAnEndBeforeTheStart() {
         let form = PollForm(title: "Q", options: ["A", "B"], startTime: hours(48), endTime: hours(24))
         #expect(form.errors(now: now)[.endTime] == "pollCreator.errors.endBeforeStart")
@@ -449,5 +495,27 @@ struct BlockListTests {
         #expect(!list.contains(nil))
         #expect(list.unblock("alice") == ["bob"])
         #expect(!list.contains("alice"))
+    }
+}
+
+@Suite("Invitees")
+struct InviteeTests {
+    private func invitee(_ username: String, voted: Bool) -> Invitee {
+        Invitee(person: Person(userId: "u-\(username)", username: username), hasBallot: voted)
+    }
+
+    @Test func removingTheLastOneWhoHasNotVotedEndsThePoll() {
+        let list = [invitee("ana", voted: true), invitee("ben", voted: false)]
+        #expect(list[1].removalEndsPoll(in: list))
+    }
+
+    @Test func removingWhileSomeoneElseHasNotVotedKeepsItOpen() {
+        let list = [invitee("ana", voted: true), invitee("ben", voted: false), invitee("cy", voted: false)]
+        #expect(!list[1].removalEndsPoll(in: list))
+    }
+
+    @Test func removingTheOnlyInviteeLeavesNobodyToEndIt() {
+        let list = [invitee("ana", voted: false)]
+        #expect(!list[0].removalEndsPoll(in: list))
     }
 }

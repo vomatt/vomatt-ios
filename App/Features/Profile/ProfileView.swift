@@ -439,6 +439,8 @@ struct StatsGrid: View {
         let value: String
         /// Only the owner sees it: marked with the lock.
         var onlyYou = false
+        /// Opens the list this count counts; the whole cell is the target.
+        var onSelect: (() -> Void)?
     }
 
     let stats: [Stat]
@@ -447,24 +449,33 @@ struct StatsGrid: View {
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: columns), spacing: 1) {
             ForEach(Array(stats.enumerated()), id: \.offset) { _, stat in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(stat.value).font(.vmMono(28)).tracking(-0.5).foregroundStyle(Tokens.foreground)
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                    HStack(spacing: 4) {
-                        Text(stat.label)
-                        if stat.onlyYou { OnlyYouMarker() }
-                    }
-                    .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+                if let onSelect = stat.onSelect {
+                    Button(action: onSelect) { cell(stat) }.buttonStyle(.plain)
+                } else {
+                    cell(stat)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(Tokens.card)
-                .accessibilityElement(children: .combine)
             }
         }
         .background(Tokens.border)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
         .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Tokens.border))
+    }
+
+    private func cell(_ stat: Stat) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(stat.value).font(.vmMono(28)).tracking(-0.5).foregroundStyle(Tokens.foreground)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            HStack(spacing: 4) {
+                Text(stat.label)
+                if stat.onlyYou { OnlyYouMarker() }
+            }
+            .font(.vmMeta).foregroundStyle(Tokens.mutedForeground)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Tokens.card)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 

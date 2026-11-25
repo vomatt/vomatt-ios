@@ -23,9 +23,12 @@ final class BallotModel {
     var savedOptionId: String? { isPending ? optionBeforeAction : myOptionId }
     /// After a saved cast: whether it replaced the viewer's earlier Ballot.
     private(set) var replacedBallot = false
+    /// A Pro poll never names a Ballot, so a first vote sends no anonymity.
+    private var pro: Bool
 
     init(poll: Poll) {
         pollId = poll.id
+        pro = poll.pro
         myOptionId = poll.myOptionId
         selected = poll.myOptionId
         anonymity = BallotAnonymity(ballot: poll.myBallotAnonymous)
@@ -38,12 +41,16 @@ final class BallotModel {
         anonymity.shown(hasBallot: myOptionId != nil || pendingAction == .retract, accountDefault: accountDefault)
     }
 
+    /// The saved option when the Ballot is left out of the voter list, which counts it among the unlisted.
+    var anonymousOptionId: String? { anonymity.ballot == true ? savedOptionId : nil }
+
     /// A refetched Poll carries fresh counts and the viewer's Ballot.
     func sync(_ poll: Poll) {
         guard !isPending else { return }
         // Keep an option the voter selected but hasn't submitted unless the Ballot itself changed
         let ballotChanged = poll.myOptionId != myOptionId
         pollId = poll.id
+        pro = poll.pro
         myOptionId = poll.myOptionId
         if selected == nil || (ballotChanged && poll.myOptionId != nil) { selected = poll.myOptionId }
         anonymity.ballot = poll.myBallotAnonymous
@@ -55,7 +62,7 @@ final class BallotModel {
         if myOptionId != nil {
             return await send(.update, optionId, anonymous: nil, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
         }
-        let chosen = anonymity.forFirstVote(accountDefault: app.me?.anonymousBallotByDefault)
+        let chosen = pro ? nil : anonymity.forFirstVote(accountDefault: app.me?.anonymousBallotByDefault)
         let outcome = await send(.vote, optionId, anonymous: chosen, app: app, onPollChanged: onPollChanged, onPollEnded: onPollEnded)
         if outcome == .saved { anonymity.voted(anonymity.ballot) }
         return outcome
@@ -130,9 +137,11 @@ final class BallotModel {
                 app.signIn()
                 return .failed
             }
-            // Still busy after the service's retry: common.conflict shows common.busy
-            let busyMessage = apiError?.isBusy == true ? app.t.message(for: error, fallback: failure) : nil
-            app.showToast(busyMessage ?? app.t(apiError?.isRateLimited == true ? "poll.tooManyVotes" : failure), isError: true)
+            // The API's reason only where it is written for voters (a Pro poll's phone number; still busy after
+            // the service's retry shows common.busy); its other codes read as developer wording
+            let forVoters = apiError?.isBusy == true || apiError?.errorCode?.hasPrefix("vote.ballot.") == true
+            let apiMessage = forVoters ? app.t.message(for: error, fallback: failure) : nil
+            app.showToast(apiMessage ?? app.t(apiError?.isRateLimited == true ? "poll.tooManyVotes" : failure), isError: true)
             return .failed
         }
     }

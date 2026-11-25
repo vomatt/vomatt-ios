@@ -26,6 +26,7 @@ extension Poll {
             audience: dto.audience.map(Audience.init),
             creatorId: try required(dto.creatorId, "VoteResponse.creatorId"),
             creatorUsername: try required(dto.creatorUsername, "VoteResponse.creatorUsername"),
+            creatorDisplayName: dto.creatorDisplayName,
             creatorAvatarUrl: dto.creatorAvatarUrl,
             creatorIsCommunity: dto.creatorCommunity ?? false,
             createdAt: dto.createdAt ?? dto.startTime ?? .now,

@@ -26,7 +26,8 @@ struct AppConfig {
         )
     }()
 
-    func pollURL(_ id: String) -> URL { siteURL.appending(path: "poll/\(id)") }
+    /// A Poll's web link, by the short id the web writes.
+    func pollURL(_ id: String) -> URL { siteURL.appending(path: "poll/\(PollID.shortId(id) ?? id)") }
     func profileURL(_ username: String) -> URL { siteURL.appending(path: username) }
 }
 
@@ -250,7 +251,7 @@ final class AppModel {
         paths[selectedTab, default: NavigationPath()].append(route)
     }
 
-    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>`, `https://<site>/<username>` and a community
+    /// `vomatt://poll/<id>`, `https://<site>/poll/<id>` (by UUID or short id), `https://<site>/<username>` and a community
     /// invitation's `…/notifications/community-invitations/<id>` (its email's link). The page opens on
     /// the tab the person is on, over whatever they had there, once anything presented has closed. A link
     /// the app has no page for leaves everything as it is.
@@ -268,7 +269,7 @@ final class AppModel {
             paths[.notifications] = NavigationPath()
         } else if first == "poll", parts.count > 1 {
             dismissModals()
-            push(.poll(parts[1]))
+            push(.poll(PollID.fromLink(parts[1]) ?? parts[1]))
         } else if parts.count == 1, !Username.reserved.contains(first) {
             dismissModals()
             push(.profile(first))
@@ -293,9 +294,16 @@ final class AppModel {
 
     /// Tells the API a signed-in user opened the share sheet for a Poll (signed-out shares aren't counted).
     /// `ShareLink` reports no completion, so this counts the tap, not the delivery.
-    func recordShare(of poll: Poll) {
+    func recordShare(of poll: Poll, channel: VomattService.ShareChannel = .native) {
         guard isSignedIn else { return }
-        Task { try? await service.sharePoll(id: poll.id) }
+        Task { try? await service.sharePoll(id: poll.id, channel: channel) }
+    }
+
+    /// Copies a Poll's canonical link and says so; counted as a share like the share sheet's.
+    func copyLink(of poll: Poll) {
+        UIPasteboard.general.url = shareURL(for: poll)
+        showToast(t("poll.linkCopied"))
+        recordShare(of: poll, channel: .copyLink)
     }
 
     // MARK: Poll cache

@@ -59,9 +59,14 @@ extension Poll {
         guard let voterVisibility else { return nil }
         switch voterVisibility {
         case .nobody: return .nobody
-        case .owner: return .owner
+        case .owner: return creatorIsCommunity ? .community : .owner
         case .signedIn: return audience == .inviteOnly ? .invited : .signedIn
         }
+    }
+
+    /// The owner as `poll.visibility.community` names it: the display name, else the username.
+    public var creatorName: String {
+        creatorDisplayName.flatMap { $0.isEmpty ? nil : $0 } ?? creatorUsername
     }
 
     /// Only the owner and its Invitees can see an Invite-only Poll, so any other viewer is an Invitee.

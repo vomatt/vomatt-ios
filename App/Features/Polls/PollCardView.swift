@@ -13,16 +13,20 @@ struct PollCardView: View {
 
     @State private var poll: Poll
     @State private var ballot: BallotModel
-    @State private var votersOption: ResultRow?
+    @State private var votersOption: VotersSelection?
     @State private var reporting = false
+    @State private var showingQR = false
     /// The status clock: it moves only when the Poll's status changes.
     @State private var now = Date.now
+    /// Results fill in only when the end or reveal happens on screen; a feed of ended Polls stays still.
+    @State private var revealedOnMount: Bool
 
     init(poll: Poll, onDeleted: (() -> Void)? = nil) {
         initialPoll = poll
         self.onDeleted = onDeleted
         _poll = State(initialValue: poll)
         _ballot = State(initialValue: BallotModel(poll: poll))
+        _revealedOnMount = State(initialValue: poll.isRevealed())
     }
 
     var body: some View {
@@ -38,8 +42,11 @@ struct PollCardView: View {
         .onChange(of: app.latestPolls[poll.id]) { _, fresh in
             if let fresh, fresh != poll { apply(fresh) }
         }
-        .sheet(item: $votersOption) { option in VotersSheet(pollId: poll.id, option: option) }
+        .sheet(item: $votersOption) { selection in
+            VotersSheet(pollId: poll.id, selection: selection, myAnonymousOptionId: ballot.anonymousOptionId)
+        }
         .sheet(isPresented: $reporting) { ReportSheet(pollId: poll.id) }
+        .sheet(isPresented: $showingQR) { PollQRSheet(poll: poll) }
     }
 
     private func card(status: PollStatus, sealedUntil: Date?, now: Date) -> some View {
@@ -52,7 +59,8 @@ struct PollCardView: View {
                         ResultsView(
                             poll: poll, myOptionId: ballot.myOptionId, turnout: ballot.turnout,
                             sealedUntil: sealedUntil, onSealed: refetch,
-                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil
+                            onSelectOption: sealedUntil == nil && poll.canSeeVoters(viewerId: app.userId) ? { votersOption = $0 } : nil,
+                            reveal: !revealedOnMount
                         )
                     } else {
                         BallotView(
@@ -94,6 +102,7 @@ struct PollCardView: View {
         .contextMenu {
             ShareLink(item: app.shareURL(for: poll)) { Label(app.t("poll.share"), systemImage: "square.and.arrow.up") }
                 .simultaneousGesture(TapGesture().onEnded { app.recordShare(of: poll) })
+            Button { showingQR = true } label: { Label(app.t("poll.showQr"), systemImage: "qrcode") }
             if app.userId != poll.creatorId {
                 ReportPollButton { reporting = true }
                 FollowButton(user: UserSummary(id: poll.creatorId, username: poll.creatorUsername, avatarUrl: poll.creatorAvatarUrl))

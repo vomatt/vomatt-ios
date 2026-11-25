@@ -122,8 +122,8 @@ struct PollCreatorView: View {
                     if value.count == old.count + 1, value.hasSuffix("\n") {
                         form.title = old
                         focus = .option(0)
-                    } else if value.count > pollTitleMax {
-                        form.title = String(value.prefix(pollTitleMax))
+                    } else if value.utf16.count > pollTitleMax {
+                        form.title = PollForm.prefix(value, utf16: pollTitleMax)
                     }
                     if errors[.title] != nil { errors = form.errors() }
                 }
@@ -134,7 +134,7 @@ struct PollCreatorView: View {
                     Text(app.t("pollCreator.questionNote"))
                 }
                 Spacer()
-                Text("\(form.title.count)/\(pollTitleMax)").font(.vmMono(12)).monospacedDigit()
+                Text("\(form.title.utf16.count)/\(pollTitleMax)").font(.vmMono(12)).monospacedDigit()
             }
             .font(.vm(12))
             .foregroundStyle(Tokens.mutedForeground)
@@ -151,11 +151,21 @@ struct PollCreatorView: View {
                     .lineLimit(3...12)
                     .focused($focus, equals: .description)
                     .padding(.vertical, 12)
-                    .fieldChrome(isFocused: focus == .description, minHeight: 80)
+                    .fieldChrome(isFocused: focus == .description, isInvalid: errors[.description] != nil, minHeight: 80)
                     .accessibilityLabel(app.t("pollCreator.descriptionLabel"))
                     .onChange(of: form.description) { _, value in
-                        if value.count > pollDescriptionMax { form.description = String(value.prefix(pollDescriptionMax)) }
+                        if value.utf16.count > pollDescriptionMax { form.description = PollForm.prefix(value, utf16: pollDescriptionMax) }
+                        if errors[.description] != nil { errors = form.errors() }
                     }
+                // A saved text past the limit says so; the counter shows near it
+                if errors[.description] != nil || form.description.utf16.count > pollDescriptionMax - 100 {
+                    HStack(alignment: .top) {
+                        fieldError(.description)
+                        Spacer()
+                        Text("\(form.description.utf16.count)/\(pollDescriptionMax)").font(.vmMono(12)).monospacedDigit()
+                            .foregroundStyle(Tokens.mutedForeground)
+                    }
+                }
             }
         } else {
             Button {
@@ -413,8 +423,8 @@ struct PollCreatorView: View {
                 VStack(spacing: 8) {
                     ForEach(Array(form.options.enumerated()), id: \.offset) { _, option in
                         HStack(spacing: 12) {
-                            BallotMark(checked: false)
-                            Text(option.trimmingCharacters(in: .whitespacesAndNewlines)).font(.vm(16))
+                            BallotMark(chosen: nil)
+                            Text(PollForm.singleLine(option)).font(.vm(16))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.horizontal, 16).padding(.vertical, 10)
@@ -476,8 +486,11 @@ struct PollCreatorView: View {
     private func revealErrors() {
         if errors[.endTime] != nil { endPreset = nil }
         if errors[.invitees] != nil { showSettings = true }
+        if errors[.description] != nil { showContext = true }
         if errors[.title] != nil {
             focus = .title
+        } else if errors[.description] != nil {
+            focus = .description
         } else if let index = form.options.indices.first(where: { errors[.option($0)] != nil }) {
             focus = .option(index)
         }

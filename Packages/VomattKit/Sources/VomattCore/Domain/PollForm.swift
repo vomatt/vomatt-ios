@@ -90,7 +90,7 @@ public struct PollForm: Codable, Hashable, Sendable {
     }
 
     public enum Field: Hashable, Sendable {
-        case title, option(Int), endTime, invitees
+        case title, description, option(Int), endTime, invitees
     }
 
     /// Validation errors as translation keys (the web's `pollCreator.errors.*`).
@@ -98,11 +98,13 @@ public struct PollForm: Codable, Hashable, Sendable {
         var errors: [Field: String] = [:]
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.isEmpty { errors[.title] = "pollCreator.errors.titleRequired" }
-        else if title.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
+        else if title.utf16.count > pollTitleMax { errors[.title] = "pollCreator.errors.titleTooLong" }
+        if description.utf16.count > pollDescriptionMax { errors[.description] = "pollCreator.errors.descriptionTooLong" }
         // Two options with the same text split one opinion into two counts
         var seen = Set<String>()
         for (index, option) in options.enumerated() {
-            let key = option.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            // Compared as saved: a pasted line break is a space
+            let key = Self.singleLine(option).lowercased()
             if key.isEmpty {
                 errors[.option(index)] = "pollCreator.errors.optionRequired"
             } else if !seen.insert(key).inserted {
@@ -158,7 +160,19 @@ public struct PollForm: Codable, Hashable, Sendable {
         endTime = (startTime ?? now).addingTimeInterval(preset.duration)
     }
 
-    /// The question as one line: pasted line breaks become spaces.
+    /// The longest start of `text` within `max` UTF-16 units, the length the API and the web count, in whole characters.
+    public static func prefix(_ text: String, utf16 max: Int) -> String {
+        var used = 0
+        var end = text.startIndex
+        for index in text.indices {
+            used += text[index].utf16.count
+            if used > max { break }
+            end = text.index(after: index)
+        }
+        return String(text[..<end])
+    }
+
+    /// The question or an option as one line: pasted line breaks become spaces.
     public static func singleLine(_ text: String) -> String {
         text.replacingOccurrences(of: #"\s*\n\s*"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -169,7 +183,7 @@ public struct PollForm: Codable, Hashable, Sendable {
         return PollInput(
             title: Self.singleLine(title),
             description: description.isEmpty ? nil : description,
-            options: options.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            options: options.map(Self.singleLine),
             startTime: startTime ?? now,
             endTime: endTime ?? now,
             voterVisibility: voterVisibility,
