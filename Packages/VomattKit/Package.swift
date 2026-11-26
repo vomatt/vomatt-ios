@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.0.0"),
     ],
     targets: [
-        // Generated at build time from openapi.json (synced from vomatt-web's api-docs.json)
+        // Generated at build time from openapi.json (synced from vomatt-api's docs/frontend/openapi.json)
         .target(
             name: "VomattAPI",
             dependencies: [

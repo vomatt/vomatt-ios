@@ -917,6 +917,41 @@ struct SessionTests {
         #expect(error?.kind == .notAuthenticated)
         #expect(await !service.session.isSignedIn)
     }
+
+    /// The contract: a 503 means the token was not checked or spent, so the tokens are kept for a retry.
+    @Test func anUnavailableRefreshKeepsTheTokens() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/auth/refresh" ? (503, failure("common.service_unavailable"), [:]) : (401, failure("auth.token.expired"), [:])
+        }
+        let store = InMemoryTokenStore(tokens(1))
+        let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
+        _ = try? await service.myProfile()
+        #expect(await service.session.isSignedIn)
+        #expect(store.load()?.refreshToken == "refresh-1")
+    }
+
+    /// A refresh answered 200 that can't be read may already have spent the token, so keeping it would
+    /// only end the sign-in later as suspicious.
+    @Test func anUnreadableRefreshEndsTheSession() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/auth/refresh" ? (200, envelope("null"), [:]) : (401, failure("auth.token.expired"), [:])
+        }
+        let store = InMemoryTokenStore(tokens(1))
+        let service = VomattService(baseURL: base, tokenStore: store, language: { .en }, transport: transport)
+        _ = try? await service.myProfile()
+        #expect(await !service.session.isSignedIn)
+        #expect(store.load() == nil)
+    }
+
+    @Test func aReusedRefreshTokenSignsOutAsRevoked() async throws {
+        let transport = StubTransport { request, _ in
+            request.path == "/api/auth/refresh" ? (401, failure("auth.suspicious_login"), [:]) : (401, failure("auth.token.expired"), [:])
+        }
+        let service = VomattService(baseURL: base, tokenStore: InMemoryTokenStore(tokens(1)), language: { .en }, transport: transport)
+        var events = service.session.events.makeAsyncIterator()
+        _ = try? await service.myProfile()
+        #expect(await events.next() == .signedOut(expired: true, revoked: true))
+    }
 }
 
 actor Counter {

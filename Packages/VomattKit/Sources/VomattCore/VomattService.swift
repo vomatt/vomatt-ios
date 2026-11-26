@@ -47,7 +47,9 @@ public final class VomattService: Sendable {
             let output = try await client.refresh(body: .json(.init(refreshToken: refreshToken)))
             return .ok(try AuthTokens(required(output.ok.body.json.data, "refresh.data")))
         } catch {
-            guard let error = unwrap(error) as APIError? else { return .unavailable }
+            // The token was not checked or spent: keep it for a retry. Anything else (the 401s, but also an
+            // answer that can't be read, after which the token may already be spent) ends the session.
+            let error = unwrap(error)
             if error.kind == .network || error.isRateLimited || (error.status ?? 0) >= 500 { return .unavailable }
             return .rejected(suspicious: error.errorCode == "auth.suspicious_login")
         }

@@ -36,7 +36,7 @@ jobs:
       GH_TOKEN: ${{ secrets.SYNC_PR_TOKEN }}
       SYNC_SCOPE: >-
         Every non-admin path and field. First run `scripts/sync.sh api --file ../vomatt-api/docs/frontend/openapi.json`
-        to refresh docs/api-docs.json; behavior changes described only in docs/frontend/CHANGELOG.md count too.
+        to refresh Packages/VomattKit/Sources/VomattAPI/openapi.json; behavior changes described only in docs/frontend/CHANGELOG.md count too.
         Update the app, views and tests included, as docs/api-sync.md describes.
       VERIFY: make test-core && make build SIMULATOR="$SIM"
       # No gh or network tools: pushing and the PR happen in the last step

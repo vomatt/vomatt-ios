@@ -349,6 +349,8 @@ struct PollFormTests {
         #expect(!PollForm(options: ["A", ""], endTime: nil).canAddOption)
         #expect(PollForm(options: ["A", "B"], endTime: nil).canAddOption)
         #expect(!PollForm(options: (0..<10).map(String.init), endTime: nil).canAddOption)
+        // Blank the same way firstEmptyOption sees it, newlines included
+        #expect(!PollForm(options: ["A", "\n"], endTime: nil).canAddOption)
     }
 
     // Cases ported from vomatt-web's src/__tests__/features/polls/PollCreator.test.tsx

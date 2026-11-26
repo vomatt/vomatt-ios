@@ -125,7 +125,7 @@ struct ProfileView: View {
                 UIPasteboard.general.url = url
                 app.showToast(app.t("comments.linkCopied"))
             } label: { Label(app.t("comments.copyLink"), systemImage: "link") }
-            if app.isSignedIn, profile.id != nil {
+            if app.isSignedIn, profile.id != nil, profile.id != app.userId {
                 Divider()
                 if app.isBlocked(profile.username) {
                     Button(role: .destructive) {

@@ -88,7 +88,8 @@ struct VerificationForm: View {
         .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
         .task(id: cooldown) {
             guard cooldown > 0 else { return }
-            try? await Task.sleep(for: .seconds(1))
+            // Cancelled when the cooldown was reset: the new tick counts from the new value
+            guard (try? await Task.sleep(for: .seconds(1))) != nil else { return }
             cooldown -= 1
         }
         .onAppear { isFocused = true }

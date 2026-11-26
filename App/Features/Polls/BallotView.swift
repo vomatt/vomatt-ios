@@ -318,7 +318,16 @@ struct BallotView: View {
         mode = .sealed
         Task {
             let outcome = await ballot.retract(app: app, onPollEnded: onPollEnded)
-            if outcome == .saved { announce(app.t("poll.voteWithdrawn")) }
+            if outcome == .saved {
+                // The API returns no Poll here; without this the card and the app's cache keep the old Ballot
+                // From the latest copy, so a like or save made while the request was out is kept
+                var withdrawn = app.latest(poll)
+                withdrawn.myOptionId = nil
+                withdrawn.myBallotAnonymous = nil
+                withdrawn.participantCount = ballot.turnout
+                onPollChanged(withdrawn)
+                announce(app.t("poll.voteWithdrawn"))
+            }
             if outcome == .failed { shake += 1 }
         }
     }
@@ -460,17 +469,17 @@ struct VotedStamp: View {
         HStack(spacing: 4) {
             CheckShape()
                 .trim(from: 0, to: drawn ? 1 : 0)
-                .stroke(Color.black.opacity(0.85), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
+                .stroke(Tokens.highlightForeground, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
                 .frame(width: 12, height: 12)
             Text(label).font(.vm(11, .medium, relativeTo: .caption2))
         }
-        // Volt stays light in dark mode, so its ink stays dark
-        .foregroundStyle(Color.black.opacity(0.85))
+        // Volt stays light in dark mode, so its ink (highlight-foreground) stays dark
+        .foregroundStyle(Tokens.highlightForeground)
         .padding(.leading, 8)
         .padding(.trailing, 10)
         .padding(.vertical, 3)
         .background(Tokens.highlight, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.black.opacity(0.2)))
+        .overlay(Capsule().strokeBorder(Tokens.highlightForeground.opacity(0.2)))
         .fixedSize()
         .onAppear { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25).delay(0.1)) { drawn = true } }
     }

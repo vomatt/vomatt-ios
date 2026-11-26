@@ -53,14 +53,13 @@ contract describes.
 
 ## Automatic sync
 
-When `docs/frontend/openapi.json` changes on vomatt-api's main, its `notify-ios-contract` workflow sends
+When `docs/frontend/openapi.json` changes on vomatt-api's main, its `notify-clients` workflow sends
 a `repository_dispatch` (`api-contract-updated`) here, and `.github/workflows/sync-api-contract.yml`
 has Claude follow this page and open a PR (none when the app is already in step). Run it by hand
 from the Actions tab with an optional vomatt-api `sha`.
 
-Secrets: `CLAUDE_CODE_OAUTH_TOKEN` here, `API_READ_TOKEN` here if vomatt-api is private,
-`SYNC_PR_TOKEN` here (a PAT that can open PRs; without it the PR is opened with `github.token` and
-ios.yml does not run on it), and
+Secrets: `CLAUDE_CODE_OAUTH_TOKEN` here, `SYNC_PR_TOKEN` here (a PAT that can push and open PRs;
+the run fails without it, since a PR opened with `github.token` would not run ios.yml), and
 `IOS_DISPATCH_TOKEN` in vomatt-api (a fine-grained PAT with "Contents: read and write" on vomatt-ios).
 
 ## Checking for drift
