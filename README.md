@@ -8,7 +8,7 @@ contract, in SwiftUI.
 |---|---|
 | UI | SwiftUI, iOS 17+, iPhone and iPad |
 | API | [vomatt-api](../vomatt-api), through a client generated from `openapi.json` at build time ([swift-openapi-generator](https://github.com/apple/swift-openapi-generator)) |
-| Shared with the web | API contract, `en`/`zh` strings, color tokens, the 72 bot avatars, the Geist fonts, poll rules |
+| Shared with the web | API contract, `en`/`zh` strings, color tokens, the 60 bot avatars, the Geist fonts, poll rules |
 | Project | [XcodeGen](https://github.com/yonaskolb/XcodeGen) generates `Vomatt.xcodeproj` from `project.yml` |
 
 ## Getting started

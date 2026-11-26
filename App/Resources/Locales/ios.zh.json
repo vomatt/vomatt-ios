@@ -31,7 +31,6 @@
 		"feedbackLimited": "你今天送出的回饋已達上限，請明天（UTC）再試。",
 		"follow": "追蹤 {name}",
 		"unfollow": "取消追蹤 {name}",
-		"followShort": "追蹤",
 		"followersEmpty": "還沒有人追蹤。",
 		"followingListEmpty": "還沒有追蹤任何人。",
 		"followFailed": "無法追蹤，請再試一次。",
@@ -39,7 +38,6 @@
 		"setBirthday": "新增生日",
 		"votersChoicesHidden": "此投票含匿名票，不顯示各人的選擇。以下是所有參與者：",
 		"followsYou": "追蹤了你",
-		"followBack": "回追蹤",
 		"mutualTitle": "你也追蹤的追蹤者",
 		"mutualEmpty": "他的追蹤者中沒有你追蹤的人。",
 		"seeAll": "查看全部",
@@ -49,15 +47,7 @@
 		"pollTitle": "投票"
 	},
 	"apiError": {
-		"auth.email_not_verified": "此 OAuth 帳號的 email 尚未驗證，無法登入或合併既有帳號",
-		"user.not_found": "找不到此用戶",
-		"comment.report.self": "不能檢舉自己的留言",
-		"invite_list.not_found": "找不到群組",
-		"invite_list.max_reached": "最多只能建立 {0} 個群組",
-		"invite_list.members.max": "每個群組最多 {0} 位成員"
-	},
-	"groups": {
-		"memberCountOne": "1 位成員"
+		"comment.report.self": "不能檢舉自己的留言"
 	},
 	"poll": {
 		"yourVote": "你的選擇"

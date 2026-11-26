@@ -19,6 +19,20 @@ struct LocalizerTests {
         #expect(localizer("missing.key") == "missing.key")
     }
 
+    /// Chinese has no singular form, so one is never the English `_one` string.
+    @Test func countsOneInTheLanguageThatHasTheString() {
+        let zh = Localizer(
+            language: .zh,
+            strings: ["groups.memberCount": "{count} 位成員"],
+            fallback: ["groups.memberCount": "{count} members", "groups.memberCount_one": "{count} member",
+                       "only.en": "{count} things", "only.en_one": "{count} thing"]
+        )
+        #expect(zh.count("groups.memberCount", 1) == "1 位成員")
+        #expect(zh.count("groups.memberCount", 2) == "2 位成員")
+        // A string missing from Chinese falls back to English whole, singular included
+        #expect(zh.count("only.en", 1) == "1 thing")
+    }
+
     @Test func unknownPlaceholdersStay() {
         #expect(Localizer.interpolate("{a} and {b}", ["a": 1]) == "1 and {b}")
         #expect(Localizer.interpolate("no braces", ["a": 1]) == "no braces")

@@ -183,6 +183,7 @@ struct ResultsView: View {
 
     private func loadIfNeeded() async {
         guard sealedUntil == nil, poll.inlineResults == nil, fetched == nil else { return }
+        failed = false
         do {
             fetched = try await app.service.results(pollId: poll.id)
         } catch let error as APIError where error.isSealed {

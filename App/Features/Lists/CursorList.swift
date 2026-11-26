@@ -52,7 +52,8 @@ final class CursorList<Item: Identifiable & Sendable> {
             items = mergeById(items, page.items)
             nextCursor = page.nextCursor
         } catch {
-            loadMoreFailed = true
+            // A reload since then owns the list now
+            if current == generation { loadMoreFailed = true }
         }
     }
 

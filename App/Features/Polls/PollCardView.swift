@@ -559,7 +559,7 @@ struct PollRow<Meta: View, Aside: View>: View {
                         if unread {
                             // Centered on the first line's capitals, not sat on its baseline
                             UnreadDot(label: app.t("notifications.unread"))
-                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + dotLift }
+                                .alignmentGuide(.firstTextBaseline) { [dotLift] in $0[VerticalAlignment.center] + dotLift }
                         }
                     }
                     HStack(spacing: 6) { meta() }

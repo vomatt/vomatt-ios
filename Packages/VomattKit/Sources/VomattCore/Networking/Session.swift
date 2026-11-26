@@ -106,8 +106,8 @@ public actor Session {
             tokens = rotated
             store.save(rotated)
             return rotated.accessToken
-        case .rejected:
-            signOut(expired: true)
+        case let .rejected(suspicious):
+            signOut(expired: true, revoked: suspicious)
             return nil
         case .unavailable:
             // Keep the session; a refused token would only fail again

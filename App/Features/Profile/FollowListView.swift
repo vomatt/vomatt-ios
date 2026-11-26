@@ -94,7 +94,7 @@ struct PersonFollowButton: View {
             if app.isFollowing(user.id) {
                 FollowingButton(userId: user.id, username: user.username)
             } else {
-                Button(app.t(user.followsYou == true ? "ios.followBack" : "ios.followShort")) { app.follow(user) }
+                Button(app.t(user.followsYou == true ? "follows.followBack" : "follows.follow")) { app.follow(user) }
                     .buttonStyle(.vm(.default, size: .sm))
             }
         }

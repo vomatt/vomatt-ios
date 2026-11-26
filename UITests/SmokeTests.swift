@@ -72,7 +72,7 @@ final class SmokeTests: XCTestCase {
 
         app.buttons["Profile"].tap()
         // Signed out, Profile offers sign-in and the legal links
-        XCTAssertTrue(app.buttons["Terms"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Terms of Service"].firstMatch.waitForExistence(timeout: 5))
         snapshot("8-profile-signed-out")
     }
 

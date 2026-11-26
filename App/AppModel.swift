@@ -178,6 +178,9 @@ final class AppModel {
                 blockedIds = [:]
                 blocked = blockList.usernames()
                 following = []
+                // Both hold what the last account saw (its ballots, invitations it closed)
+                latestPolls = [:]
+                closedCommunityInvitations = []
                 unreadCount = 0
                 sessionGeneration += 1
                 if revoked {

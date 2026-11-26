@@ -31,7 +31,6 @@
 		"feedbackLimited": "You've sent a lot of feedback today. Try again tomorrow (UTC).",
 		"follow": "Follow {name}",
 		"unfollow": "Unfollow {name}",
-		"followShort": "Follow",
 		"followersEmpty": "No followers yet.",
 		"followingListEmpty": "Not following anyone yet.",
 		"followFailed": "Couldn't follow this person. Try again.",
@@ -39,7 +38,6 @@
 		"setBirthday": "Add birthday",
 		"votersChoicesHidden": "Choices are hidden because this poll has anonymous ballots. Everyone who took part:",
 		"followsYou": "Follows you",
-		"followBack": "Follow back",
 		"mutualTitle": "Followers you follow",
 		"mutualEmpty": "None of their followers are people you follow.",
 		"seeAll": "See all",
@@ -49,15 +47,7 @@
 		"pollTitle": "Poll"
 	},
 	"apiError": {
-		"auth.email_not_verified": "This OAuth account's email is not verified; cannot sign in or merge an existing account",
-		"user.not_found": "User not found",
-		"comment.report.self": "You cannot report your own comment",
-		"invite_list.not_found": "Group not found",
-		"invite_list.max_reached": "You can keep at most {0} Groups",
-		"invite_list.members.max": "A Group can hold at most {0} members"
-	},
-	"groups": {
-		"memberCountOne": "1 member"
+		"comment.report.self": "You cannot report your own comment"
 	},
 	"poll": {
 		"yourVote": "Your vote"

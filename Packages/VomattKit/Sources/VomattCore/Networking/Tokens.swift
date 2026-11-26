@@ -26,7 +26,7 @@ public struct AccessTokenClaims: Equatable, Sendable {
         if let exp = json["exp"] as? TimeInterval { expiresAt = Date(timeIntervalSince1970: exp) }
     }
 
-    /// True when the token expires within `leeway` seconds (or its expiry is unknown).
+    /// True when the token expires within `leeway` seconds; false when its expiry is unknown.
     public func isExpiringSoon(leeway: TimeInterval = 60, now: Date = .now) -> Bool {
         guard let expiresAt else { return false }
         return expiresAt.timeIntervalSince(now) < leeway

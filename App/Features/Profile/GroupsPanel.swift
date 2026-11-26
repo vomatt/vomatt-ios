@@ -66,7 +66,7 @@ struct GroupsPanel: View {
     }
 
     private func memberCount(_ count: Int) -> String {
-        count == 1 ? app.t("groups.memberCountOne") : app.t("groups.memberCount", ["count": count])
+        app.t.count("groups.memberCount", count)
     }
 
     private func load() async {
@@ -113,7 +113,7 @@ private struct GroupEditor: View {
                     HStack(alignment: .bottom, spacing: 8) {
                         VMTextField(label: app.t("groups.nameLabel"), placeholder: app.t("groups.namePlaceholder"), text: $name)
                         LoadingButton(style: .vm(.outline), action: rename) { Text(app.t("groups.rename")) }
-                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || name == group.name)
+                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || name.trimmingCharacters(in: .whitespaces) == group.name)
                     }
                     VStack(alignment: .leading, spacing: 10) {
                         SectionTitle(text: app.t("groups.members"))
@@ -189,7 +189,7 @@ private struct GroupEditor: View {
 
     private func rename() async {
         do {
-            group = try await app.service.renameGroup(id: group.id, name: String(name.prefix(groupNameMax)))
+            group = try await app.service.renameGroup(id: group.id, name: String(name.trimmingCharacters(in: .whitespaces).prefix(groupNameMax)))
             onChange(.updated(group))
         } catch {
             app.showToast(app.t.message(for: error, fallback: "groups.saveFailed"), isError: true)

@@ -389,7 +389,7 @@ struct CommentThreadView: View {
                 }
                 .font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
             case .ready:
-                if model.comments.isEmpty {
+                if shown.isEmpty {
                     Text(app.t("comments.empty")).font(.vm(14)).foregroundStyle(Tokens.mutedForeground)
                 }
             }
@@ -1029,7 +1029,8 @@ private struct CommentComposer: View {
             Task {
                 let ok = await onPost(value)
                 isPosting = false
-                if !ok { text = value }
+                // Give the text back, unless a newer one is being typed
+                if !ok, text.isEmpty { text = value }
             }
         }
     }

@@ -132,7 +132,7 @@ public struct PollForm: Codable, Hashable, Sendable {
     }
 
     public var canAddOption: Bool {
-        options.count < pollOptionsLimit && options.allSatisfy { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        options.count < pollOptionsLimit && options.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
     /// The first blank option: Add option goes there instead of adding another.

@@ -297,7 +297,7 @@ public struct Comment: Identifiable, Hashable, Sendable {
         self.deleted = deleted
     }
 
-    public var isPending: Bool { id.hasPrefix("pending-") }
+    public var isPending: Bool { id.hasPrefix(pendingCommentPrefix) }
 }
 
 public extension Comment {
