@@ -90,7 +90,9 @@ public struct Localizer: Sendable {
     /// A "{count} …" string in the language's plural form: `key_one` for one where the language has
     /// that form (en), `key` otherwise, with the count grouped (1,200). From the web's `countText`.
     public func count(_ key: String, _ count: Int, _ values: [String: CustomStringConvertible] = [:]) -> String {
-        let one = count == 1 && has("\(key)_one")
+        // The singular comes from the table that has the string, so zh never borrows en's `_one`
+        let table = strings[key] != nil ? strings : fallback
+        let one = count == 1 && table["\(key)_one"] != nil
         return self(one ? "\(key)_one" : key, values.merging(["count": number(count)]) { _, new in new })
     }
 
